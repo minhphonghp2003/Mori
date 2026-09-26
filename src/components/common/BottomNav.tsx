@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { useApp } from '../../context/AppContext';
 import { NavTab } from '../../types';
 import { 
@@ -9,34 +10,29 @@ import {
   Settings 
 } from 'lucide-react';
 
+const TAB_HREF: Record<NavTab, string> = {
+  home: '/nearby',
+  moments: '/moments',
+  map: '/location',
+  chat: '/chat',
+  setting: '/settings',
+};
+
 export const BottomNav: React.FC = () => {
-  const { 
-    activeTab, 
-    setActiveTab, 
-    setActiveConversationId, 
-    setActiveTimelineId,
-    conversations
-  } = useApp();
+  const { activeTab, conversations, totalUnreadCount } = useApp();
 
-  const totalUnread = conversations?.reduce((sum, c) => sum + (c.unreadCount || 0), 0) || 0;
-
-  const handleTabClick = (tabId: NavTab) => {
-    setActiveTab(tabId);
-    if (tabId !== 'chat') {
-      setActiveConversationId(null);
-    }
-    if (tabId !== 'setting') {
-      setActiveTimelineId(null);
-    }
-  };
+  const listUnread = conversations?.reduce((sum, c) => sum + (c.unreadCount || 0), 0) || 0;
+  // Server-pushed counter (ReceiveUnreadCount) covers conversations whose
+  // rows are stale; the local sum covers rows the hub never touched.
+  const totalUnread = Math.max(listUnread, totalUnreadCount || 0);
 
   return (
     <nav className="shrink-0 bg-white border-t border-slate-100 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] px-2 pt-1 pb-1.5 z-30 select-none">
       <div className="grid grid-cols-5 items-center max-w-md mx-auto relative">
         
         {/* 1. HOME (Nearby Users) */}
-        <button
-          onClick={() => handleTabClick('home')}
+        <Link
+          href={TAB_HREF.home}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'home' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
           }`}
@@ -46,11 +42,11 @@ export const BottomNav: React.FC = () => {
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Gần bạn</span>
           {activeTab === 'home' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
-        </button>
+        </Link>
 
         {/* 2. MOMENT */}
-        <button
-          onClick={() => handleTabClick('moments')}
+        <Link
+          href={TAB_HREF.moments}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'moments' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
           }`}
@@ -60,24 +56,24 @@ export const BottomNav: React.FC = () => {
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Khoảnh khắc</span>
           {activeTab === 'moments' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
-        </button>
+        </Link>
 
         {/* 3. MAP (BIG ICON - CENTER FLOATING ACTION BUTTON) */}
         <div className="flex flex-col items-center justify-center relative -top-3">
-          <button
-            onClick={() => handleTabClick('map')}
+          <Link
+            href={TAB_HREF.map}
             className={`w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.38)] ring-4 ring-white flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
               activeTab === 'map' ? 'scale-108 ring-indigo-100 shadow-[0_10px_25px_rgba(79,70,229,0.5)]' : 'hover:scale-105'
             }`}
             title="Bản đồ"
           >
             <MapPin className="w-6 h-6 stroke-[2.4] fill-white/20" />
-          </button>
+          </Link>
         </div>
 
         {/* 4. CHAT */}
-        <button
-          onClick={() => handleTabClick('chat')}
+        <Link
+          href={TAB_HREF.chat}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'chat' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
           }`}
@@ -92,11 +88,11 @@ export const BottomNav: React.FC = () => {
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Tin nhắn</span>
           {activeTab === 'chat' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
-        </button>
+        </Link>
 
         {/* 5. SETTING */}
-        <button
-          onClick={() => handleTabClick('setting')}
+        <Link
+          href={TAB_HREF.setting}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'setting' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
           }`}
@@ -106,7 +102,7 @@ export const BottomNav: React.FC = () => {
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Cài đặt</span>
           {activeTab === 'setting' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
-        </button>
+        </Link>
 
       </div>
     </nav>

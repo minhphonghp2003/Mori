@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Moment, User, ReactionEmoji, Timeline } from '../../types';
+import { Moment, User, ReactionEmoji, Timeline, VisibilityTier } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { TimelineDetailView } from '../timelines/TimelineDetailView';
+import { emptyUser } from '@/lib/chat/mappers';
+import { VISIBILITY_OPTIONS } from '@/constants/visibility';
 import { 
   Heart, 
   MessageCircle, 
@@ -15,7 +17,9 @@ import {
   ArrowLeft, 
   X, 
   AlertTriangle, 
-  Compass 
+  Compass,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export interface MomentReelCardProps {
@@ -46,8 +50,11 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     currentUser, 
     friends, 
     timelines,
+    ensureTimelineById,
     reactToMoment, 
     deleteMoment,
+    hideMoment,
+    changeMomentVisibility,
     openChatWithUser, 
     setSelectedUser,
     showToast 
@@ -60,6 +67,8 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   const [showVideoControls, setShowVideoControls] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showHideConfirm, setShowHideConfirm] = useState(false);
+  const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showTimelineModal, setShowTimelineModal] = useState<Timeline | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -72,33 +81,51 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
 
-  const author: User = friends.find(f => f.id === moment.userId) || currentUser;
   const isMine = moment.userId === currentUser.id;
+  // Own moments show me; friends resolve to their live profile; strangers get
+  // a stub built from the moment itself (never falls back to currentUser).
+  const author: User = isMine
+    ? currentUser
+    : (friends.find(f => f.id === moment.userId) ??
+      emptyUser(moment.userId, moment.userName, moment.userAvatar || ''));
   const isLover = author.relationship?.type === 'lover';
   const isBestFriend = author.relationship?.type === 'best_friend';
   const isVideo = moment.mediaType === 'video' || !!moment.videoUrl;
+
+  const currentVisibilityLabel =
+    VISIBILITY_OPTIONS.find(o => o.value === moment.visibility)?.label ?? 'Quyền xem';
 
   // Find user's current reaction on this moment
   const userReaction = moment.reactions.find(r => r.userId === currentUser.id);
   const isLiked = !!userReaction;
 
-  // Find associated timeline if any
+  // Find associated timeline if any (fetch on demand when the moment
+  // belongs to a timeline that isn't in the list yet).
   const momentTimeline = timelines.find(t => 
     (moment.timelineId && t.id === moment.timelineId) ||
     t.moments.some(m => m.id === moment.id)
   );
 
+  useEffect(() => {
+    if (moment.timelineId && !momentTimeline) {
+      void ensureTimelineById(moment.timelineId);
+    }
+  }, [moment.timelineId, momentTimeline, ensureTimelineById]);
+
   // Multi-image handling
   const images = moment.imageUrls && moment.imageUrls.length > 0 ? moment.imageUrls : [moment.imageUrl];
   const hasMultipleImages = !isVideo && images.length > 1;
 
-  // Close reaction picker on outside tap
+  // Close reaction/visibility pickers on outside tap
   useEffect(() => {
-    if (!showReactionPicker) return;
-    const handleWindowClick = () => setShowReactionPicker(false);
+    if (!showReactionPicker && !showVisibilityPicker) return;
+    const handleWindowClick = () => {
+      setShowReactionPicker(false);
+      setShowVisibilityPicker(false);
+    };
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
-  }, [showReactionPicker]);
+  }, [showReactionPicker, showVisibilityPicker]);
 
   const handleSelectEmojiReaction = (emoji: ReactionEmoji, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -213,13 +240,16 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
 
   const handleShare = (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    // Deep link: opening it in the feed shows this exact moment in the viewer.
+    const shareUrl = `${window.location.origin}/moments?momentId=${moment.id}`;
     if (navigator.share) {
       navigator.share({
         title: `Khoảnh khắc của ${moment.userName}`,
         text: moment.caption,
-        url: window.location.href
+        url: shareUrl
       }).catch(() => {});
     } else {
+      navigator.clipboard?.writeText(shareUrl).catch(() => {});
       showToast('Đã sao chép liên kết khoảnh khắc! 📋', 'success');
     }
   };
@@ -228,6 +258,12 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     deleteMoment(moment.id);
     setShowDeleteConfirm(false);
     showToast('Đã xóa khoảnh khắc thành công', 'info');
+    onClose?.();
+  };
+
+  const handleHide = () => {
+    hideMoment(moment.id);
+    setShowHideConfirm(false);
     onClose?.();
   };
 
@@ -510,12 +546,13 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           </button>
         </div>
 
-        {/* Chat / Direct Message Button (if allowed) */}
-        {moment.allowDirectMessage !== false && moment.allowComment !== false && (
+        {/* Chat / Direct Message Button (others' moments only — carries the
+            moment into the conversation via ?momentId=) */}
+        {!isMine && moment.allowDirectMessage !== false && moment.allowComment !== false && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              openChatWithUser(author);
+              openChatWithUser(author, moment.id);
             }}
             className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
             title="Nhắn tin"
@@ -558,6 +595,76 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             </div>
             <span className="text-[10px] font-bold text-white/90 drop-shadow-sm whitespace-nowrap truncate">
               {isMuted ? 'Tắt tiếng' : 'Bật tiếng'}
+            </span>
+          </button>
+        )}
+
+        {/* Visibility button if owner (opens quick picker above) */}
+        {isMine && (
+          <div className="relative">
+            {showVisibilityPicker && (
+              <div
+                className="absolute bottom-full right-0 mb-2 z-40 w-36 p-1 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-white/20 shadow-2xl flex flex-col animate-in zoom-in-75 duration-150"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="px-3 pt-1.5 pb-1 text-[9px] font-bold uppercase tracking-wider text-white/50">
+                  Quyền xem
+                </span>
+                {VISIBILITY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (opt.value !== moment.visibility) {
+                        changeMomentVisibility(moment.id, opt.value as VisibilityTier);
+                      }
+                      setShowVisibilityPicker(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-left text-[11px] font-semibold transition-colors cursor-pointer ${
+                      opt.value === moment.visibility
+                        ? 'bg-indigo-600/80 text-white'
+                        : 'text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowVisibilityPicker(prev => !prev);
+              }}
+              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+              title="Đổi quyền xem khoảnh khắc"
+            >
+              <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
+                <Eye className="w-4.5 h-4.5 stroke-white" />
+              </div>
+              <span className="text-[10px] font-bold text-white/90 drop-shadow-sm whitespace-nowrap truncate max-w-[68px]">
+                {currentVisibilityLabel}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Hide button for others' moments (removed from my feed) */}
+        {!isMine && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHideConfirm(true);
+            }}
+            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+            title="Ẩn khoảnh khắc khỏi feed"
+          >
+            <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
+              <EyeOff className="w-4.5 h-4.5 stroke-white" />
+            </div>
+            <span className="text-[10px] font-bold text-white/90 drop-shadow-sm whitespace-nowrap truncate">
+              Ẩn
             </span>
           </button>
         )}
@@ -656,6 +763,38 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
                 className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white shadow-md transition-colors cursor-pointer whitespace-nowrap truncate"
               >
                 Xóa ngay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HIDE CONFIRMATION MODAL (others' moments — no undo endpoint) */}
+      {showHideConfirm && (
+        <div 
+          className="absolute inset-0 z-40 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-3xl p-5 text-center text-white shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-3">
+              <EyeOff className="w-6 h-6" />
+            </div>
+            <h4 className="text-sm font-bold whitespace-nowrap truncate">Ẩn khoảnh khắc này?</h4>
+            <p className="text-xs text-slate-400 mt-1 mb-4 leading-relaxed">
+              Khoảnh khắc sẽ biến mất khỏi feed của bạn và không thể hoàn tác.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowHideConfirm(false)}
+                className="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors cursor-pointer whitespace-nowrap truncate"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleHide}
+                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white shadow-md transition-colors cursor-pointer whitespace-nowrap truncate"
+              >
+                Ẩn ngay
               </button>
             </div>
           </div>

@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAppSelector } from '@/store/hooks';
+import { emptyUser } from '@/lib/chat/mappers';
+import { getDistanceMeters, metersToKm } from '@/lib/location/geo';
+import type { User } from '../../types';
 import { 
   MapPin, 
   MessageCircle, 
@@ -9,17 +13,45 @@ import {
 
 export const HomeView: React.FC = () => {
   const { 
+    currentUser,
     friends, 
     openChatWithUser, 
     setSelectedUser 
   } = useApp();
 
+  const { latitude, longitude, locations } = useAppSelector((s) => s.location);
+
   const [sortOrder, setSortOrder] = useState<'nearest' | 'farthest'>('nearest');
   const [maxDistance, setMaxDistance] = useState<number | 'all'>('all');
 
-  // Filter and sort nearby users
+  const hasMyPosition = latitude != null && longitude != null;
+  const friendsById = useMemo(() => new Map(friends.map((f) => [f.id, f])), [friends]);
+
+  // Active users near me (hub-fresh), shaped for the design rows.
   const nearbyUsers = useMemo(() => {
-    return [...friends]
+    const myNumericId = Number(currentUser.id);
+    return locations
+      .filter((l) => l.userId !== myNumericId)
+      .map((l): User => {
+        const friend = friendsById.get(String(l.userId));
+        const distanceMeters =
+          hasMyPosition && latitude != null && longitude != null
+            ? getDistanceMeters(latitude, longitude, l.latitude, l.longitude)
+            : null;
+        return {
+          ...emptyUser(String(l.userId), l.name, l.image ?? ''),
+          status: l.status ?? '',
+          battery: l.battery ?? 0,
+          location: { lat: l.latitude, lng: l.longitude, address: '', city: '' },
+          relationship: friend?.relationship,
+          distanceKm: distanceMeters != null ? metersToKm(distanceMeters) : undefined,
+        };
+      });
+  }, [locations, friendsById, currentUser.id, latitude, longitude, hasMyPosition]);
+
+  // Filter and sort nearby users
+  const visibleUsers = useMemo(() => {
+    return [...nearbyUsers]
       .filter((user) => {
         const dist = user.distanceKm ?? 999;
         if (maxDistance !== 'all' && dist > maxDistance) {
@@ -32,7 +64,7 @@ export const HomeView: React.FC = () => {
         const distB = b.distanceKm ?? 999;
         return sortOrder === 'nearest' ? distA - distB : distB - distA;
       });
-  }, [friends, sortOrder, maxDistance]);
+  }, [nearbyUsers, sortOrder, maxDistance]);
 
   const renderGenderIcon = (gender?: string) => {
     const g = (gender || '').toLowerCase();
@@ -118,7 +150,7 @@ export const HomeView: React.FC = () => {
 
       {/* Compact Nearby Users List */}
       <div className="p-3 space-y-2 max-w-lg mx-auto w-full pb-16">
-        {nearbyUsers.length === 0 ? (
+        {visibleUsers.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-3xl p-6 border border-slate-100">
             <Users className="w-9 h-9 text-slate-300 mx-auto mb-2" />
             <div className="text-xs font-bold text-slate-700">Không có người dùng quanh bán kính này</div>
@@ -127,7 +159,7 @@ export const HomeView: React.FC = () => {
             </p>
           </div>
         ) : (
-          nearbyUsers.map((user) => {
+          visibleUsers.map((user) => {
             return (
               <div
                 key={user.id}
@@ -154,17 +186,21 @@ export const HomeView: React.FC = () => {
                         {user.name}
                       </span>
                       <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {user.age}t
-                        </span>
+                        {user.age > 0 && (
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {user.age}t
+                          </span>
+                        )}
                         {renderGenderIcon(user.gender)}
                       </div>
                     </div>
 
-                    <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-bold shrink-0">
-                      <MapPin className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
-                      <span>{user.distanceKm ?? 0} km</span>
-                    </div>
+                    {user.distanceKm !== undefined && (
+                      <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-bold shrink-0">
+                        <MapPin className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
+                        <span>{user.distanceKm} km</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Status */}
@@ -172,9 +208,11 @@ export const HomeView: React.FC = () => {
                     "{user.status}"
                   </div>
 
-                  {/* Address */}
+                  {/* Address — API has no reverse-geocode address, so only show coordinates */}
                   <div className="text-[10px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                    <span className="truncate">{user.location.address}</span>
+                    <span className="truncate">
+                      {user.location.lat.toFixed(5)}, {user.location.lng.toFixed(5)}
+                    </span>
                   </div>
                 </div>
 

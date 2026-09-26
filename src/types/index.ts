@@ -73,6 +73,8 @@ export interface MessageReaction {
 export interface Message {
   id: string;
   senderId: string;
+  senderName?: string;
+  senderAvatar?: string;
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
@@ -92,6 +94,7 @@ export interface Message {
     imageUrl?: string;
   };
   isEdited?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface Conversation {
@@ -108,6 +111,11 @@ export interface Conversation {
   isArchived?: boolean;
   adminId?: string;
   pendingRequests?: User[];
+  partnerId?: string;
+  memberCount?: number;
+  isOnline?: boolean;
+  isBlocked?: boolean;
+  blockedById?: number | null;
 }
 
 export interface TimelinePartner {
@@ -127,6 +135,8 @@ export interface Timeline {
   ownerName: string;
   ownerAvatar: string;
   partners: TimelinePartner[];
+  /** Total stops on the server (the list below may be capped). */
+  momentCount?: number;
   moments: {
     id: string;
     title: string;
@@ -135,6 +145,8 @@ export interface Timeline {
     locationName: string;
     time: string;
     dayNumber: number;
+    /** Full mapped moment (viewer needs reactions/visibility) when known. */
+    moment?: Moment;
   }[];
 }
 
@@ -149,4 +161,6 @@ export interface DiscoverableGroup {
   isPrivate: boolean;
   memberCount: number;
   activityTime: string;
+  requestId?: number;
+  requestStatus?: number;
 }

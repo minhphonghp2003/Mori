@@ -1,22 +1,82 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, Compass, Calendar, Users, Camera, Check } from 'lucide-react';
+import type { Moment } from '../../types';
+import { getAvailableMoments, formatMomentDate } from '../../services/moment';
+import { mapMoment } from '../../lib/moment/mappers';
+import { X, Compass, Calendar, Users, Camera, Check, Loader2 } from 'lucide-react';
 
 interface CreateTimelineModalProps {
   onClose: () => void;
 }
 
+const toDateInput = (d: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClose }) => {
-  const { friends, moments, createTimeline, showToast } = useApp();
+  const { friends, createTimeline, showToast } = useApp();
 
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('20/10/2026');
-  const [endDate, setEndDate] = useState('23/10/2026');
+  const [startDate, setStartDate] = useState(() => toDateInput(new Date()));
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return toDateInput(d);
+  });
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>([]);
   const [selectedMomentIds, setSelectedMomentIds] = useState<string[]>([]);
+  const [available, setAvailable] = useState<Moment[]>([]);
+  const [isLoadingAvailable, setIsLoadingAvailable] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const acceptedFriends = friends.filter(f => f.relationship?.status === 'accepted');
+
+  // The API only accepts *your* moments inside the range that aren't already
+  // on a timeline (GET /Moment/available requires both dates).
+  useEffect(() => {
+    if (!startDate || !endDate) {
+      setAvailable([]);
+      return;
+    }
+    const from = new Date(`${startDate}T00:00:00`);
+    const to = new Date(`${endDate}T23:59:59`);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to < from) {
+      setAvailable([]);
+      return;
+    }
+    let alive = true;
+    setIsLoadingAvailable(true);
+    (async () => {
+      try {
+        const out: Moment[] = [];
+        let prevId: number | null = null;
+        for (let page = 0; page < 3; page++) {
+          const res = await getAvailableMoments(
+            formatMomentDate(from),
+            formatMomentDate(to),
+            prevId,
+            20,
+          );
+          out.push(...res.data.map(mapMoment));
+          if (!res.hasMore || res.prevId == null) break;
+          prevId = res.prevId;
+        }
+        if (!alive) return;
+        setAvailable(out);
+        // Drop selections that are no longer attachable in this range.
+        setSelectedMomentIds((prev) => prev.filter((id) => out.some((m) => m.id === id)));
+      } catch (err) {
+        console.error('[CreateTimelineModal] getAvailableMoments failed:', err);
+        if (alive) setAvailable([]);
+      } finally {
+        if (alive) setIsLoadingAvailable(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [startDate, endDate]);
 
   const togglePartner = (id: string) => {
     setSelectedPartnerIds(prev =>
@@ -30,24 +90,27 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       showToast('Vui lòng nhập tên hành trình', 'error');
       return;
     }
-
-    createTimeline({
-      title: title.trim(),
-      description: description.trim() || 'Hành trình kỷ niệm đáng nhớ cùng những người bạn tuyệt vời.',
-      bannerImage: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-      startDate,
-      endDate,
-      partnerIds: selectedPartnerIds,
-      selectedMomentIds
-    });
-
-    onClose();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await createTimeline({
+        title: title.trim(),
+        partnerIds: selectedPartnerIds,
+        selectedMomentIds,
+      });
+      onClose();
+    } catch {
+      // Axios errors are already toasted by the interceptor — keep the
+      // editor open so nothing the user picked is lost.
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -78,25 +141,13 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
               placeholder="VD: Chuyến đi Đà Lạt mùa sương 🌲, Săn mây Tà Xùa..."
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Mô tả ngắn
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Kể đôi lời về chuyến đi..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          {/* Dates */}
+          {/* Dates scope which of YOUR moments can be attached */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
@@ -104,10 +155,9 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                 <span>Ngày bắt đầu</span>
               </label>
               <input
-                type="text"
+                type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                placeholder="20/10/2026"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
               />
             </div>
@@ -117,10 +167,10 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                 <span>Ngày kết thúc</span>
               </label>
               <input
-                type="text"
+                type="date"
                 value={endDate}
+                min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                placeholder="23/10/2026"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
               />
             </div>
@@ -132,65 +182,82 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
               <Users className="w-3.5 h-3.5 text-indigo-500" />
               <span>Bạn đồng hành ({selectedPartnerIds.length} người)</span>
             </label>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-              {acceptedFriends.map((friend) => {
-                const isSelected = selectedPartnerIds.includes(friend.id);
-                return (
-                  <button
-                    type="button"
-                    key={friend.id}
-                    onClick={() => togglePartner(friend.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    <img
-                      src={friend.avatar}
-                      alt={friend.name}
-                      referrerPolicy="no-referrer"
-                      className="w-5 h-5 rounded-full object-cover"
-                    />
-                    <span>{friend.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {acceptedFriends.length === 0 ? (
+              <p className="text-[11px] text-slate-400 bg-slate-50 rounded-xl px-3 py-2">
+                Bạn chưa có bạn bè nào để thêm vào hành trình.
+              </p>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                {acceptedFriends.map((friend) => {
+                  const isSelected = selectedPartnerIds.includes(friend.id);
+                  return (
+                    <button
+                      type="button"
+                      key={friend.id}
+                      onClick={() => togglePartner(friend.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <img
+                        src={friend.avatar}
+                        alt={friend.name}
+                        referrerPolicy="no-referrer"
+                        className="w-5 h-5 rounded-full object-cover"
+                      />
+                      <span>{friend.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Select moments */}
+          {/* Select moments (yours, in range, not on another timeline) */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
               <Camera className="w-3.5 h-3.5 text-indigo-500" />
               <span>Gắn khoảnh khắc vào hành trình ({selectedMomentIds.length} ảnh)</span>
             </label>
-            <div className="grid grid-cols-3 gap-2 max-h-36 overflow-y-auto no-scrollbar p-1">
-              {moments.map((m) => {
-                const isSelected = selectedMomentIds.includes(m.id);
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => toggleMoment(m.id)}
-                    className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
-                      isSelected ? 'border-indigo-600 scale-95 shadow-md' : 'border-transparent opacity-80'
-                    }`}
-                  >
-                    <img
-                      src={m.imageUrl}
-                      alt={m.caption}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                    {isSelected && (
-                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            {isLoadingAvailable ? (
+              <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang tải khoảnh khắc...</span>
+              </div>
+            ) : available.length === 0 ? (
+              <p className="text-[11px] text-slate-400 bg-slate-50 rounded-xl px-3 py-3 text-center">
+                Không có khoảnh khắc nào của bạn trong khoảng ngày này.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 max-h-36 overflow-y-auto no-scrollbar p-1">
+                {available.map((m) => {
+                  const isSelected = selectedMomentIds.includes(m.id);
+                  return (
+                    <div
+                      key={m.id}
+                      onClick={() => toggleMoment(m.id)}
+                      className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
+                        isSelected ? 'border-indigo-600 scale-95 shadow-md' : 'border-transparent opacity-80'
+                      }`}
+                    >
+                      <img
+                        src={m.imageUrl}
+                        alt={m.caption}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="pt-2 flex gap-2">
@@ -203,9 +270,11 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              Lưu hành trình
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{isSubmitting ? 'Đang lưu...' : 'Lưu hành trình'}</span>
             </button>
           </div>
         </form>

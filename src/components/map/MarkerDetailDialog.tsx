@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, FriendshipType, Timeline, Moment } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { getUserById } from '@/services/user';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { 
   X, 
@@ -35,7 +37,9 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
     currentUser, 
     friends,
     moments,
+    ensureUserMoments,
     timelines,
+    ensureUserTimelines,
     openChatWithUser, 
     changeFriendshipType,
     respondFriendRequest,
@@ -44,14 +48,19 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
     removeFriend,
     blockFriend,
     unblockFriend,
-    deleteTimeline,
-    setActiveTab,
-    setActiveTimelineId
+    deleteTimeline
   } = useApp();
+  const router = useRouter();
 
   const [activeTab, setActiveProfileTab] = useState<'moments' | 'timelines' | 'info'>('moments');
   const [timelineToDelete, setTimelineToDelete] = useState<Timeline | null>(null);
   const [viewingMoment, setViewingMoment] = useState<Moment | null>(null);
+  // Age/gender/bio come from the public profile endpoint (location events
+  // only carry id/name/image) — API doc: no bio field, so it stays empty.
+  const [profile, setProfile] = useState<{
+    age: number;
+    gender: 'Nam' | 'Nữ' | 'Khác';
+  } | null>(null);
 
   const renderGenderIcon = (gender?: string) => {
     const g = (gender || '').toLowerCase();
@@ -81,6 +90,37 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
   const isSelf = liveUser.id === currentUser.id;
   const currentType = liveUser.relationship?.type || 'friend';
   const friendStatus = liveUser.relationship?.status || (liveUser.relationship ? 'accepted' : 'none');
+
+  useEffect(() => {
+    setProfile(null);
+    if (isSelf) return;
+    const numericId = Number(user.id);
+    if (!Number.isFinite(numericId) || numericId <= 0) return;
+    let alive = true;
+    getUserById(numericId)
+      .then((u) => {
+        if (!alive) return;
+        setProfile({
+          age: u.age ?? 0,
+          gender: u.genderId === 1 ? 'Nam' : u.genderId === 2 ? 'Nữ' : 'Khác',
+        });
+      })
+      .catch((err) => console.error('[MarkerDetailDialog] getUserById failed:', err));
+    return () => {
+      alive = false;
+    };
+  }, [user.id, isSelf]);
+
+  // The feed only carries the recent page — merge this profile's visible
+  // moments so the grid and viewer show them all.
+  useEffect(() => {
+    void ensureUserMoments(user.id);
+    void ensureUserTimelines(user.id);
+  }, [user.id, ensureUserMoments, ensureUserTimelines]);
+
+  const displayUser: User = profile
+    ? { ...liveUser, age: profile.age, gender: profile.gender }
+    : liveUser;
 
   // Moments posted by this user
   const userMoments = moments.filter(m => m.userId === liveUser.id);
@@ -163,10 +203,12 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               <div className="flex items-center gap-1.5 overflow-hidden">
                 <h3 className="text-base font-bold text-slate-900 whitespace-nowrap truncate">{liveUser.name}</h3>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
-                    {liveUser.age} tuổi
-                  </span>
-                  {renderGenderIcon(liveUser.gender)}
+                  {displayUser.age > 0 && (
+                    <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                      {displayUser.age} tuổi
+                    </span>
+                  )}
+                  {renderGenderIcon(displayUser.gender)}
                 </div>
               </div>
 
@@ -431,8 +473,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                       key={tl.id}
                       onClick={() => {
                         onClose();
-                        setActiveTab('setting');
-                        setActiveTimelineId(tl.id);
+                        router.push(`/timelines/${tl.id}`);
                       }}
                       className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
                     >
@@ -468,14 +509,14 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                             <Calendar className="w-3 h-3 shrink-0" />
                             <span>{tl.startDate} - {tl.endDate}</span>
                             <span>·</span>
-                            <span>{tl.moments.length} điểm dừng</span>
+                            <span>{tl.momentCount ?? tl.moments.length} điểm dừng</span>
                           </div>
                         </div>
                       </div>
 
                       <div className="p-2.5 flex items-center justify-between text-[11px] gap-2">
                         <span className="text-slate-500 truncate whitespace-nowrap overflow-hidden text-ellipsis flex-1">
-                          {tl.description}
+                          {tl.description || `Tạo bởi ${tl.ownerName}`}
                         </span>
                         
                         <div className="flex items-center gap-2 shrink-0">
@@ -518,21 +559,30 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                 </p>
               </div>
 
-              {/* Location card */}
-              <div className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
-                  Vị trí hiện tại
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-800">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                    <MapPin className="w-4 h-4" />
+              {/* Location card — no reverse-geocode address in the API, so
+                  show coordinates + distance instead (hidden when unknown). */}
+              {(liveUser.location.lat !== 0 || liveUser.location.lng !== 0) && (
+                <div className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs space-y-2">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap truncate">
+                    Vị trí hiện tại
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold whitespace-nowrap truncate">{liveUser.location.address}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap truncate">{liveUser.location.city}</div>
+                  <div className="flex items-start gap-2.5 text-xs text-slate-800">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold whitespace-nowrap truncate">
+                        {liveUser.location.lat.toFixed(5)}, {liveUser.location.lng.toFixed(5)}
+                      </div>
+                      {liveUser.distanceKm !== undefined && (
+                        <div className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap truncate">
+                          Cách {liveUser.distanceKm} km
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Quick Profile Actions (Hủy kết bạn / Chặn) */}
               {!isSelf && friendStatus === 'accepted' && (

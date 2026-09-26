@@ -1,9 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '../../context/AppContext';
+import { useLogout } from '../../hooks/auth/use-logout';
+import { requestNotificationPermission, syncFcmTokenAfterAuth, deleteFcmToken } from '../../lib/fcm';
 import { FriendshipType, VisibilityTier, User as UserType, Timeline, Moment } from '../../types';
-import { VISIBILITY_OPTIONS } from '../../data/mockData';
+import { VISIBILITY_OPTIONS } from '../../constants/visibility';
 import { CreateTimelineModal } from '../timelines/CreateTimelineModal';
-import { TimelineDetailView } from '../timelines/TimelineDetailView';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { 
   User, 
@@ -32,19 +34,26 @@ import {
   MoreVertical,
   Trash2,
   Image as ImageIcon,
-  Upload
+  Upload,
+  Loader2
 } from 'lucide-react';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 export const SettingsView: React.FC = () => {
   const { 
     currentUser, 
     friends, 
     moments, 
+    ensureUserMoments,
     timelines, 
-    activeTimelineId, 
-    setActiveTimelineId,
+    isLoadingTimelines,
     setSelectedUser,
     respondFriendRequest, 
+    cancelFriendRequest,
     changeFriendshipType, 
     removeFriend,
     blockFriend,
@@ -56,6 +65,8 @@ export const SettingsView: React.FC = () => {
     openChatWithUser,
     showToast 
   } = useApp();
+  const router = useRouter();
+  const { mutate: logout } = useLogout();
 
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'timelines' | 'friends' | 'settings'>('settings');
   const [showCreateTimeline, setShowCreateTimeline] = useState(false);
@@ -102,10 +113,68 @@ export const SettingsView: React.FC = () => {
   const [friendToRemove, setFriendToRemove] = useState<UserType | null>(null);
 
   // Single toggle notification as requested
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () => typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted',
+  );
+
+  const handleToggleNotifications = async (enable: boolean) => {
+    if (enable) {
+      if (!('Notification' in window)) {
+        showToast('Trình duyệt này không hỗ trợ thông báo đẩy', 'error');
+        return;
+      }
+      const perm = await requestNotificationPermission();
+      if (perm !== 'granted') {
+        setNotificationsEnabled(false);
+        showToast('Bạn đã từ chối quyền thông báo. Mở cài đặt trình duyệt để bật lại.', 'error');
+        return;
+      }
+      try {
+        await syncFcmTokenAfterAuth();
+      } catch (err) {
+        console.error('[SettingsView] syncFcmTokenAfterAuth failed:', err);
+      }
+      setNotificationsEnabled(true);
+      showToast('Đã bật thông báo 🔔', 'info');
+    } else {
+      try {
+        await deleteFcmToken();
+      } catch (err) {
+        console.error('[SettingsView] deleteFcmToken failed:', err);
+      }
+      setNotificationsEnabled(false);
+      showToast('Đã tắt thông báo', 'info');
+    }
+  };
 
   // Download App modal
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+
+  // PWA install prompt captured when the browser offers it.
+  const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      installPromptRef.current = e as BeforeInstallPromptEvent;
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    const deferred = installPromptRef.current;
+    if (deferred) {
+      try {
+        await deferred.prompt();
+        await deferred.userChoice;
+        installPromptRef.current = null;
+      } catch {
+        // fall through to the manual instructions below
+      }
+    }
+    setShowDownloadModal(true);
+  };
 
   // Logout modal
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -118,18 +187,11 @@ export const SettingsView: React.FC = () => {
 
   const myMoments = moments.filter(m => m.userId === currentUser.id);
 
-  // If a timeline is opened, show detailed journey view
-  if (activeTimelineId) {
-    const selectedTimeline = timelines.find(t => t.id === activeTimelineId);
-    if (selectedTimeline) {
-      return (
-        <TimelineDetailView
-          timeline={selectedTimeline}
-          onBack={() => setActiveTimelineId(null)}
-        />
-      );
-    }
-  }
+  // The feed only carries the recent page — merge my visible moments so the
+  // grid shows them all (timelines load globally via AppContext).
+  useEffect(() => {
+    void ensureUserMoments(currentUser.id);
+  }, [currentUser.id, ensureUserMoments]);
 
   const handleOpenEditProfile = () => {
     setProfileForm({
@@ -143,33 +205,48 @@ export const SettingsView: React.FC = () => {
     setShowEditProfileModal(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogoutModal(false);
     showToast('Đã đăng xuất tài khoản thành công! 👋', 'info');
+    try {
+      await logout();
+    } catch (err) {
+      console.error('[SettingsView] logout failed:', err);
+    }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profileForm.name.trim()) {
       showToast('Vui lòng nhập họ tên của bạn', 'error');
       return;
     }
+    if (isSavingProfile) return;
+    setIsSavingProfile(true);
+    try {
+      // Save profile details (avatar upload + PUT /User/me)
+      await updateProfile({
+        name: profileForm.name.trim(),
+        avatar: profileForm.avatar.trim() || currentUser.avatar,
+        age: Number(profileForm.age) || 20,
+        gender: profileForm.gender as 'Nam' | 'Nữ' | 'Khác',
+        bio: profileForm.bio.trim()
+      });
 
-    // Save profile details
-    updateProfile({
-      name: profileForm.name.trim(),
-      avatar: profileForm.avatar.trim() || currentUser.avatar,
-      age: Number(profileForm.age) || 20,
-      gender: profileForm.gender as 'Nam' | 'Nữ' | 'Khác',
-      bio: profileForm.bio.trim()
-    });
+      // Save status
+      if (profileForm.status.trim() && profileForm.status.trim() !== currentUser.status) {
+        updateStatus(profileForm.status.trim());
+      }
 
-    // Save status
-    if (profileForm.status.trim() && profileForm.status.trim() !== currentUser.status) {
-      updateStatus(profileForm.status.trim());
+      setShowEditProfileModal(false);
+    } catch {
+      // Axios errors are already toasted by the interceptor — keep the
+      // modal open so the user can retry without losing their edits.
+    } finally {
+      setIsSavingProfile(false);
     }
-
-    setShowEditProfileModal(false);
   };
 
   const confirmBlockFriend = () => {
@@ -358,7 +435,7 @@ export const SettingsView: React.FC = () => {
                 Cài đặt ứng dụng trực tiếp vào điện thoại để nhận thông báo và truy cập nhanh chóng.
               </p>
               <button
-                onClick={() => setShowDownloadModal(true)}
+                onClick={handleInstallApp}
                 className="w-full py-2.5 rounded-xl bg-white text-indigo-600 font-bold text-xs shadow-md hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <Download className="w-4 h-4" />
@@ -384,8 +461,7 @@ export const SettingsView: React.FC = () => {
                     type="checkbox"
                     checked={notificationsEnabled}
                     onChange={(e) => {
-                      setNotificationsEnabled(e.target.checked);
-                      showToast(e.target.checked ? 'Đã bật thông báo 🔔' : 'Đã tắt thông báo', 'info');
+                      void handleToggleNotifications(e.target.checked);
                     }}
                     className="sr-only peer"
                   />
@@ -460,7 +536,12 @@ export const SettingsView: React.FC = () => {
               </button>
             </div>
 
-            {timelines.length === 0 ? (
+            {isLoadingTimelines && timelines.length === 0 ? (
+              <div className="bg-white rounded-3xl p-8 text-center border border-slate-100 flex flex-col items-center gap-2">
+                <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                <p className="text-xs text-slate-400">Đang tải hành trình...</p>
+              </div>
+            ) : timelines.length === 0 ? (
               <div className="bg-white rounded-3xl p-8 text-center border border-slate-100">
                 <Compass className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                 <p className="text-xs text-slate-400">Chưa có hành trình nào</p>
@@ -470,7 +551,7 @@ export const SettingsView: React.FC = () => {
                 {timelines.map((tl) => (
                   <div
                     key={tl.id}
-                    onClick={() => setActiveTimelineId(tl.id)}
+                    onClick={() => router.push(`/timelines/${tl.id}`)}
                     className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
                   >
                     <div className="relative h-32 w-full overflow-hidden bg-slate-100">
@@ -487,7 +568,7 @@ export const SettingsView: React.FC = () => {
                           <Calendar className="w-3 h-3" />
                           <span>{tl.startDate} - {tl.endDate}</span>
                           <span>·</span>
-                          <span>{tl.moments.length} điểm dừng</span>
+                          <span>{tl.momentCount ?? tl.moments.length} điểm dừng</span>
                         </div>
                       </div>
                     </div>
@@ -517,17 +598,19 @@ export const SettingsView: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTimelineToDelete(tl);
-                          }}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Xóa hành trình"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {tl.ownerId === currentUser.id && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTimelineToDelete(tl);
+                            }}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Xóa hành trình"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
 
                         <div className="flex items-center gap-1 text-indigo-600 font-bold text-xs group-hover:translate-x-0.5 transition-transform whitespace-nowrap truncate">
                           <span>Chi tiết</span>
@@ -610,7 +693,7 @@ export const SettingsView: React.FC = () => {
                         <span className="text-xs font-medium text-slate-800 hover:text-indigo-600">{req.name}</span>
                       </div>
                       <button
-                        onClick={() => showToast('Đã thu hồi lời mời kết bạn', 'info')}
+                        onClick={() => cancelFriendRequest(req.id)}
                         className="text-[11px] text-rose-600 font-semibold hover:underline cursor-pointer"
                       >
                         Thu hồi
@@ -953,9 +1036,11 @@ export const SettingsView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer"
+                  disabled={isSavingProfile}
+                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  Lưu thay đổi
+                  {isSavingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{isSavingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                 </button>
               </div>
             </form>

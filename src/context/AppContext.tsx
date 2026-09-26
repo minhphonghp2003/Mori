@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { setToastListener } from '../lib/toast';
 import { 
   User, 
   Moment, 
@@ -8,17 +12,53 @@ import {
   VisibilityTier, 
   ReactionEmoji, 
   FriendshipType,
-  Message,
-  DiscoverableGroup
+  FriendshipStatus,
+  Message
 } from '../types';
-import { 
-  CURRENT_USER, 
-  MOCK_FRIENDS, 
-  MOCK_MOMENTS, 
-  MOCK_CONVERSATIONS, 
-  MOCK_MESSAGES_DATA, 
-  MOCK_TIMELINES 
-} from '../data/mockData';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAuth } from '@/providers/auth-provider';
+import { getCurrentUser, updateCurrentUser, setAvatar } from '@/services/user';
+import {
+  getFeedMoments,
+  getUserMoments,
+  createMoment as createMomentApi,
+  deleteMoment as deleteMomentApi,
+  hideMoment as hideMomentApi,
+  changeMomentVisibility as changeMomentVisibilityApi,
+  addMomentReaction,
+} from '@/services/moment';
+import { getPresignedUploadUrls, uploadToPresignedUrl } from '@/services/upload';
+import { isAxiosError } from 'axios';
+import type { MomentVisibility } from '@/types/moment';
+import { mapMoment, toReactionEmoji } from '@/lib/moment/mappers';
+import {
+  getMyFriendships,
+  sendFriendRequest as sendFriendRequestApi,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  revokeFriendRequest,
+  blockUser,
+  unblockUser,
+  removeFriendship,
+  changeFriendshipType as changeFriendshipTypeApi,
+} from '@/services/friendship';
+import { FRIENDSHIP_TYPE_VALUES, isRemoved, type FriendshipDto } from '@/types/friendship';
+import { appHub } from '@/lib/signalr/app-hub';
+import { setMyStatus, setMyVisibility } from '@/store/slices/location-slice';
+import { mapConversation, mapMessage, mapMeToUser, mapFriendshipToUser, dataUrlToBlob, emptyUser } from '@/lib/chat/mappers';
+import {
+  getMyTimelines,
+  getUserTimelines,
+  getTimelineById,
+  createTimeline as createTimelineApi,
+  deleteTimeline as deleteTimelineApi,
+  getTimelineMomentsAll,
+} from '@/services/timeline';
+import { buildTimelineView, type TimelineOwnerLookup } from '@/lib/timeline/mappers';
+import type { TimelineDto } from '@/types/timeline';
+import type { MomentDto } from '@/types/moment';
+import { useChatActions, type ChatActions } from '@/hooks/chat/use-chat-actions';
+import { getCallController } from '@/lib/call/controller';
 
 export interface ToastMessage {
   id: string;
@@ -26,13 +66,16 @@ export interface ToastMessage {
   type?: 'success' | 'info' | 'error';
 }
 
-export interface ActiveCall {
-  partner: User;
-  isVideo: boolean;
-  isConnected: boolean;
-  duration: number;
-  isMuted: boolean;
-  isCameraOff: boolean;
+/** Media for a new moment: already-selected Files (converted from the
+ *  camera/gallery sources by CreateMomentModal) — no bytes in the POST. */
+export interface AddMomentInput {
+  caption: string;
+  images?: File[];
+  video?: File;
+  includeLocation?: boolean;
+  allowComment?: boolean;
+  visibility: VisibilityTier;
+  excludedUserIds?: string[];
 }
 
 interface AppContextType {
@@ -41,18 +84,25 @@ interface AppContextType {
   currentUser: User;
   friends: User[];
   moments: Moment[];
+  momentsHasMore: boolean;
+  isLoadingMoments: boolean;
+  isLoadingMoreMoments: boolean;
+  momentsError: boolean;
+  processingMomentIds: string[];
   conversations: Conversation[];
   messagesMap: Record<string, Message[]>;
+  conversationsHasMore: boolean;
+  isLoadingConversations: boolean;
+  isLoadingMoreConversations: boolean;
+  totalUnreadCount: number;
   timelines: Timeline[];
+  isLoadingTimelines: boolean;
   activeConversationId: string | null;
   setActiveConversationId: (id: string | null) => void;
   activeTimelineId: string | null;
   setActiveTimelineId: (id: string | null) => void;
   selectedUser: User | null;
   setSelectedUser: (user: User | null) => void;
-  activeCall: ActiveCall | null;
-  deviceMode: 'phone' | 'full';
-  setDeviceMode: (mode: 'phone' | 'full') => void;
   toasts: ToastMessage[];
   showToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   removeToast: (id: string) => void;
@@ -64,27 +114,22 @@ interface AppContextType {
   updateVisibility: (tier: VisibilityTier) => void;
   updateBattery: (battery: number, isCharging?: boolean) => void;
   reactToMoment: (momentId: string, emoji: ReactionEmoji) => void;
-  addMoment: (momentData: { 
-    caption: string; 
-    imageUrl: string; 
-    imageUrls?: string[];
-    mediaType?: 'image' | 'video'; 
-    videoUrl?: string; 
-    locationName?: string;
-    includeLocation?: boolean;
-    allowDirectMessage?: boolean;
-    visibility: VisibilityTier; 
-    allowedUserIds?: string[];
-    excludedUserIds?: string[];
-    allowComment: boolean;
-  }) => void;
+  addMoment: (input: AddMomentInput) => Promise<void>;
   deleteMoment: (momentId: string) => void;
-  sendMessage: (conversationId: string, text?: string, imageUrl?: string, locationPin?: { lat: number; lng: number; name: string }, videoUrl?: string, replyTo?: { id: string; senderName: string; text?: string; imageUrl?: string }, momentId?: string) => void;
-  editMessage: (conversationId: string, messageId: string, newText: string) => void;
-  deleteMessage: (conversationId: string, messageId: string) => void;
-  reactToMessage: (conversationId: string, messageId: string, emoji: string) => void;
-  createGroup: (name: string, memberIds: string[], isPrivate: boolean) => string;
-  joinGroup: (group: DiscoverableGroup) => void;
+  hideMoment: (momentId: string) => void;
+  changeMomentVisibility: (momentId: string, tier: VisibilityTier) => void;
+  refreshMoments: () => Promise<void>;
+  loadMoreMoments: () => Promise<void>;
+  ensureUserMoments: (userId: string) => Promise<void>;
+  refreshTimelines: () => Promise<void>;
+  ensureUserTimelines: (userId: string) => Promise<void>;
+  ensureTimelineById: (timelineId: string) => Promise<void>;
+  sendMessage: ChatActions['sendMessage'];
+  editMessage: ChatActions['editMessage'];
+  deleteMessage: ChatActions['deleteMessage'];
+  reactToMessage: ChatActions['reactToMessage'];
+  createGroup: ChatActions['createGroup'];
+  joinGroup: ChatActions['joinGroup'];
   startCall: (partner: User, isVideo: boolean) => void;
   endCall: () => void;
   toggleMuteCall: () => void;
@@ -96,74 +141,578 @@ interface AppContextType {
   removeFriend: (userId: string) => void;
   blockFriend: (userId: string) => void;
   unblockFriend: (userId: string) => void;
-  updateProfile: (profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>) => void;
-  createTimeline: (timelineData: { title: string; description: string; bannerImage: string; startDate: string; endDate: string; partnerIds: string[]; selectedMomentIds: string[] }) => void;
+  blockChat: ChatActions['blockChat'];
+  unblockChat: ChatActions['unblockChat'];
+  updateProfile: (profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>) => Promise<void>;
+  createTimeline: (timelineData: { title: string; partnerIds: string[]; selectedMomentIds: string[] }) => Promise<void>;
   deleteTimeline: (timelineId: string) => void;
-  openChatWithUser: (user: User) => void;
-  toggleArchiveConversation: (conversationId: string) => void;
-  toggleMuteConversation: (conversationId: string) => void;
-  deleteConversation: (conversationId: string) => void;
-  updateGroupInfo: (conversationId: string, updates: { name?: string; avatar?: string; isPrivateGroup?: boolean }) => void;
-  addGroupMembers: (conversationId: string, newMemberIds: string[]) => void;
-  acceptGroupRequest: (conversationId: string, user: User) => void;
-  rejectGroupRequest: (conversationId: string, userId: string) => void;
-  leaveGroup: (conversationId: string) => void;
+  openChatWithUser: ChatActions['openChatWithUser'];
+  toggleArchiveConversation: ChatActions['toggleArchiveConversation'];
+  toggleMuteConversation: ChatActions['toggleMuteConversation'];
+  deleteConversation: ChatActions['deleteConversation'];
+  updateGroupInfo: ChatActions['updateGroupInfo'];
+  addGroupMembers: ChatActions['addGroupMembers'];
+  leaveGroup: ChatActions['leaveGroup'];
+  refreshConversations: ChatActions['refreshConversations'];
+  loadMoreConversations: ChatActions['loadMoreConversations'];
+  loadOlderMessages: ChatActions['loadOlderMessages'];
+  hasMoreMessages: (conversationId: string) => boolean;
+  resolvePartnerUser: ChatActions['resolvePartnerUser'];
+  loadMembers: ChatActions['loadMembers'];
+  searchAndMergeMessages: ChatActions['searchAndMergeMessages'];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const TAB_HREF: Record<NavTab, string> = {
+  home: '/nearby',
+  moments: '/moments',
+  map: '/location',
+  chat: '/chat',
+  setting: '/settings',
+};
+
+const tabFromPathname = (path: string): NavTab => {
+  if (path.startsWith('/nearby')) return 'home';
+  if (path.startsWith('/moments')) return 'moments';
+  if (path.startsWith('/location')) return 'map';
+  if (path.startsWith('/chat')) return 'chat';
+  if (path.startsWith('/settings') || path.startsWith('/timelines')) return 'setting';
+  return 'map';
+};
+
+/** Main-app routes only — auth pages must never be recorded as last_page
+ *  (AppProvider is mounted root-wide now). */
+const isMainRoute = (path: string): boolean =>
+  Object.values(TAB_HREF).some((href) => path === href || path.startsWith(`${href}/`)) ||
+  path.startsWith('/timelines');
+
+/** Match a presigned upload key against a ReceiveFileMarkedSuccess key by
+ *  folder prefix (strip the filename): `users/1/images/<guid>/raw.jpg` vs
+ *  `users/1/images/<guid>/original.webp` → both `users/1/images/<guid>`. */
+const normalizeFileKeyToken = (key: string | undefined): string => {
+  if (!key) return '';
+  const idx = key.lastIndexOf('/');
+  return idx > 0 ? key.slice(0, idx) : key;
+};
+
+const VISIBILITY_NAMES: MomentVisibility[] = ['OnlyMe', 'Friends', 'BestFriend', 'Lover', 'Public'];
+const VISIBILITY_LABELS = ['Chỉ mình tôi', 'Bạn bè', 'Bạn thân', 'Người yêu', 'Công khai'];
+
+/** Neutral pre-hydration identity — replaced by GET /User/me on login. */
+const INITIAL_CURRENT_USER: User = {
+  ...emptyUser('', '', ''),
+  bio: '',
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState<NavTab>('map');
-  const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER);
-  const [friends, setFriends] = useState<User[]>(MOCK_FRIENDS);
-  const [moments, setMoments] = useState<Moment[]>(MOCK_MOMENTS);
-  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
-  const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(MOCK_MESSAGES_DATA);
-  const [timelines, setTimelines] = useState<Timeline[]>(MOCK_TIMELINES);
-  
+  const [currentUser, setCurrentUser] = useState<User>(INITIAL_CURRENT_USER);
+  const [friendships, setFriendships] = useState<FriendshipDto[]>([]);
+  const [moments, setMoments] = useState<Moment[]>([]);
+  const [momentsHasMore, setMomentsHasMore] = useState(false);
+  const [isLoadingMoments, setIsLoadingMoments] = useState(false);
+  const [isLoadingMoreMoments, setIsLoadingMoreMoments] = useState(false);
+  const [momentsError, setMomentsError] = useState(false);
+  const [processingMomentIds, setProcessingMomentIds] = useState<string[]>([]);
+  const [timelines, setTimelines] = useState<Timeline[]>([]);
+  const [isLoadingTimelines, setIsLoadingTimelines] = useState(false);
+
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activeTimelineId, setActiveTimelineId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
-  const [deviceMode, setDeviceMode] = useState<'phone' | 'full'>('phone');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isNavHidden, setIsNavHidden] = useState<boolean>(false);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
 
-  // Auto restore nav bar when tab changes
+  const router = useRouter();
+  const pathname = usePathname();
+  const auth = useAuth();
+  const dispatch = useAppDispatch();
+  const chatState = useAppSelector((s) => s.chat);
+
+  // Raw friendship rows stay in state; the design-shaped `friends` list is
+  // derived so every consumer (map, settings, group picker) sees live state.
+  const friendshipsRef = useRef(friendships);
+  useEffect(() => {
+    friendshipsRef.current = friendships;
+  }, [friendships]);
+
+  // ---- Moments feed internals -------------------------------------------
+  const momentsRef = useRef(moments);
+  useEffect(() => {
+    momentsRef.current = moments;
+  }, [moments]);
+  const momentsCursorRef = useRef<number | null>(null);
+  /** momentId -> presigned keys still awaiting ReceiveFileMarkedSuccess. */
+  const processingMapRef = useRef<Map<string, string[]>>(new Map());
+  const markedFileKeysRef = useRef<Set<string>>(new Set());
+  /** Reaction send queues (server rate-limits to 1 POST/sec per user+moment). */
+  const reactionQueuesRef = useRef<Map<string, { queue: ReactionEmoji[]; timer: number | null; inFlight: boolean }>>(new Map());
+  /** Self-reference for the recursive queue pump (ref writes only in effects). */
+  const pumpReactionsRef = useRef<(momentId: string) => Promise<void>>(async () => {});
+
+  // ---- Timelines internals ---------------------------------------------
+  /** Raw DTO+moments cache so owner-name changes re-map without refetching. */
+  const timelineCacheRef = useRef<Array<{ dto: TimelineDto; momentDtos: MomentDto[] }>>([]);
+  const applyTimelinesRef = useRef<() => void>(() => {});
+
+  const myNumericId = auth.user?.id;
+  const friends = useMemo(() => {
+    if (!myNumericId) return [];
+    return friendships
+      .filter((f) => !isRemoved(f))
+      .map((f) => mapFriendshipToUser(f, myNumericId));
+  }, [friendships, myNumericId]);
+
+  // Active tab is derived from the current route (single source of truth)
+  const activeTab = tabFromPathname(pathname);
+
+  // Navigate to a tab's route (nav bar restores itself via derived state)
   const handleSetActiveTab = (tab: NavTab) => {
     setIsNavHidden(false);
-    setActiveTab(tab);
+    const href = TAB_HREF[tab];
+    if (pathname !== href) router.push(href);
   };
 
-  // Toast helper
-  const showToast = (text: string, type: 'success' | 'info' | 'error' = 'info') => {
-    const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
-    setToasts(prev => [...prev, { id, text, type }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 3200);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
-
-  // Call duration counter
+  // Persist last main page for the "/" redirector
   useEffect(() => {
-    if (!activeCall || !activeCall.isConnected) return;
-    const timer = setInterval(() => {
-      setActiveCall(prev => prev ? { ...prev, duration: prev.duration + 1 } : null);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [activeCall?.isConnected]);
+    if (!isMainRoute(pathname)) return;
+    if (!pathname.startsWith('/chat/')) {
+      localStorage.setItem('last_page', pathname);
+    }
+  }, [pathname]);
 
-  // Profile / Status actions
+  // Toast helper — stable identity so it can also back the module-level
+  // bridge (lib/toast) used by axios/signalr code outside React.
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const showToast = useCallback(
+    (text: string, type: 'success' | 'info' | 'error' = 'info') => {
+      const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
+      setToasts(prev => [...prev, { id, text, type }]);
+      setTimeout(() => {
+        removeToast(id);
+      }, 3200);
+    },
+    [removeToast],
+  );
+
+  useEffect(() => {
+    setToastListener(showToast);
+    return () => setToastListener(null);
+  }, [showToast]);
+
+  // ---------------------------------------------------------------------
+  // Chat state — DTOs live in Redux; design-shaped objects are derived.
+  // ---------------------------------------------------------------------
+  const editedIds = useMemo(
+    () => new Set(chatState.editedMessageIds),
+    [chatState.editedMessageIds],
+  );
+
+  const conversations = useMemo(
+    () => chatState.conversations.map((c) => mapConversation(c, { editedIds })),
+    [chatState.conversations, editedIds],
+  );
+
+  const messagesMap = useMemo(() => {
+    const out: Record<string, Message[]> = {};
+    for (const key of Object.keys(chatState.messages)) {
+      const list = chatState.messages[Number(key)] ?? [];
+      out[key] = list.map((m) => mapMessage(m, { editedIds }));
+    }
+    return out;
+  }, [chatState.messages, editedIds]);
+
+  const chatActions = useChatActions({
+    toast: showToast,
+    setSelectedUser,
+    revealNav: () => setIsNavHidden(false),
+  });
+
+  const {
+    refreshConversations,
+    enterConversation,
+    leaveConversation,
+  } = chatActions;
+
+  // Real profile identity (isMe checks depend on currentUser.id being correct
+  // as soon as the session hydrates; the full profile lands right after).
+  useEffect(() => {
+    if (!auth.hydrated || !auth.user) return;
+    const uid = String(auth.user.id);
+    const authName = auth.user.name;
+    let cancelled = false;
+    setCurrentUser((prev) =>
+      prev.id === uid ? prev : { ...prev, id: uid, name: authName || prev.name },
+    );
+    (async () => {
+      try {
+        const me = await getCurrentUser();
+        if (!cancelled) setCurrentUser(mapMeToUser(me));
+      } catch (err) {
+        console.error('[AppContext] getCurrentUser failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.hydrated, auth.user?.id, auth.user?.name]);
+
+  // Real friendship graph (accepted + pending + blocked rows for the
+  // settings/profile surfaces; group creation filters accepted).
+  const refreshFriendships = useCallback(async () => {
+    try {
+      const res = await getMyFriendships({ take: 100 });
+      setFriendships(res.data.filter((f) => !isRemoved(f)));
+    } catch (err) {
+      console.error('[AppContext] getMyFriendships failed:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!auth.hydrated || !myNumericId) return;
+    void refreshFriendships();
+  }, [auth.hydrated, myNumericId, refreshFriendships]);
+
+  // ---------------------------------------------------------------------
+  // Moments feed — first page on login, cursor paging, focus refetch.
+  // ---------------------------------------------------------------------
+  const refreshMoments = useCallback(async () => {
+    setIsLoadingMoments(true);
+    setMomentsError(false);
+    try {
+      const page = await getFeedMoments(null, 10);
+      momentsCursorRef.current = page.prevId;
+      setMomentsHasMore(page.hasMore);
+      setMoments(page.data.map(mapMoment));
+    } catch (err) {
+      console.error('[AppContext] getFeedMoments failed:', err);
+      setMomentsError(true);
+    } finally {
+      setIsLoadingMoments(false);
+    }
+  }, []);
+
+  const loadMoreMoments = useCallback(async () => {
+    if (isLoadingMoreMoments || !momentsHasMore) return;
+    setIsLoadingMoreMoments(true);
+    try {
+      const page = await getFeedMoments(momentsCursorRef.current, 10);
+      momentsCursorRef.current = page.prevId;
+      setMomentsHasMore(page.hasMore);
+      setMoments((prev) => {
+        const ids = new Set(prev.map((m) => m.id));
+        return [...prev, ...page.data.map(mapMoment).filter((m) => !ids.has(m.id))];
+      });
+    } catch (err) {
+      console.error('[AppContext] loadMoreMoments failed:', err);
+      setMomentsError(true);
+    } finally {
+      setIsLoadingMoreMoments(false);
+    }
+  }, [isLoadingMoreMoments, momentsHasMore]);
+
+  /** A user's visible moments merged into the feed list (profile grids). */
+  const ensureUserMoments = useCallback(async (userId: string) => {
+    const uid = Number(userId);
+    if (!uid) return;
+    try {
+      const page = await getUserMoments(uid, null, 12);
+      const mapped = page.data.map(mapMoment);
+      setMoments((prev) => {
+        const rest = prev.filter((m) => m.userId !== String(uid));
+        const existing = new Set(rest.map((m) => m.id));
+        return [...mapped.filter((m) => !existing.has(m.id)), ...rest];
+      });
+    } catch (err) {
+      console.error('[AppContext] getUserMoments failed:', err);
+    }
+  }, []);
+
+  // ---------------------------------------------------------------------
+  // Timelines — API-backed (/Timeline/me cursor) enriched with each
+  // timeline's moments so cards/detail get banner + dates + journey stops.
+  // ---------------------------------------------------------------------
+  const timelineOwnerCtx = useMemo<TimelineOwnerLookup>(() => ({
+    myId: myNumericId ? String(myNumericId) : '',
+    findUser: (id: string) => {
+      if (id && myNumericId && String(myNumericId) === id) {
+        return { name: currentUser.name, avatar: currentUser.avatar };
+      }
+      const f = friends.find((u) => u.id === id);
+      return f ? { name: f.name, avatar: f.avatar } : undefined;
+    },
+  }), [myNumericId, currentUser.name, currentUser.avatar, friends]);
+
+  const applyTimelinesFromCache = useCallback(() => {
+    setTimelines(
+      timelineCacheRef.current.map(({ dto, momentDtos }) =>
+        buildTimelineView(dto, momentDtos, timelineOwnerCtx),
+      ),
+    );
+  }, [timelineOwnerCtx]);
+
+  useEffect(() => {
+    applyTimelinesRef.current = applyTimelinesFromCache;
+  }, [applyTimelinesFromCache]);
+
+  // Profile/friends landing after the first load → re-map owner names
+  // from the cache without refetching anything.
+  useEffect(() => {
+    if (timelineCacheRef.current.length) applyTimelinesFromCache();
+  }, [applyTimelinesFromCache]);
+
+  /** Fetch each timeline's moments (best-effort; empty on failure). */
+  const enrichTimelineCaches = useCallback(async (dtos: TimelineDto[]) => {
+    return Promise.all(
+      dtos.map(async (dto) => {
+        let momentDtos: MomentDto[] = [];
+        try {
+          momentDtos = await getTimelineMomentsAll(Number(dto.id));
+        } catch (err) {
+          console.error('[AppContext] getTimelineMoments failed:', err);
+        }
+        return { dto, momentDtos };
+      }),
+    );
+  }, []);
+
+  const refreshTimelines = useCallback(async () => {
+    setIsLoadingTimelines(true);
+    try {
+      const page = await getMyTimelines(null, 20);
+      timelineCacheRef.current = await enrichTimelineCaches(page.data);
+      applyTimelinesRef.current();
+    } catch (err) {
+      console.error('[AppContext] getMyTimelines failed:', err);
+    } finally {
+      setIsLoadingTimelines(false);
+    }
+  }, [enrichTimelineCaches]);
+
+  /** A user's timelines merged into the list (profile sheet tab). */
+  const ensureUserTimelines = useCallback(async (userId: string) => {
+    const uid = Number(userId);
+    if (!uid) return;
+    try {
+      const page = await getUserTimelines(uid, null, 20);
+      if (!page.data.length) return;
+      const fetched = await enrichTimelineCaches(page.data);
+      const fetchedIds = new Set(fetched.map((r) => String(r.dto.id)));
+      timelineCacheRef.current = [
+        ...fetched,
+        ...timelineCacheRef.current.filter((r) => !fetchedIds.has(String(r.dto.id))),
+      ];
+      applyTimelinesRef.current();
+    } catch (err) {
+      console.error('[AppContext] getUserTimelines failed:', err);
+    }
+  }, [enrichTimelineCaches]);
+
+  /** On-demand fetch for a moment's timeline chip when it isn't loaded yet. */
+  const ensureTimelineById = useCallback(async (timelineId: string) => {
+    const tid = Number(timelineId);
+    if (!tid) return;
+    if (timelineCacheRef.current.some((r) => String(r.dto.id) === String(tid))) return;
+    try {
+      const res = await getTimelineById(tid);
+      if (!res.data) return;
+      const rows = await enrichTimelineCaches([res.data]);
+      timelineCacheRef.current = [...rows, ...timelineCacheRef.current];
+      applyTimelinesRef.current();
+    } catch (err) {
+      console.error('[AppContext] getTimelineById failed:', err);
+    }
+  }, [enrichTimelineCaches]);
+
+  const findFriendshipRow = (userId: string): FriendshipDto | undefined => {
+    const my = auth.user?.id;
+    const oid = Number(userId);
+    if (!my) return undefined;
+    return friendshipsRef.current.find(
+      (f) => (f.user1Id === my && f.user2Id === oid) || (f.user1Id === oid && f.user2Id === my),
+    );
+  };
+
+  const upsertFriendship = useCallback((dto: FriendshipDto) => {
+    setFriendships((prev) => {
+      const rest = prev.filter((x) => x.id !== dto.id);
+      return isRemoved(dto) ? rest : [...rest, dto];
+    });
+  }, []);
+
+  const dropFriendship = useCallback((id: number) => {
+    setFriendships((prev) => prev.filter((x) => x.id !== id));
+  }, []);
+
+  /** Relationship of `dto` as seen by me, in the design shape. */
+  const relationshipFromDto = (
+    dto: FriendshipDto,
+  ): { type: FriendshipType; status: FriendshipStatus } | undefined => {
+    const my = auth.user?.id;
+    if (!my) return undefined;
+    return mapFriendshipToUser(dto, my).relationship;
+  };
+
+  /** Keep the open profile sheet in sync (strangers aren't in `friends`). */
+  const syncSelectedRelationship = (
+    userId: string,
+    relationship?: { type: FriendshipType; status: FriendshipStatus },
+  ) => {
+    setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, relationship } : prev));
+  };
+
+  /** Axios already toasts; here we only log and re-sync (400 = someone beat us to it). */
+  const onFriendshipError = (label: string, err: unknown) => {
+    console.error(`[AppContext] ${label} failed:`, err);
+    void refreshFriendships();
+  };
+
+  // Realtime friendship + moment changes broadcast by the hub (multi-slot
+  // subscriptions; cleared on appHub.stop()).
+  const handleFileMarkedSuccess = useCallback((data: { originalKey?: string; key?: string; fileId?: string }) => {
+    const raw = data.originalKey ?? data.key ?? data.fileId;
+    if (!raw) return;
+    markedFileKeysRef.current.add(normalizeFileKeyToken(raw));
+    const resolved: string[] = [];
+    processingMapRef.current.forEach((keys, mid) => {
+      const remaining = keys.filter((k) => !markedFileKeysRef.current.has(k));
+      if (remaining.length === 0) resolved.push(mid);
+      else processingMapRef.current.set(mid, remaining);
+    });
+    resolved.forEach((mid) => {
+      processingMapRef.current.delete(mid);
+    });
+    // POST /Moment answers with a transient id-0 placeholder row — the real
+    // moment (real id, Success status) only exists after processing, so swap
+    // the whole page for fresh server ids instead of refetching one row.
+    if (resolved.length > 0) {
+      setProcessingMomentIds([...processingMapRef.current.keys()]);
+      void refreshMoments();
+    }
+  }, [refreshMoments]);
+
+  useEffect(() => {
+    if (!auth.hydrated || !auth.isAuthenticated || !myNumericId) return;
+    const unsubs = [
+      appHub.onReceiveFriendshipCreated(upsertFriendship),
+      appHub.onReceiveFriendshipAccepted(upsertFriendship),
+      appHub.onReceiveFriendshipBlocked(upsertFriendship),
+      appHub.onReceiveFriendshipUnblocked(upsertFriendship),
+      appHub.onReceiveMomentReacted((data) => {
+        setMoments((prev) =>
+          prev.map((m) => {
+            if (m.id !== String(data.momentId)) return m;
+            const uid = String(data.userId);
+            if (m.reactions.some((r) => r.userId === uid && r.emoji === data.emoji)) return m;
+            return {
+              ...m,
+              reactions: [
+                ...m.reactions,
+                {
+                  userId: uid,
+                  userName: data.userName,
+                  userAvatar: data.userImage?.thumbUrl ?? '',
+                  emoji: toReactionEmoji(data.emoji),
+                },
+              ],
+            };
+          }),
+        );
+      }),
+      appHub.onReceiveFileMarkedSuccess(handleFileMarkedSuccess),
+    ];
+    return () => {
+      for (const unsub of unsubs) unsub();
+    };
+  }, [auth.hydrated, auth.isAuthenticated, myNumericId, upsertFriendship, handleFileMarkedSuccess]);
+
+  // Conversation list: first page on login + refetch when the tab regains
+  // focus (rows go stale otherwise — API doc §19 recommends a refetch).
+  const authReady = auth.hydrated && auth.isAuthenticated && !!auth.user;
+  useEffect(() => {
+    if (!authReady) return;
+    let alive = true;
+    setIsLoadingConversations(true);
+    refreshConversations().finally(() => {
+      if (alive) setIsLoadingConversations(false);
+    });
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void refreshConversations();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      alive = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [authReady, auth.user?.id, refreshConversations]);
+
+  // Drop the previous user's social state the moment the session ends
+  // (AppProvider is root-mounted and survives logout → /init).
+  useEffect(() => {
+    if (auth.hydrated && !auth.isAuthenticated) {
+      setFriendships([]);
+      setMoments([]);
+      setMomentsHasMore(false);
+      setMomentsError(false);
+      setProcessingMomentIds([]);
+      processingMapRef.current.clear();
+      markedFileKeysRef.current.clear();
+      reactionQueuesRef.current.clear();
+      momentsCursorRef.current = null;
+      setTimelines([]);
+      timelineCacheRef.current = [];
+    }
+  }, [auth.hydrated, auth.isAuthenticated]);
+
+  // Moments feed + timelines: first page on login + refetch when the tab
+  // regains focus.
+  useEffect(() => {
+    if (!authReady) return;
+    void refreshMoments();
+    void refreshTimelines();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshMoments();
+        void refreshTimelines();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [authReady, auth.user?.id, refreshMoments, refreshTimelines]);
+
+  // Enter/leave wrapper: page components keep calling
+  // setActiveConversationId, which now drives the SignalR room join and the
+  // message window.
+  const handleSetActiveConversationId = useCallback(
+    (id: string | null) => {
+      setActiveConversationId(id);
+      if (id) void enterConversation(id);
+      else void leaveConversation();
+    },
+    [enterConversation, leaveConversation],
+  );
+
+  const hasMoreMessages = useCallback(
+    (conversationId: string) => !!chatState.messageHasMore[Number(conversationId)],
+    [chatState.messageHasMore],
+  );
+
+  // Profile / Status actions — pushed to the hub so other map users see them.
   const updateStatus = (newStatus: string) => {
-    setCurrentUser(prev => ({ ...prev, status: newStatus, lastUpdated: 'Vừa xong' }));
+    const trimmed = newStatus.slice(0, 45);
+    void appHub.updateStatus(trimmed);
+    dispatch(setMyStatus(trimmed));
+    setCurrentUser(prev => ({ ...prev, status: trimmed, lastUpdated: 'Vừa xong' }));
     showToast('Đã cập nhật trạng thái mới ✨', 'success');
   };
 
   const updateVisibility = (tier: VisibilityTier) => {
+    void appHub.updateVisibility(tier);
+    dispatch(setMyVisibility(tier));
     setCurrentUser(prev => ({ ...prev, visibility: tier }));
     const labels = ['Chỉ mình tôi', 'Bạn bè', 'Bạn thân', 'Người yêu', 'Công khai'];
     showToast(`Đã đổi quyền riêng tư vị trí: ${labels[tier]} 📍`, 'success');
@@ -174,696 +723,465 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Cập nhật mức pin: ${battery}%`, 'info');
   };
 
-  // Moments actions
-  const reactToMoment = (momentId: string, emoji: ReactionEmoji) => {
-    setMoments(prev => prev.map(m => {
-      if (m.id !== momentId) return m;
-      const existingReactionIndex = m.reactions.findIndex(r => r.userId === currentUser.id);
-      let updatedReactions = [...m.reactions];
+  // ---------------------------------------------------------------------
+  // Moments actions — feed rows are API-backed. Reactions are add-only
+  // upstream (unique moment+user+emoji, no DELETE endpoint), so optimistic
+  // state mirrors that: duplicates are no-ops, never optimistic-off.
+  // ---------------------------------------------------------------------
+  const dropOptimisticReaction = useCallback((momentId: string, emoji: ReactionEmoji) => {
+    const my = auth.user ? String(auth.user.id) : '';
+    setMoments((prev) =>
+      prev.map((m) =>
+        m.id === momentId
+          ? { ...m, reactions: m.reactions.filter((r) => !(r.userId === my && r.emoji === emoji)) }
+          : m,
+      ),
+    );
+  }, [auth.user]);
 
-      if (existingReactionIndex >= 0) {
-        if (updatedReactions[existingReactionIndex].emoji === emoji) {
-          // Remove reaction if same
-          updatedReactions.splice(existingReactionIndex, 1);
-        } else {
-          // Update reaction
-          updatedReactions[existingReactionIndex] = {
-            ...updatedReactions[existingReactionIndex],
-            emoji
-          };
-        }
-      } else {
-        // Add new reaction
-        updatedReactions.push({
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userAvatar: currentUser.avatar,
-          emoji
-        });
-      }
-      return { ...m, reactions: updatedReactions };
-    }));
-  };
-
-  const addMoment = (momentData: { 
-    caption: string; 
-    imageUrl: string; 
-    imageUrls?: string[];
-    mediaType?: 'image' | 'video'; 
-    videoUrl?: string; 
-    locationName?: string; 
-    includeLocation?: boolean;
-    allowDirectMessage?: boolean;
-    visibility: VisibilityTier; 
-    allowedUserIds?: string[];
-    excludedUserIds?: string[];
-    allowComment: boolean;
-  }) => {
-    const newMoment: Moment = {
-      id: "moment_" + Date.now(),
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userAvatar: currentUser.avatar,
-      imageUrl: momentData.imageUrl,
-      imageUrls: momentData.imageUrls && momentData.imageUrls.length > 0 ? momentData.imageUrls : [momentData.imageUrl],
-      mediaType: momentData.mediaType || 'image',
-      videoUrl: momentData.videoUrl,
-      caption: momentData.caption,
-      locationName: momentData.includeLocation !== false ? (momentData.locationName || currentUser.location.address) : undefined,
-      includeLocation: momentData.includeLocation !== false,
-      allowDirectMessage: momentData.allowDirectMessage !== false,
-      timeAgo: 'Vừa xong',
-      createdAt: new Date().toISOString(),
-      visibility: momentData.visibility,
-      allowedUserIds: momentData.allowedUserIds,
-      excludedUserIds: momentData.excludedUserIds,
-      allowComment: momentData.allowComment,
-      reactions: []
-    };
-
-    setMoments(prev => [newMoment, ...prev]);
-    showToast('Đã đăng khoảnh khắc mới thành công! 📸', 'success');
-  };
-  const deleteMoment = (momentId: string) => {
-    setMoments(prev => prev.filter(m => m.id !== momentId));
-    showToast('Đã xóa khoảnh khắc thành công', 'info');
-  };
-
-  // Chat actions
-  const sendMessage = (
-    conversationId: string, 
-    text?: string, 
-    imageUrl?: string, 
-    locationPin?: { lat: number; lng: number; name: string },
-    videoUrl?: string,
-    replyTo?: { id: string; senderName: string; text?: string; imageUrl?: string },
-    momentId?: string
-  ) => {
-    if (!text && !imageUrl && !locationPin && !videoUrl && !momentId) return;
-
-    const newMsg: Message = {
-      id: `msg_${Date.now()}`,
-      senderId: currentUser.id,
-      text,
-      imageUrl,
-      videoUrl,
-      locationPin,
-      replyTo,
-      momentId,
-      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      status: 'delivered',
-      reactions: []
-    };
-
-    setMessagesMap(prev => ({
-      ...prev,
-      [conversationId]: [...(prev[conversationId] || []), newMsg]
-    }));
-
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      return {
-        ...conv,
-        lastMessage: newMsg
-      };
-    }));
-
-    // Simulate smart auto-reply after 1.5s if talking to a friend 1:1
-    const currentConv = conversations.find(c => c.id === conversationId);
-    if (currentConv && !currentConv.isGroup) {
-      const partner = currentConv.participants.find(p => p.id !== currentUser.id);
-      if (partner) {
-        setTimeout(() => {
-          const autoReplies = [
-            'Okie bạn ơi! Chiều gặp nhé 😊',
-            'Hay quá, tí tôi xem ngay!',
-            'Tớ vừa thấy khoảnh khắc của bạn trên bản đồ rồi nè 📍',
-            'Cảm ơn bạn nhiều nha! ❤️'
-          ];
-          const randomReply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
-          const replyMsg: Message = {
-            id: `reply_${Date.now()}`,
-            senderId: partner.id,
-            text: randomReply,
-            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-            status: 'read'
-          };
-          setMessagesMap(mPrev => ({
-            ...mPrev,
-            [conversationId]: [...(mPrev[conversationId] || []), replyMsg]
-          }));
-          setConversations(cPrev => cPrev.map(conv => {
-            if (conv.id !== conversationId) return conv;
-            return {
-              ...conv,
-              lastMessage: replyMsg,
-              unreadCount: activeConversationId === conversationId ? 0 : conv.unreadCount + 1
-            };
-          }));
-        }, 1500);
-      }
-    }
-  };
-
-  const reactToMessage = (conversationId: string, messageId: string, emoji: string) => {
-    setMessagesMap(prev => {
-      const list = prev[conversationId] || [];
-      const updated = list.map(msg => {
-        if (msg.id !== messageId) return msg;
-        const currentReactions = msg.reactions || [];
-        const existingIdx = currentReactions.findIndex(r => r.userId === currentUser.id);
-        let nextReactions = [...currentReactions];
-        if (existingIdx >= 0) {
-          if (nextReactions[existingIdx].emoji === emoji) {
-            nextReactions.splice(existingIdx, 1);
-          } else {
-            nextReactions[existingIdx] = { userId: currentUser.id, emoji };
-          }
-        } else {
-          nextReactions.push({ userId: currentUser.id, emoji });
-        }
-        return { ...msg, reactions: nextReactions };
-      });
-      return { ...prev, [conversationId]: updated };
-    });
-  };
-
-  const editMessage = (conversationId: string, messageId: string, newText: string) => {
-    if (!newText.trim()) return;
-    setMessagesMap(prev => {
-      const list = prev[conversationId] || [];
-      return {
-        ...prev,
-        [conversationId]: list.map(m => m.id === messageId ? { ...m, text: newText.trim(), isEdited: true } : m)
-      };
-    });
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      if (conv.lastMessage.id === messageId) {
-        return {
-          ...conv,
-          lastMessage: { ...conv.lastMessage, text: newText.trim(), isEdited: true }
-        };
-      }
-      return conv;
-    }));
-    showToast('Đã chỉnh sửa tin nhắn ✏️', 'success');
-  };
-
-  const deleteMessage = (conversationId: string, messageId: string) => {
-    setMessagesMap(prev => {
-      const list = prev[conversationId] || [];
-      const updated = list.filter(m => m.id !== messageId);
-      return {
-        ...prev,
-        [conversationId]: updated
-      };
-    });
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      if (conv.lastMessage.id === messageId) {
-        const remaining = (messagesMap[conversationId] || []).filter(m => m.id !== messageId);
-        const lastMsg = remaining.length > 0 ? remaining[remaining.length - 1] : conv.lastMessage;
-        return {
-          ...conv,
-          lastMessage: lastMsg
-        };
-      }
-      return conv;
-    }));
-    showToast('Đã xóa tin nhắn 🗑️', 'info');
-  };
-
-  const createGroup = (name: string, memberIds: string[], isPrivate: boolean) => {
-    const selectedFriends = friends.filter(f => memberIds.includes(f.id));
-    const newConvId = `conv_group_${Date.now()}`;
-    const newGroupConv: Conversation = {
-      id: newConvId,
-      isGroup: true,
-      name,
-      avatar: selectedFriends[0]?.avatar || CURRENT_USER.avatar,
-      participants: [currentUser, ...selectedFriends],
-      lastMessage: {
-        id: `init_${Date.now()}`,
-        senderId: currentUser.id,
-        text: `Đã tạo nhóm "${name}"`,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        status: 'delivered'
-      },
-      unreadCount: 0,
-      isPrivateGroup: isPrivate
-    };
-
-    setConversations(prev => [newGroupConv, ...prev]);
-    setMessagesMap(prev => ({
-      ...prev,
-      [newConvId]: [newGroupConv.lastMessage]
-    }));
-
-    showToast(`Đã tạo nhóm "${name}" 🎉`, 'success');
-    return newConvId;
-  };
-
-  const joinGroup = (group: DiscoverableGroup) => {
-    const existing = conversations.find(c => c.id === group.id || c.name === group.name);
-    if (existing) {
-      setActiveConversationId(existing.id);
-      setActiveTab('chat');
+  // Sequential sender: server rate-limits reactions to 1 req/sec per
+  // user+moment (rejected calls come back as an empty 200), so queued taps
+  // are flushed one-by-one with a 1.05 s gap.
+  const pumpReactions = useCallback(async (momentId: string) => {
+    const entry = reactionQueuesRef.current.get(momentId);
+    if (!entry || entry.inFlight) return;
+    if (entry.queue.length === 0) {
+      reactionQueuesRef.current.delete(momentId);
       return;
     }
+    entry.inFlight = true;
+    const emoji = entry.queue.shift()!;
+    try {
+      await addMomentReaction(Number(momentId), emoji);
+    } catch (err) {
+      // axios already toasted; drop the optimistic row so state matches.
+      console.error('[AppContext] addMomentReaction failed:', err);
+      dropOptimisticReaction(momentId, emoji);
+    } finally {
+      entry.inFlight = false;
+      if (entry.queue.length > 0) {
+        entry.timer = window.setTimeout(() => {
+          entry.timer = null;
+          void pumpReactionsRef.current(momentId);
+        }, 1050);
+      } else {
+        reactionQueuesRef.current.delete(momentId);
+      }
+    }
+  }, [dropOptimisticReaction]);
 
-    const newGroupConv: Conversation = {
-      id: group.id,
-      isGroup: true,
-      name: group.name,
-      avatar: group.avatar,
-      participants: [currentUser, ...friends.slice(0, 3)],
-      lastMessage: {
-        id: `join_${Date.now()}`,
-        senderId: 'system',
-        text: `🎉 Bạn đã tham gia "${group.name}". Hãy gửi lời chào đến các thành viên!`,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        status: 'delivered'
-      },
-      unreadCount: 0,
-      isPrivateGroup: group.isPrivate
-    };
+  useEffect(() => {
+    pumpReactionsRef.current = pumpReactions;
+  }, [pumpReactions]);
 
-    setConversations(prev => [newGroupConv, ...prev]);
-    setMessagesMap(prev => ({
-      ...prev,
-      [group.id]: [newGroupConv.lastMessage]
-    }));
+  const reactToMoment = (momentId: string, emoji: ReactionEmoji) => {
+    const my = currentUser.id;
+    setMoments((prev) =>
+      prev.map((m) => {
+        if (m.id !== momentId) return m;
+        if (m.reactions.some((r) => r.userId === my && r.emoji === emoji)) return m;
+        return {
+          ...m,
+          reactions: [
+            ...m.reactions,
+            { userId: my, userName: currentUser.name, userAvatar: currentUser.avatar, emoji },
+          ],
+        };
+      }),
+    );
 
-    showToast(`Đã tham gia nhóm "${group.name}" thành công! 🎉`, 'success');
-    setActiveConversationId(group.id);
-    setActiveTab('chat');
+    const alreadyOnServer = momentsRef.current
+      .find((m) => m.id === momentId)
+      ?.reactions.some((r) => r.userId === my && r.emoji === emoji);
+    if (alreadyOnServer) return;
+
+    let entry = reactionQueuesRef.current.get(momentId);
+    if (!entry) {
+      entry = { queue: [], timer: null, inFlight: false };
+      reactionQueuesRef.current.set(momentId, entry);
+    }
+    if (entry.queue.includes(emoji)) return;
+    entry.queue.push(emoji);
+    if (entry.timer == null && !entry.inFlight) {
+      entry.timer = window.setTimeout(() => {
+        entry.timer = null;
+        void pumpReactionsRef.current(momentId);
+      }, 1000);
+    }
   };
 
-  // Calling actions
-  const startCall = (partner: User, isVideo: boolean) => {
-    setActiveCall({
-      partner,
-      isVideo,
-      isConnected: false,
-      duration: 0,
-      isMuted: false,
-      isCameraOff: false
-    });
+  /** presigned `Moment` upload → POST /Moment → prepend to the feed. */
+  const addMoment = async (input: AddMomentInput): Promise<void> => {
+    const files = input.images?.length ? input.images : input.video ? [input.video] : [];
+    if (files.length === 0) {
+      showToast('Không có ảnh hoặc video nào để đăng.', 'error');
+      throw new Error('no media');
+    }
+    const contentTypes = files.map((f) => f.type || 'application/octet-stream');
+    try {
+      const presigned = await getPresignedUploadUrls({ bucket: 'Moment', contentTypes });
+      await Promise.all(
+        presigned.map((item, i) => uploadToPresignedUrl(item.uploadUrl, files[i], contentTypes[i])),
+      );
+      const isVideo = input.video != null;
+      const dto = await createMomentApi({
+        caption: input.caption || undefined,
+        visibility: input.visibility,
+        allowComment: input.allowComment !== false,
+        isShowLocation: input.includeLocation !== false,
+        excludedUserIds: input.excludedUserIds?.length ? input.excludedUserIds.join(',') : null,
+        imageFileIds: isVideo ? null : presigned.map((p) => p.fileId),
+        videoFileId: isVideo ? (presigned[0]?.fileId ?? null) : null,
+      });
+      const mapped = mapMoment(dto);
+      // The create response carries a transient id-0 placeholder (the real
+      // id only exists after processing) — repeated creates must not eat
+      // each other's placeholder rows.
+      setMoments((prev) => [mapped, ...prev.filter((m) => m.id !== mapped.id || mapped.id === '0')]);
+      if (dto.status === 'Processing') {
+        const marked = markedFileKeysRef.current;
+        const remaining = presigned
+          .map((p) => normalizeFileKeyToken(p.key))
+          .filter((k) => k && !marked.has(k));
+        if (remaining.length > 0) {
+          processingMapRef.current.set(mapped.id, remaining);
+          setProcessingMomentIds([...processingMapRef.current.keys()]);
+          // Safety net: if the hub event never arrives, the placeholder
+          // must not sit with a stuck pill forever.
+          setTimeout(() => {
+            const stillWaiting = [...processingMapRef.current.keys()];
+            if (stillWaiting.length > 0) {
+              processingMapRef.current.clear();
+              setProcessingMomentIds([]);
+              void refreshMoments();
+            }
+          }, 45000);
+        }
+      }
+      showToast('Đã đăng khoảnh khắc mới thành công! 📸', 'success');
+    } catch (err) {
+      console.error('[AppContext] addMoment failed:', err);
+      if (!isAxiosError(err)) {
+        showToast(err instanceof Error ? err.message : 'Đăng khoảnh khắc thất bại.', 'error');
+      }
+      throw err;
+    }
+  };
 
-    // Auto connect after 2 seconds
-    setTimeout(() => {
-      setActiveCall(prev => prev ? { ...prev, isConnected: true } : null);
-    }, 2000);
+  /** API call first; the ReelCard shows its own success toast/close. */
+  const deleteMoment = (momentId: string) => {
+    const numericId = Number(momentId);
+    if (!numericId) return;
+    void (async () => {
+      try {
+        await deleteMomentApi(numericId);
+        setMoments((prev) => prev.filter((m) => m.id !== momentId));
+      } catch (err) {
+        console.error('[AppContext] deleteMoment failed:', err);
+        void refreshMoments();
+      }
+    })();
+  };
+
+  /** Hide someone else's moment from my feed (server keeps no undo). */
+  const hideMoment = (momentId: string) => {
+    const numericId = Number(momentId);
+    if (!numericId) return;
+    void (async () => {
+      try {
+        await hideMomentApi(numericId);
+        setMoments((prev) => prev.filter((m) => m.id !== momentId));
+        showToast('Đã ẩn khoảnh khắc khỏi feed của bạn', 'info');
+      } catch (err) {
+        console.error('[AppContext] hideMoment failed:', err);
+      }
+    })();
+  };
+
+  const changeMomentVisibility = (momentId: string, tier: VisibilityTier) => {
+    const numericId = Number(momentId);
+    if (!numericId || tier < 0 || tier > 4) return;
+    void (async () => {
+      try {
+        const dto = await changeMomentVisibilityApi(numericId, VISIBILITY_NAMES[tier]);
+        const mapped = mapMoment(dto);
+        setMoments((prev) => prev.map((m) => (m.id === momentId ? { ...m, ...mapped } : m)));
+        showToast(`Đã đổi quyền xem: ${VISIBILITY_LABELS[tier]} 🔒`, 'success');
+      } catch (err) {
+        console.error('[AppContext] changeMomentVisibility failed:', err);
+      }
+    })();
+  };
+
+  // Calling actions — delegated to the CallProvider (real WebRTC) mounted
+  // under (main)/layout. AppProvider is root-mounted so it reaches the
+  // provider through the controller bridge instead of useCall().
+  const startCall = (partner: User, isVideo: boolean) => {
+    const controller = getCallController();
+    if (!controller) {
+      showToast('Không thể gọi lúc này, vui lòng thử lại', 'error');
+      return;
+    }
+    controller.startCall(Number(partner.id), partner.name, partner.avatar || null, isVideo);
   };
 
   const endCall = () => {
-    setActiveCall(null);
-    showToast('Cuộc gọi đã kết thúc', 'info');
+    getCallController()?.endCall();
   };
 
   const toggleMuteCall = () => {
-    setActiveCall(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null);
+    getCallController()?.toggleMic();
   };
 
   const toggleCameraCall = () => {
-    setActiveCall(prev => prev ? { ...prev, isCameraOff: !prev.isCameraOff } : null);
+    getCallController()?.toggleCamera();
   };
 
-  // Friends & Social Graph actions
+  // Friends & Social Graph actions — backed by /Friendship endpoints.
+  // Lock contention (409) is retried by the axios interceptor; a 400 here
+  // means the relationship changed server-side, so we re-fetch the list.
   const respondFriendRequest = (userId: string, accept: boolean) => {
-    setFriends(prev => prev.map(f => {
-      if (f.id !== userId) return f;
-      return {
-        ...f,
-        relationship: {
-          type: f.relationship?.type || 'friend',
-          status: accept ? 'accepted' : 'blocked'
-        }
-      };
-    }));
-
-    setSelectedUser(prev => (prev && prev.id === userId) ? {
-      ...prev,
-      relationship: {
-        type: prev.relationship?.type || 'friend',
-        status: accept ? 'accepted' : 'blocked'
-      }
-    } : prev);
-
-    const friendName = friends.find(f => f.id === userId)?.name || 'Bạn';
-    if (accept) {
-      showToast(`Đã kết bạn với ${friendName} 🤝`, 'success');
-    } else {
-      showToast(`Đã từ chối lời mời từ ${friendName}`, 'info');
+    const row = findFriendshipRow(userId);
+    if (!row) {
+      void refreshFriendships();
+      return;
     }
+    const name = row.otherUserName || 'Bạn';
+    void (async () => {
+      try {
+        if (accept) {
+          const dto = await acceptFriendRequest(row.id);
+          upsertFriendship(dto);
+          syncSelectedRelationship(userId, relationshipFromDto(dto));
+          showToast(`Đã kết bạn với ${name} 🤝`, 'success');
+        } else {
+          await rejectFriendRequest(row.id);
+          dropFriendship(row.id);
+          syncSelectedRelationship(userId, undefined);
+          showToast(`Đã từ chối lời mời từ ${name}`, 'info');
+        }
+      } catch (err) {
+        onFriendshipError('respondFriendRequest', err);
+      }
+    })();
   };
 
   const sendFriendRequest = (userId: string) => {
-    setFriends(prev => prev.map(f => {
-      if (f.id !== userId) return f;
-      return {
-        ...f,
-        relationship: {
-          type: 'friend',
-          status: 'pending_sent'
-        }
-      };
-    }));
-
-    setSelectedUser(prev => (prev && prev.id === userId) ? {
-      ...prev,
-      relationship: {
-        type: 'friend',
-        status: 'pending_sent'
+    void (async () => {
+      try {
+        const dto = await sendFriendRequestApi(Number(userId));
+        upsertFriendship(dto);
+        const rel = relationshipFromDto(dto);
+        syncSelectedRelationship(userId, rel);
+        showToast(
+          rel?.status === 'accepted'
+            ? `Đã kết bạn với ${dto.otherUserName} 🤝`
+            : 'Đã gửi lời mời kết bạn ✨',
+          'success',
+        );
+      } catch (err) {
+        onFriendshipError('sendFriendRequest', err);
       }
-    } : prev);
-
-    showToast('Đã gửi lời mời kết bạn ✨', 'success');
+    })();
   };
 
   const cancelFriendRequest = (userId: string) => {
-    setFriends(prev => prev.map(f => {
-      if (f.id !== userId) return f;
-      return {
-        ...f,
-        relationship: {
-          type: 'friend',
-          status: 'none'
-        }
-      };
-    }));
-
-    setSelectedUser(prev => (prev && prev.id === userId) ? {
-      ...prev,
-      relationship: {
-        type: 'friend',
-        status: 'none'
+    const row = findFriendshipRow(userId);
+    if (!row) {
+      void refreshFriendships();
+      return;
+    }
+    void (async () => {
+      try {
+        await revokeFriendRequest(row.id);
+        dropFriendship(row.id);
+        syncSelectedRelationship(userId, undefined);
+        showToast('Đã thu hồi lời mời kết bạn', 'info');
+      } catch (err) {
+        onFriendshipError('cancelFriendRequest', err);
       }
-    } : prev);
-
-    showToast('Đã thu hồi lời mời kết bạn', 'info');
+    })();
   };
 
   const changeFriendshipType = (userId: string, type: FriendshipType) => {
-    setFriends(prev => prev.map(f => {
-      if (f.id !== userId) return f;
-      return {
-        ...f,
-        relationship: {
-          type,
-          status: 'accepted'
-        }
-      };
-    }));
-
-    setSelectedUser(prev => (prev && prev.id === userId) ? {
-      ...prev,
-      relationship: {
-        type,
-        status: 'accepted'
+    const row = findFriendshipRow(userId);
+    if (!row) {
+      void refreshFriendships();
+      return;
+    }
+    const apiType =
+      type === 'best_friend'
+        ? FRIENDSHIP_TYPE_VALUES.BestFriend
+        : type === 'lover'
+          ? FRIENDSHIP_TYPE_VALUES.Lover
+          : FRIENDSHIP_TYPE_VALUES.Friend;
+    void (async () => {
+      try {
+        const dto = await changeFriendshipTypeApi(row.id, apiType);
+        upsertFriendship(dto);
+        syncSelectedRelationship(userId, relationshipFromDto(dto));
+        const typeLabels: Record<FriendshipType, string> = {
+          friend: 'Bạn bè',
+          best_friend: 'Bạn thân ⭐',
+          lover: 'Người yêu ❤️'
+        };
+        showToast(`Đã cập nhật quan hệ: ${typeLabels[type]}`, 'success');
+      } catch (err) {
+        onFriendshipError('changeFriendshipType', err);
       }
-    } : prev);
-
-    const typeLabels: Record<FriendshipType, string> = {
-      friend: 'Bạn bè',
-      best_friend: 'Bạn thân ⭐',
-      lover: 'Người yêu ❤️'
-    };
-    showToast(`Đã cập nhật quan hệ: ${typeLabels[type]}`, 'success');
+    })();
   };
 
   const removeFriend = (userId: string) => {
-    const friendName = friends.find(f => f.id === userId)?.name || 'Bạn bè';
-    setFriends(prev => prev.filter(f => f.id !== userId));
-    setSelectedUser(prev => (prev && prev.id === userId) ? {
-      ...prev,
-      relationship: undefined
-    } : prev);
-    showToast(`Đã hủy kết bạn với ${friendName}`, 'info');
+    const row = findFriendshipRow(userId);
+    if (!row) {
+      void refreshFriendships();
+      return;
+    }
+    const name = row.otherUserName || 'Bạn bè';
+    void (async () => {
+      try {
+        await removeFriendship(row.id);
+        dropFriendship(row.id);
+        syncSelectedRelationship(userId, undefined);
+        showToast(`Đã hủy kết bạn với ${name}`, 'info');
+      } catch (err) {
+        onFriendshipError('removeFriend', err);
+      }
+    })();
   };
 
   const blockFriend = (userId: string) => {
-    const friendName = friends.find(f => f.id === userId)?.name || 'Người dùng';
-    setFriends(prev => prev.map(f => {
-      if (f.id !== userId) return f;
-      return {
-        ...f,
-        relationship: {
-          type: 'friend',
-          status: 'blocked'
-        }
-      };
-    }));
-    setSelectedUser(prev => (prev && prev.id === userId) ? {
-      ...prev,
-      relationship: {
-        type: 'friend',
-        status: 'blocked'
+    const row = findFriendshipRow(userId);
+    if (!row) {
+      void refreshFriendships();
+      return;
+    }
+    const name = row.otherUserName || 'Người dùng';
+    void (async () => {
+      try {
+        const dto = await blockUser(row.id);
+        upsertFriendship(dto);
+        syncSelectedRelationship(userId, relationshipFromDto(dto));
+        showToast(`Đã chặn ${name} 🚫`, 'info');
+      } catch (err) {
+        onFriendshipError('blockFriend', err);
       }
-    } : prev);
-    showToast(`Đã chặn ${friendName} 🚫`, 'info');
+    })();
   };
 
   const unblockFriend = (userId: string) => {
-    const friendName = friends.find(f => f.id === userId)?.name || 'Người dùng';
-    setFriends(prev => prev.map(f => {
-      if (f.id !== userId) return f;
-      return {
-        ...f,
-        relationship: {
-          type: 'friend',
-          status: 'accepted'
-        }
-      };
-    }));
-    setSelectedUser(prev => (prev && prev.id === userId) ? {
-      ...prev,
-      relationship: {
-        type: 'friend',
-        status: 'accepted'
+    const row = findFriendshipRow(userId);
+    if (!row) {
+      void refreshFriendships();
+      return;
+    }
+    const name = row.otherUserName || 'Người dùng';
+    void (async () => {
+      try {
+        const dto = await unblockUser(row.id);
+        upsertFriendship(dto);
+        syncSelectedRelationship(userId, relationshipFromDto(dto));
+        showToast(`Đã bỏ chặn ${name} 🤝`, 'success');
+      } catch (err) {
+        onFriendshipError('unblockFriend', err);
       }
-    } : prev);
-    showToast(`Đã bỏ chặn ${friendName} 🤝`, 'success');
+    })();
   };
 
-  const updateProfile = (profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>) => {
-    setCurrentUser(prev => ({
-      ...prev,
-      ...profileData
-    }));
-    showToast('Đã lưu thông tin cá nhân thành công ✨', 'success');
+  /**
+   * Profile save: avatar (if a new data-URL was picked) goes through the
+   * presigned Profile bucket → POST /User/me/avatar; name/age/gender through
+   * PUT /User/me. `bio` stays local-only (no API field yet). Axios errors are
+   * toasted by the interceptor; thrown so the modal stays open on failure.
+   */
+  const updateProfile = async (
+    profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>,
+  ): Promise<void> => {
+    let avatar = currentUser.avatar;
+    try {
+      if (profileData.avatar && profileData.avatar !== currentUser.avatar) {
+        if (profileData.avatar.startsWith('data:')) {
+          const blob = dataUrlToBlob(profileData.avatar);
+          const contentType = blob.type || 'image/jpeg';
+          const [item] = await getPresignedUploadUrls({
+            bucket: 'Profile',
+            contentTypes: [contentType],
+          });
+          if (!item) throw new Error('Không nhận được URL tải lên.');
+          await uploadToPresignedUrl(item.uploadUrl, blob, contentType);
+          await setAvatar(item.fileId);
+        }
+        avatar = profileData.avatar;
+      }
+
+      const genderId =
+        profileData.gender === 'Nam' ? 1 : profileData.gender === 'Nữ' ? 2 : profileData.gender ? 3 : undefined;
+      const dto = await updateCurrentUser({
+        name: (profileData.name ?? currentUser.name).trim(),
+        age: Number(profileData.age ?? currentUser.age) || currentUser.age || 20,
+        ...(genderId ? { genderId } : {}),
+      });
+      const mapped = mapMeToUser(dto);
+      setCurrentUser((prev) => ({
+        ...prev,
+        name: mapped.name,
+        age: mapped.age,
+        gender: mapped.gender,
+        // Server avatar wins (fresh just-uploaded URL); the picked
+        // data-URL only survives when the profile has no server image yet.
+        avatar: mapped.avatar || avatar,
+        bio: profileData.bio !== undefined ? profileData.bio : prev.bio,
+        lastUpdated: 'Vừa xong',
+      }));
+      showToast('Đã lưu thông tin cá nhân thành công ✨', 'success');
+    } catch (err) {
+      if (!isAxiosError(err)) {
+        showToast(err instanceof Error ? err.message : 'Không thể lưu hồ sơ.', 'error');
+      }
+      throw err;
+    }
   };
 
-  // Timelines actions
-  const createTimeline = (data: {
+  // Timelines actions — API-backed. Design title → API `caption` (≤2000);
+  // description/banner/dates are not API fields (adaptation table): dates
+  // only scope the available-moments picker, banner derives from moments.
+  const createTimeline = async (data: {
     title: string;
-    description: string;
-    bannerImage: string;
-    startDate: string;
-    endDate: string;
     partnerIds: string[];
     selectedMomentIds: string[];
   }) => {
-    const selectedPartners = friends
-      .filter(f => data.partnerIds.includes(f.id))
-      .map(f => ({ id: f.id, name: f.name, avatar: f.avatar }));
-
-    const selectedMomentObjs = moments
-      .filter(m => data.selectedMomentIds.includes(m.id))
-      .map((m, idx) => ({
-        id: `tl_item_${m.id}`,
-        title: m.locationName || 'Khoảnh khắc',
-        caption: m.caption,
-        imageUrl: m.imageUrl,
-        locationName: m.locationName || currentUser.location.address,
-        time: m.timeAgo,
-        dayNumber: idx + 1
-      }));
-
-    const newTl: Timeline = {
-      id: `timeline_${Date.now()}`,
-      title: data.title,
-      description: data.description,
-      bannerImage: data.bannerImage || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-      startDate: data.startDate,
-      endDate: data.endDate,
-      ownerId: currentUser.id,
-      ownerName: currentUser.name,
-      ownerAvatar: currentUser.avatar,
-      partners: selectedPartners,
-      moments: selectedMomentObjs.length > 0 ? selectedMomentObjs : [
-        {
-          id: `tl_item_1`,
-          title: 'Điểm khởi hành 🚀',
-          caption: 'Bắt đầu chuyến đi đầy phấn khởi cùng những người bạn tuyệt vời.',
-          imageUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80',
-          locationName: currentUser.location.address,
-          time: 'Ngày 1',
-          dayNumber: 1
-        }
-      ]
-    };
-
-    setTimelines(prev => [newTl, ...prev]);
-    showToast(`Đã tạo hành trình "${data.title}" 🧭`, 'success');
+    try {
+      await createTimelineApi({
+        caption: data.title.trim().slice(0, 2000),
+        partnerIds: data.partnerIds.map(Number).filter((n) => n > 0),
+        momentIds: data.selectedMomentIds.map(Number).filter((n) => n > 0),
+      });
+      await refreshTimelines();
+      showToast(`Đã tạo hành trình "${data.title.trim()}" 🧭`, 'success');
+    } catch (err) {
+      console.error('[AppContext] createTimeline failed:', err);
+      throw err;
+    }
   };
 
   const deleteTimeline = (timelineId: string) => {
     const target = timelines.find(t => t.id === timelineId);
-    setTimelines(prev => prev.filter(t => t.id !== timelineId));
-    if (activeTimelineId === timelineId) {
-      setActiveTimelineId(null);
-    }
-    showToast(`Đã xóa hành trình "${target?.title || ''}" 🗑️`, 'info');
-  };
-
-  const openChatWithUser = (user: User) => {
-    // Check if conversation already exists
-    let existingConv = conversations.find(c => 
-      !c.isGroup && c.participants.some(p => p.id === user.id)
-    );
-
-    if (!existingConv) {
-      const newConvId = `conv_${Date.now()}`;
-      existingConv = {
-        id: newConvId,
-        isGroup: false,
-        participants: [currentUser, user],
-        lastMessage: {
-          id: `msg_init_${Date.now()}`,
-          senderId: currentUser.id,
-          text: `Bắt đầu trò chuyện với ${user.name}`,
-          timestamp: 'Vừa xong',
-          status: 'sent'
-        },
-        unreadCount: 0
-      };
-      setConversations(prev => [existingConv!, ...prev]);
-      setMessagesMap(prev => ({
-        ...prev,
-        [newConvId]: [existingConv!.lastMessage]
-      }));
-    }
-
-    setActiveConversationId(existingConv.id);
-    setActiveTab('chat');
-    setSelectedUser(null);
-  };
-
-  const toggleArchiveConversation = (conversationId: string) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      const willArchive = !conv.isArchived;
-      showToast(willArchive ? 'Đã lưu trữ cuộc trò chuyện 📁' : 'Đã bỏ lưu trữ cuộc trò chuyện 📥', 'info');
-      return { ...conv, isArchived: willArchive };
-    }));
-  };
-
-  const toggleMuteConversation = (conversationId: string) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      const willMute = !conv.isMuted;
-      showToast(willMute ? 'Đã tắt thông báo cuộc trò chuyện 🔕' : 'Đã bật lại thông báo cuộc trò chuyện 🔔', 'info');
-      return { ...conv, isMuted: willMute };
-    }));
-  };
-
-  const deleteConversation = (conversationId: string) => {
-    setConversations(prev => prev.filter(c => c.id !== conversationId));
-    if (activeConversationId === conversationId) {
-      setActiveConversationId(null);
-    }
-    showToast('Đã xóa cuộc trò chuyện 🗑️', 'info');
-  };
-
-  const updateGroupInfo = (conversationId: string, updates: { name?: string; avatar?: string; isPrivateGroup?: boolean }) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      return {
-        ...conv,
-        name: updates.name?.trim() ? updates.name.trim() : conv.name,
-        avatar: updates.avatar || conv.avatar,
-        isPrivateGroup: updates.isPrivateGroup !== undefined ? updates.isPrivateGroup : conv.isPrivateGroup
-      };
-    }));
-    showToast('Đã cập nhật cài đặt nhóm 👥', 'success');
-  };
-
-  const addGroupMembers = (conversationId: string, newMemberIds: string[]) => {
-    const membersToAdd = friends.filter(f => newMemberIds.includes(f.id));
-    if (membersToAdd.length === 0) return;
-
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      const existingIds = new Set(conv.participants.map(p => p.id));
-      const filtered = membersToAdd.filter(m => !existingIds.has(m.id));
-      return {
-        ...conv,
-        participants: [...conv.participants, ...filtered]
-      };
-    }));
-
-    const names = membersToAdd.map(m => m.name).join(', ');
-    const systemMsg: Message = {
-      id: `sys_add_${Date.now()}`,
-      senderId: 'system',
-      text: `${names} đã được thêm vào nhóm.`,
-      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      status: 'delivered'
-    };
-    setMessagesMap(prev => ({
-      ...prev,
-      [conversationId]: [...(prev[conversationId] || []), systemMsg]
-    }));
-
-    showToast(`Đã thêm ${membersToAdd.length} thành viên vào nhóm`, 'success');
-  };
-
-  const acceptGroupRequest = (conversationId: string, user: User) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      const remainingReqs = (conv.pendingRequests || []).filter(r => r.id !== user.id);
-      const isAlreadyIn = conv.participants.some(p => p.id === user.id);
-      return {
-        ...conv,
-        participants: isAlreadyIn ? conv.participants : [...conv.participants, user],
-        pendingRequests: remainingReqs
-      };
-    }));
-
-    const systemMsg: Message = {
-      id: `sys_join_${Date.now()}`,
-      senderId: 'system',
-      text: `${user.name} đã tham gia nhóm.`,
-      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      status: 'delivered'
-    };
-    setMessagesMap(prev => ({
-      ...prev,
-      [conversationId]: [...(prev[conversationId] || []), systemMsg]
-    }));
-
-    showToast(`Đã duyệt yêu cầu tham gia của ${user.name}`, 'success');
-  };
-
-  const rejectGroupRequest = (conversationId: string, userId: string) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id !== conversationId) return conv;
-      return {
-        ...conv,
-        pendingRequests: (conv.pendingRequests || []).filter(r => r.id !== userId)
-      };
-    }));
-    showToast('Đã từ chối yêu cầu tham gia nhóm', 'info');
-  };
-
-  const leaveGroup = (conversationId: string) => {
-    setConversations(prev => prev.filter(c => c.id !== conversationId));
-    if (activeConversationId === conversationId) {
-      setActiveConversationId(null);
-    }
-    showToast('Đã rời khỏi nhóm', 'info');
+    void (async () => {
+      try {
+        await deleteTimelineApi(Number(timelineId));
+        timelineCacheRef.current = timelineCacheRef.current.filter(
+          (r) => String(r.dto.id) !== timelineId,
+        );
+        setTimelines(prev => prev.filter(t => t.id !== timelineId));
+        if (activeTimelineId === timelineId) {
+          setActiveTimelineId(null);
+        }
+        showToast(`Đã xóa hành trình "${target?.title || ''}" 🗑️`, 'info');
+      } catch (err) {
+        console.error('[AppContext] deleteTimeline failed:', err);
+      }
+    })();
   };
 
   return (
@@ -876,18 +1194,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         friends,
         moments,
+        momentsHasMore,
+        isLoadingMoments,
+        isLoadingMoreMoments,
+        momentsError,
+        processingMomentIds,
         conversations,
         messagesMap,
+        conversationsHasMore: chatState.conversationsHasMore,
+        isLoadingConversations,
+        isLoadingMoreConversations: chatActions.isLoadingMore,
+        totalUnreadCount: chatState.totalUnreadCount,
         timelines,
+        isLoadingTimelines,
         activeConversationId,
-        setActiveConversationId,
+        setActiveConversationId: handleSetActiveConversationId,
         activeTimelineId,
         setActiveTimelineId,
         selectedUser,
         setSelectedUser,
-        activeCall,
-        deviceMode,
-        setDeviceMode,
         toasts,
         showToast,
         removeToast,
@@ -897,12 +1222,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reactToMoment,
         addMoment,
         deleteMoment,
-        sendMessage,
-        editMessage,
-        deleteMessage,
-        reactToMessage,
-        createGroup,
-        joinGroup,
+        hideMoment,
+        changeMomentVisibility,
+        refreshMoments,
+        loadMoreMoments,
+        ensureUserMoments,
+        refreshTimelines,
+        ensureUserTimelines,
+        ensureTimelineById,
+        sendMessage: chatActions.sendMessage,
+        editMessage: chatActions.editMessage,
+        deleteMessage: chatActions.deleteMessage,
+        reactToMessage: chatActions.reactToMessage,
+        createGroup: chatActions.createGroup,
+        joinGroup: chatActions.joinGroup,
         startCall,
         endCall,
         toggleMuteCall,
@@ -914,18 +1247,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeFriend,
         blockFriend,
         unblockFriend,
+        blockChat: chatActions.blockChat,
+        unblockChat: chatActions.unblockChat,
         updateProfile,
         createTimeline,
         deleteTimeline,
-        openChatWithUser,
-        toggleArchiveConversation,
-        toggleMuteConversation,
-        deleteConversation,
-        updateGroupInfo,
-        addGroupMembers,
-        acceptGroupRequest,
-        rejectGroupRequest,
-        leaveGroup
+        openChatWithUser: chatActions.openChatWithUser,
+        toggleArchiveConversation: chatActions.toggleArchiveConversation,
+        toggleMuteConversation: chatActions.toggleMuteConversation,
+        deleteConversation: chatActions.deleteConversation,
+        updateGroupInfo: chatActions.updateGroupInfo,
+        addGroupMembers: chatActions.addGroupMembers,
+        leaveGroup: chatActions.leaveGroup,
+        refreshConversations: chatActions.refreshConversations,
+        loadMoreConversations: chatActions.loadMoreConversations,
+        loadOlderMessages: chatActions.loadOlderMessages,
+        hasMoreMessages,
+        resolvePartnerUser: chatActions.resolvePartnerUser,
+        loadMembers: chatActions.loadMembers,
+        searchAndMergeMessages: chatActions.searchAndMergeMessages
       }}
     >
       {children}

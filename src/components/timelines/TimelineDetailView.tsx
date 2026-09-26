@@ -35,6 +35,24 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
     onBack();
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/timelines/${timeline.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: timeline.title, url });
+        return;
+      }
+      throw new Error('no-share');
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('Đã sao chép liên kết hành trình! 🧭', 'success');
+      } catch {
+        showToast('Không thể chia sẻ liên kết lúc này', 'error');
+      }
+    }
+  };
+
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-50 overflow-y-auto no-scrollbar select-none">
       {/* Top Floating Back Bar */}
@@ -49,7 +67,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
 
         <div className="flex items-center gap-1">
           <button
-            onClick={() => showToast('Đã sao chép liên kết hành trình! 🧭', 'success')}
+            onClick={handleShare}
             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
             title="Chia sẻ hành trình"
           >
@@ -81,9 +99,11 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
             <h1 className="text-lg font-bold text-white drop-shadow-sm mb-1 leading-snug whitespace-nowrap truncate">
               {timeline.title}
             </h1>
-            <p className="text-xs text-white/80 line-clamp-2 mb-2 font-normal">
-              {timeline.description}
-            </p>
+            {timeline.description ? (
+              <p className="text-xs text-white/80 line-clamp-2 mb-2 font-normal">
+                {timeline.description}
+              </p>
+            ) : null}
 
             <div className="flex items-center justify-between pt-2 border-t border-white/20 text-[11px] text-white/90">
               <div className="flex items-center gap-1.5 whitespace-nowrap truncate">
@@ -129,6 +149,18 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
 
           {/* MOMENTS STOPS ALONG THE ROUTE */}
           <div className="space-y-6">
+            {timeline.moments.length === 0 && (
+              <div className="relative flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-white border-2 border-dashed border-slate-300 text-slate-400 flex items-center justify-center font-bold text-xs z-10 shrink-0 mt-2">
+                  ?
+                </div>
+                <div className="flex-1 bg-white rounded-3xl p-4 border border-dashed border-slate-200 text-center">
+                  <p className="text-[11px] text-slate-400">
+                    Chưa có khoảnh khắc nào trên hành trình này.
+                  </p>
+                </div>
+              </div>
+            )}
             {timeline.moments.map((m, index) => (
               <div key={m.id} className="relative flex items-start gap-3">
                 {/* Stop node badge */}
@@ -138,7 +170,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
 
                 {/* Stop Card - Tap to view full screen */}
                 <div 
-                  onClick={() => setViewingMoment({
+                  onClick={() => setViewingMoment(m.moment ?? {
                     id: m.id,
                     userId: timeline.ownerId,
                     userName: timeline.ownerName,

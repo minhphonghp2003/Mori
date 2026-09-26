@@ -1,0 +1,63 @@
+import { httpClient } from "@/lib/axios";
+import type { ApiResponse, CursorPageResponse } from "@/types/api";
+import type { FriendshipDto, FriendshipTypeValue } from "@/types/friendship";
+
+export async function getFriendshipById(id: number): Promise<FriendshipDto | null> {
+  const { data } = await httpClient.get<ApiResponse<FriendshipDto>>(`/Friendship/${id}`);
+  return data.data ?? null;
+}
+
+export async function getMyFriendships(params?: {
+  prevId?: number;
+  take?: number;
+  type?: number;
+}): Promise<CursorPageResponse<FriendshipDto>> {
+  const { data } = await httpClient.get(`/Friendship/me`, { params });
+  return data;
+}
+
+export async function sendFriendRequest(targetUserId: number): Promise<FriendshipDto> {
+  const { data } = await httpClient.post<ApiResponse<FriendshipDto>>("/Friendship", {
+    targetUserId,
+  });
+  return data.data;
+}
+
+export async function acceptFriendRequest(id: number): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/accept`);
+  return data.data;
+}
+
+export async function rejectFriendRequest(id: number): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/reject`);
+  return data.data;
+}
+
+export async function revokeFriendRequest(id: number): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/revoke`);
+  return data.data;
+}
+
+export async function blockUser(id: number): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/block`);
+  return data.data;
+}
+
+export async function unblockUser(id: number): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/unblock`);
+  return data.data;
+}
+
+export async function removeFriendship(id: number): Promise<void> {
+  await httpClient.delete(`/Friendship/${id}`);
+}
+
+export async function changeFriendshipType(
+  id: number,
+  type: FriendshipTypeValue,
+): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/type`, {
+    type,
+  });
+  return data.data;
+}

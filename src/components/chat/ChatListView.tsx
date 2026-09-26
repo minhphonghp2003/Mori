@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '../../context/AppContext';
-import { DISCOVERABLE_GROUPS } from '../../data/mockData';
+import { getDiscoverableGroups } from '@/services/chat';
+import { mapDiscoverableGroup } from '@/lib/chat/mappers';
 import { DiscoverableGroup, Conversation } from '../../types';
-import { ChatRoomView } from './ChatRoomView';
 import { CreateGroupModal } from './CreateGroupModal';
 import { 
   Users, 
@@ -28,16 +29,19 @@ import {
 export const ChatListView: React.FC = () => {
   const { 
     conversations, 
-    activeConversationId, 
-    setActiveConversationId, 
     currentUser,
     setSelectedUser,
     toggleArchiveConversation,
     toggleMuteConversation,
     deleteConversation,
     joinGroup,
-    showToast
+    isLoadingConversations,
+    isLoadingMoreConversations,
+    conversationsHasMore,
+    loadMoreConversations,
+    resolvePartnerUser
   } = useApp();
+  const router = useRouter();
 
   const [filterTab, setFilterTab] = useState<'all' | 'archived' | 'discover'>('all');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -49,37 +53,57 @@ export const ChatListView: React.FC = () => {
   // Track IDs of private groups where joining request was sent
   const [pendingRequests, setPendingRequests] = useState<string[]>([]);
 
-  // If a conversation is active, render the Chat Room screen
-  if (activeConversationId) {
-    return (
-      <ChatRoomView
-        conversationId={activeConversationId}
-        onBack={() => setActiveConversationId(null)}
-      />
-    );
-  }
+  // Discoverable groups (API already excludes groups I'm a member of)
+  const [discoverGroups, setDiscoverGroups] = useState<DiscoverableGroup[]>([]);
+  const [isLoadingDiscover, setIsLoadingDiscover] = useState(false);
+
+  useEffect(() => {
+    if (filterTab !== 'discover') return;
+    let alive = true;
+    setIsLoadingDiscover(true);
+    getDiscoverableGroups()
+      .then((res) => {
+        if (alive) setDiscoverGroups(res.data.map(mapDiscoverableGroup));
+      })
+      .catch((err) => console.error('[ChatList] discoverable failed:', err))
+      .finally(() => {
+        if (alive) setIsLoadingDiscover(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [filterTab]);
 
   const allActiveConversations = conversations.filter(c => !c.isArchived);
   const archivedConversations = conversations.filter(c => c.isArchived);
   const archivedCount = archivedConversations.length;
 
-  // Filter groups in DISCOVER: ONLY groups that the user is NOT currently joining
-  const joinedGroupNames = new Set(
-    conversations.filter(c => c.isGroup && c.name).map(c => c.name!)
-  );
+  const unjoinedGroups = discoverGroups;
 
-  const unjoinedGroups = DISCOVERABLE_GROUPS.filter(
-    group => !joinedGroupNames.has(group.name)
-  );
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!conversationsHasMore || isLoadingMoreConversations) return;
+    if (filterTab === 'discover') return;
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) {
+      void loadMoreConversations();
+    }
+  };
+
+  const openPartnerProfile = (conv: Conversation) => {
+    if (conv.isGroup) return;
+    void resolvePartnerUser(conv.id).then((user) => {
+      if (user) setSelectedUser(user);
+    });
+  };
 
   const handleSendRequest = (group: DiscoverableGroup) => {
-    if (pendingRequests.includes(group.id)) return;
+    if (pendingRequests.includes(group.id) || group.requestStatus === 0) return;
     setPendingRequests(prev => [...prev, group.id]);
-    showToast(`Đã gửi yêu cầu tham gia "${group.name}" ✉️`, 'info');
+    void joinGroup(group);
   };
 
   const handleJoinPublicGroup = (group: DiscoverableGroup) => {
-    joinGroup(group);
+    void joinGroup(group);
   };
 
   return (
@@ -152,11 +176,23 @@ export const ChatListView: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
+      <div className="flex-1 overflow-y-auto no-scrollbar bg-white" onScroll={handleScroll}>
         
         {/* TAB 1: ALL ACTIVE CONVERSATIONS */}
         {filterTab === 'all' && (
-          allActiveConversations.length === 0 ? (
+          isLoadingConversations && allActiveConversations.length === 0 ? (
+            <div className="p-3.5 space-y-3.5">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 animate-pulse">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-200 shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-slate-200 rounded w-1/3" />
+                    <div className="h-2.5 bg-slate-100 rounded w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : allActiveConversations.length === 0 ? (
             <div className="text-center py-14 px-4">
               <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <div className="text-sm font-bold text-slate-700 whitespace-nowrap truncate">Chưa có tin nhắn nào</div>
@@ -173,7 +209,6 @@ export const ChatListView: React.FC = () => {
           ) : (
             <div className="divide-y divide-slate-100/80">
               {allActiveConversations.map((conv) => {
-                const partner = conv.participants.find(p => p.id !== currentUser.id);
                 return (
                   <ConversationItem
                     key={conv.id}
@@ -187,13 +222,9 @@ export const ChatListView: React.FC = () => {
                     onCloseMenu={() => setMenuConvId(null)}
                     onClick={() => {
                       setMenuConvId(null);
-                      setActiveConversationId(conv.id);
+                      router.push(`/chat/${conv.id}`);
                     }}
-                    onAvatarClick={() => {
-                      if (!conv.isGroup && partner) {
-                        setSelectedUser(partner);
-                      }
-                    }}
+                    onAvatarClick={() => openPartnerProfile(conv)}
                     onArchive={() => {
                       setMenuConvId(null);
                       toggleArchiveConversation(conv.id);
@@ -209,6 +240,16 @@ export const ChatListView: React.FC = () => {
                   />
                 );
               })}
+              {isLoadingMoreConversations && (
+                <div className="py-3 text-center text-[11px] text-slate-400 font-medium">
+                  Đang tải thêm...
+                </div>
+              )}
+              {!conversationsHasMore && allActiveConversations.length > 4 && (
+                <div className="py-3 text-center text-[10px] text-slate-300">
+                  Đã hết cuộc trò chuyện
+                </div>
+              )}
             </div>
           )
         )}
@@ -230,7 +271,6 @@ export const ChatListView: React.FC = () => {
                 <span className="text-[11px] text-indigo-500">Chạm để mở</span>
               </div>
               {archivedConversations.map((conv) => {
-                const partner = conv.participants.find(p => p.id !== currentUser.id);
                 return (
                   <ConversationItem
                     key={conv.id}
@@ -244,13 +284,9 @@ export const ChatListView: React.FC = () => {
                     onCloseMenu={() => setMenuConvId(null)}
                     onClick={() => {
                       setMenuConvId(null);
-                      setActiveConversationId(conv.id);
+                      router.push(`/chat/${conv.id}`);
                     }}
-                    onAvatarClick={() => {
-                      if (!conv.isGroup && partner) {
-                        setSelectedUser(partner);
-                      }
-                    }}
+                    onAvatarClick={() => openPartnerProfile(conv)}
                     onArchive={() => {
                       setMenuConvId(null);
                       toggleArchiveConversation(conv.id);
@@ -287,7 +323,21 @@ export const ChatListView: React.FC = () => {
               </span>
             </div>
 
-            {unjoinedGroups.length === 0 ? (
+            {isLoadingDiscover ? (
+              <div className="space-y-3">
+                {[0, 1].map((i) => (
+                  <div key={i} className="p-3.5 rounded-2xl bg-white border border-slate-200/80 animate-pulse">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-200 shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-slate-200 rounded w-1/2" />
+                        <div className="h-2.5 bg-slate-100 rounded w-3/4" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : unjoinedGroups.length === 0 ? (
               <div className="text-center py-14 px-4 bg-slate-50 rounded-3xl border border-slate-100">
                 <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                 <div className="text-xs font-bold text-slate-700 whitespace-nowrap truncate">
@@ -306,7 +356,7 @@ export const ChatListView: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 gap-3">
                 {unjoinedGroups.map((grp) => {
-                  const hasRequested = pendingRequests.includes(grp.id);
+                  const hasRequested = pendingRequests.includes(grp.id) || grp.requestStatus === 0;
 
                   return (
                     <div 
@@ -339,16 +389,22 @@ export const ChatListView: React.FC = () => {
                             )}
                           </div>
 
-                          <p className="text-[11px] text-slate-600 line-clamp-2 mt-1 leading-relaxed">
-                            {grp.description}
-                          </p>
+                          {grp.description && (
+                            <p className="text-[11px] text-slate-600 line-clamp-2 mt-1 leading-relaxed">
+                              {grp.description}
+                            </p>
+                          )}
 
                           <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
                             <span className="font-semibold text-slate-600">
                               👥 {grp.memberCount} thành viên
                             </span>
-                            <span>•</span>
-                            <span className="truncate">{grp.activityTime}</span>
+                            {grp.activityTime && (
+                              <>
+                                <span>•</span>
+                                <span className="truncate">{grp.activityTime}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -447,7 +503,7 @@ export const ChatListView: React.FC = () => {
           onClose={() => setShowCreateGroup(false)}
           onSuccess={(newId) => {
             setShowCreateGroup(false);
-            setActiveConversationId(newId);
+            router.push(`/chat/${newId}`);
           }}
         />
       )}
@@ -471,7 +527,6 @@ interface ConversationItemProps {
 
 const ConversationItem: React.FC<ConversationItemProps> = ({
   conv,
-  currentUserId,
   isMenuOpen,
   onToggleMenu,
   onCloseMenu,
@@ -481,9 +536,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   onMute,
   onDelete
 }) => {
-  const partner = conv.participants.find(p => p.id !== currentUserId) || conv.participants[0] || { name: 'Người dùng', avatar: '' };
-  const displayName = conv.isGroup ? conv.name : partner.name;
-  const displayAvatar = conv.isGroup ? conv.avatar : partner.avatar;
+  const displayName = conv.name || (conv.isGroup ? 'Nhóm' : 'Người dùng');
+  const displayAvatar = conv.avatar || '';
 
   return (
     <div
@@ -507,7 +561,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           referrerPolicy="no-referrer"
           className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100"
         />
-        {!conv.isGroup && (
+        {!conv.isGroup && conv.isOnline && (
           <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
         )}
       </div>
@@ -541,11 +595,15 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] text-slate-500 truncate whitespace-nowrap leading-relaxed flex-1">
-            {conv.lastMessage.imageUrl
+            {conv.lastMessage.isDeleted
+              ? 'Tin nhắn đã bị thu hồi'
+              : conv.lastMessage.imageUrl
               ? '📷 [Hình ảnh]'
-              : conv.lastMessage.locationPin
-              ? '📍 [Vị trí]'
-              : conv.lastMessage.text}
+              : conv.lastMessage.videoUrl
+              ? '🎥 [Video]'
+              : conv.lastMessage.momentId
+              ? '📸 [Khoảnh khắc]'
+              : conv.lastMessage.text || 'Chưa có tin nhắn'}
           </p>
 
           <div className="flex items-center gap-1 shrink-0">

@@ -11,7 +11,7 @@ export const ToastContainer: React.FC = () => {
     <div className="fixed top-12 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[90%] max-w-sm pointer-events-none">
       {toasts.map((toast) => {
         let icon = <Info className="w-4 h-4 text-blue-500 shrink-0" />;
-        let bgStyle = 'bg-white text-slate-800 border-slate-200';
+        const bgStyle = 'bg-white text-slate-800 border-slate-200';
         if (toast.type === 'success') {
           icon = <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />;
         } else if (toast.type === 'error') {

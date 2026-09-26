@@ -2,16 +2,28 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CreateMomentModal } from './CreateMomentModal';
 import { MomentReelCard } from './MomentReelCard';
-import { Plus, Camera, Sparkles, Film } from 'lucide-react';
+import { MomentViewerModal } from './MomentViewerModal';
+import { Plus, Camera, Film, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import type { Moment } from '../../types';
+import { getMomentById } from '@/services/moment';
+import { mapMoment } from '@/lib/moment/mappers';
 
 export const MomentsView: React.FC = () => {
   const { 
     moments, 
-    setIsNavHidden 
+    setIsNavHidden,
+    isLoadingMoments,
+    isLoadingMoreMoments,
+    momentsHasMore,
+    momentsError,
+    refreshMoments,
+    loadMoreMoments,
+    processingMomentIds
   } = useApp();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isImmersive, setIsImmersive] = useState(false);
+  const [deepLinkMoment, setDeepLinkMoment] = useState<Moment | null>(null);
   const feedContainerRef = useRef<HTMLDivElement | null>(null);
   const lastScrollTopRef = useRef<number>(0);
 
@@ -20,10 +32,31 @@ export const MomentsView: React.FC = () => {
     setIsNavHidden(isImmersive);
   }, [isImmersive, setIsNavHidden]);
 
+  // Share target: /moments?momentId=<id> opens the viewer for that moment.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('momentId');
+    if (!id || !Number(id)) return;
+    // Consume the param once so revisiting the tab doesn't reopen the viewer.
+    window.history.replaceState(null, '', window.location.pathname);
+    let alive = true;
+    (async () => {
+      try {
+        const res = await getMomentById(Number(id));
+        if (alive && res.data) setDeepLinkMoment(mapMoment(res.data));
+      } catch {
+        // 404 / not visible — axios already toasted.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // Handle scroll detection: when scrolling down/up in feed, automatically hide nav bar for full immersion
   const handleScroll = () => {
-    if (!feedContainerRef.current) return;
-    const currentScrollTop = feedContainerRef.current.scrollTop;
+    const el = feedContainerRef.current;
+    if (!el) return;
+    const currentScrollTop = el.scrollTop;
     const delta = currentScrollTop - lastScrollTopRef.current;
 
     // Scrolling down (moving to next moment) -> hide nav bar
@@ -38,6 +71,12 @@ export const MomentsView: React.FC = () => {
     }
 
     lastScrollTopRef.current = currentScrollTop;
+
+    // Near the end of the snap feed → fetch the next cursor page.
+    if (momentsHasMore && moments.length > 0 && el.clientHeight > 0) {
+      const index = Math.round(currentScrollTop / el.clientHeight);
+      if (moments.length - index <= 2) void loadMoreMoments();
+    }
   };
 
   const toggleImmersive = () => {
@@ -64,8 +103,36 @@ export const MomentsView: React.FC = () => {
         </button>
       </div>
 
-      {/* Main Reels / TikTok Vertical Snapping Feed */}
-      {moments.length === 0 ? (
+      {/* ERROR STATE (feed failed and nothing to show) */}
+      {momentsError && moments.length === 0 && !isLoadingMoments && (
+        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-white bg-slate-950">
+          <div className="w-12 h-12 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center mb-3">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h3 className="text-sm font-bold">Không tải được khoảnh khắc</h3>
+          <p className="text-xs text-slate-400 mt-1 mb-4 max-w-xs">
+            Đã có lỗi xảy ra khi tải feed. Kiểm tra kết nối mạng và thử lại nhé.
+          </p>
+          <button
+            onClick={() => void refreshMoments()}
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-pink-500 rounded-full text-xs font-bold text-white shadow-lg cursor-pointer whitespace-nowrap truncate flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Thử lại</span>
+          </button>
+        </div>
+      )}
+
+      {/* INITIAL LOADING */}
+      {isLoadingMoments && moments.length === 0 && !momentsError && (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-950 text-white">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <span className="text-xs text-slate-400 animate-pulse">Đang tải khoảnh khắc...</span>
+        </div>
+      )}
+
+      {/* EMPTY STATE */}
+      {!isLoadingMoments && !momentsError && moments.length === 0 && (
         <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-white bg-slate-950">
           <Film className="w-12 h-12 text-slate-600 mb-3" />
           <h3 className="text-sm font-bold whitespace-nowrap truncate">Chưa có khoảnh khắc nào</h3>
@@ -80,7 +147,10 @@ export const MomentsView: React.FC = () => {
             <span>Tạo khoảnh khắc ngay</span>
           </button>
         </div>
-      ) : (
+      )}
+
+      {/* Main Reels / TikTok Vertical Snapping Feed */}
+      {moments.length > 0 && (
         <div 
           ref={feedContainerRef}
           onScroll={handleScroll}
@@ -97,14 +167,41 @@ export const MomentsView: React.FC = () => {
                 isImmersive={isImmersive}
                 onToggleImmersive={toggleImmersive}
               />
+              {/* Processing pill: files still awaiting ReceiveFileMarkedSuccess */}
+              {processingMomentIds.includes(moment.id) && (
+                <div className="absolute top-16 inset-x-0 z-40 flex justify-center pointer-events-none">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white text-xs font-semibold shadow-lg">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    <span>Đang xử lý ảnh/video...</span>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Cursor paging indicator (overlay — must not affect snap layout) */}
+      {moments.length > 0 && isLoadingMoreMoments && (
+        <div className="absolute bottom-5 inset-x-0 z-30 flex justify-center pointer-events-none">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/70 border border-white/15 text-white text-[11px] font-semibold shadow-lg">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+            <span>Đang tải thêm...</span>
+          </div>
         </div>
       )}
 
       {/* CREATE MOMENT MODAL */}
       {showCreateModal && (
         <CreateMomentModal onClose={() => setShowCreateModal(false)} />
+      )}
+
+      {/* SHARED MOMENT (?momentId=) VIEWER */}
+      {deepLinkMoment && (
+        <MomentViewerModal
+          moment={deepLinkMoment}
+          onClose={() => setDeepLinkMoment(null)}
+        />
       )}
     </div>
   );

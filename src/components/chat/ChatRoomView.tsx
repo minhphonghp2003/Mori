@@ -3,7 +3,13 @@ import { useApp } from '../../context/AppContext';
 import { MediaViewerModal } from '../common/MediaViewerModal';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { GroupSettingsModal } from './GroupSettingsModal';
-import { Message, Moment } from '../../types';
+import { Message, Moment, User } from '../../types';
+import { ConversationMemberRole, type ConversationMemberDto } from '../../types/chat';
+import { appHub } from '@/lib/signalr/app-hub';
+import { searchGiphy, type GiphyItem } from '@/services/giphy';
+import { getMomentById } from '@/services/moment';
+import { emptyUser } from '@/lib/chat/mappers';
+import { mapMoment } from '@/lib/moment/mappers';
 import { 
   ArrowLeft, 
   Video, 
@@ -15,7 +21,6 @@ import {
   CheckCheck,
   Check,
   X,
-  Upload,
   Play,
   Search,
   Camera,
@@ -26,12 +31,15 @@ import {
   Copy,
   Settings,
   Ban,
-  Plus
+  Plus,
+  AlertCircle
 } from 'lucide-react';
 
 interface ChatRoomViewProps {
   conversationId: string;
   onBack: () => void;
+  /** Moment attached from `/chat/{id}?momentId=` (share → chat flow). */
+  pendingMomentId?: string | null;
 }
 
 const EMOJI_CATEGORIES = [
@@ -49,26 +57,34 @@ const EMOJI_CATEGORIES = [
   }
 ];
 
-const GIPHY_ITEMS = [
-  { id: '1', title: 'Cheers Toast', tag: 'party', url: 'https://media.giphy.com/media/BPJmthQ3YRwD6QqcVD/giphy.gif' },
-  { id: '2', title: 'Happy Dance Cat', tag: 'happy', url: 'https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif' },
-  { id: '3', title: 'Minions Yay', tag: 'party', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
-  { id: '4', title: 'Love Heart', tag: 'love', url: 'https://media.giphy.com/media/l4pTdcifPZLpDjL1e/giphy.gif' },
-  { id: '5', title: 'LOL Laughing', tag: 'haha', url: 'https://media.giphy.com/media/10JhviFuU2gWD6/giphy.gif' },
-  { id: '6', title: 'Cute Dog', tag: 'love', url: 'https://media.giphy.com/media/4Zo41lhzKt6iZ8xff9/giphy.gif' },
-  { id: '7', title: 'High Five', tag: 'happy', url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif' },
-  { id: '8', title: 'Mind Blown', tag: 'wow', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
-  { id: '9', title: 'Thumbs Up OK', tag: 'ok', url: 'https://media.giphy.com/media/3o7absbD7PbTFQa0c8/giphy.gif' },
-  { id: '10', title: 'Bye Wave', tag: 'bye', url: 'https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif' },
-  { id: '11', title: 'Dance Party', tag: 'party', url: 'https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif' },
-  { id: '12', title: 'Wow Cat', tag: 'wow', url: 'https://media.giphy.com/media/udmx3pgdiD7gY/giphy.gif' }
-];
+const GIF_TAG_QUERIES: Record<string, string> = {
+  all: 'funny',
+  party: 'party',
+  happy: 'happy',
+  love: 'love',
+  haha: 'laugh',
+  wow: 'wow',
+};
 
 const QUICK_REACTION_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
 type DrawerType = 'emoji' | 'gif' | null;
 
-export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBack }) => {
+/** Local optimistic send (API doc §19: pending set keyed by idempotencyKey —
+ *  a retry reuses the same clientId so the server can dedupe). */
+interface PendingSend {
+  clientId: string;
+  status: 'sending' | 'failed';
+  text?: string;
+  image?: string | File;
+  video?: string | File;
+  locationPin?: { lat: number; lng: number; name: string };
+  replyTo?: { id: string; senderName: string; text?: string; imageUrl?: string };
+  momentId?: string;
+  previewUrl?: string;
+}
+
+export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBack, pendingMomentId }) => {
   const { 
     conversations, 
     messagesMap, 
@@ -79,9 +95,15 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     deleteMessage,
     reactToMessage, 
     startCall, 
-    blockFriend,
+    blockChat,
+    unblockChat,
     setSelectedUser,
-    showToast 
+    showToast,
+    resolvePartnerUser,
+    loadMembers,
+    loadOlderMessages,
+    hasMoreMessages,
+    searchAndMergeMessages
   } = useApp();
 
   const [inputText, setInputText] = useState('');
@@ -129,25 +151,196 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const conversation = conversations.find(c => c.id === conversationId);
-  const messages = messagesMap[conversationId] || [];
+  const messages = useMemo(
+    () => messagesMap[conversationId] || [],
+    [messagesMap, conversationId],
+  );
 
-  // Partner for 1:1 chat
-  const partner = conversation?.participants.find(p => p.id !== currentUser.id) || currentUser;
+  // ---- API-backed chat state (design mocks removed) ---------------------
+  const [partnerUser, setPartnerUser] = useState<User | null>(null);
+  const [memberDtos, setMemberDtos] = useState<ConversationMemberDto[]>([]);
+  const [pendingSends, setPendingSends] = useState<PendingSend[]>([]);
+  const [typingUsers, setTypingUsers] = useState<Record<number, { name: string; expires: number }>>({});
+  const [gifItems, setGifItems] = useState<GiphyItem[]>([]);
+  const [isLoadingGifs, setIsLoadingGifs] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const olderPageLockRef = useRef(false);
+  const typingThrottleRef = useRef(0);
+  const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingUrlsRef = useRef<PendingSend[]>([]);
+  useEffect(() => {
+    pendingUrlsRef.current = pendingSends;
+  }, [pendingSends]);
+
+  // ---- Shared moment (?momentId=) + moments referenced by messages -------
+  const [pendingMoment, setPendingMoment] = useState<Moment | null>(null);
+  const [extraMoments, setExtraMoments] = useState<Moment[]>([]);
+  const fetchingMomentIdsRef = useRef<Set<string>>(new Set());
+
+  // Load the moment attached from the share flow.
+  useEffect(() => {
+    if (!pendingMomentId || !Number(pendingMomentId)) {
+      setPendingMoment(null);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const res = await getMomentById(Number(pendingMomentId));
+        if (alive && res.data) setPendingMoment(mapMoment(res.data));
+        else if (alive) showToast('Khoảnh khắc không khả dụng hoặc đã hết hạn.', 'error');
+      } catch {
+        if (alive) showToast('Không tải được khoảnh khắc để đính kèm.', 'error');
+      }
+    })();
+    return () => { alive = false; };
+  }, [pendingMomentId, showToast]);
+
+  // On-demand fetch for moments in the thread that aren't in the feed page.
+  useEffect(() => {
+    for (const m of messages) {
+      if (!m.momentId) continue;
+      if (
+        moments.some(x => x.id === m.momentId) ||
+        extraMoments.some(x => x.id === m.momentId) ||
+        fetchingMomentIdsRef.current.has(m.momentId)
+      ) continue;
+      fetchingMomentIdsRef.current.add(m.momentId);
+      const id = m.momentId;
+      getMomentById(Number(id))
+        .then((res) => {
+          if (res.data) setExtraMoments(prev => [...prev, mapMoment(res.data!)]);
+        })
+        .catch(() => { /* moment not visible — card falls back to placeholder */ })
+        .finally(() => { fetchingMomentIdsRef.current.delete(id); });
+    }
+  }, [messages, moments, extraMoments]);
+
+  const convReady = !!conversation;
+  const convIsGroup = !!conversation?.isGroup;
+
+  // Display-only partner until the member lookup resolves (direct chats).
+  const partner: User = partnerUser ?? {
+    ...currentUser,
+    name: (!convIsGroup && conversation?.name) || currentUser.name,
+    avatar: (!convIsGroup && conversation?.avatar) || currentUser.avatar,
+  };
+
+  const adminUserId = useMemo(
+    () => memberDtos.find((m) => m.role === ConversationMemberRole.Host)?.userId,
+    [memberDtos],
+  );
+
+  const typingNames = Object.values(typingUsers).map(t => t.name);
+  const isPartnerTyping = !convIsGroup && typingNames.length > 0;
+  const groupTypingText = convIsGroup && typingNames.length > 0
+    ? (typingNames.length === 1 ? `${typingNames[0]} đang soạn tin...` : `${typingNames.length} người đang soạn tin...`)
+    : null;
+
+  // Resolve the direct-chat partner (profile / calls / chat-block target).
+  useEffect(() => {
+    if (!convReady) return;
+    if (convIsGroup) {
+      setPartnerUser(null);
+      return;
+    }
+    let alive = true;
+    setPartnerUser(null);
+    void resolvePartnerUser(conversationId).then((u) => {
+      if (alive) setPartnerUser(u);
+    });
+    return () => { alive = false; };
+  }, [conversationId, convReady, convIsGroup, resolvePartnerUser]);
+
+  // Group members (admin badge + member count fallback).
+  useEffect(() => {
+    if (!convReady || !convIsGroup) {
+      setMemberDtos([]);
+      return;
+    }
+    let alive = true;
+    void loadMembers(conversationId).then((d) => {
+      if (alive) setMemberDtos(d);
+    });
+    return () => { alive = false; };
+  }, [conversationId, convReady, convIsGroup, loadMembers]);
+
+  // Typing: global ReceiveTyping filtered to this room (4s auto-hide).
+  useEffect(() => {
+    const unsub = appHub.onReceiveTyping((data) => {
+      if (Number(data.conversationId) !== Number(conversationId)) return;
+      if (Number(data.userId) === Number(currentUser.id)) return;
+      setTypingUsers((prev) => {
+        const next = { ...prev };
+        if (data.isTyping) next[data.userId] = { name: data.userName, expires: Date.now() + 4000 };
+        else delete next[data.userId];
+        return next;
+      });
+    });
+    return unsub;
+  }, [conversationId, currentUser.id]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTypingUsers((prev) => {
+        const now = Date.now();
+        const kept = Object.entries(prev).filter(([, v]) => v.expires > now);
+        if (kept.length === Object.keys(prev).length) return prev;
+        return Object.fromEntries(kept);
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // GIPHY: fetch on drawer open and on tag/search change (debounced).
+  useEffect(() => {
+    if (activeDrawer !== 'gif') return;
+    const query = gifSearch.trim() || GIF_TAG_QUERIES[selectedGifTag] || 'funny';
+    let alive = true;
+    setIsLoadingGifs(true);
+    const timer = setTimeout(() => {
+      void searchGiphy(query, 'gif')
+        .then((items) => { if (alive) setGifItems(items); })
+        .catch((err) => console.error('[ChatRoom] searchGiphy failed:', err))
+        .finally(() => { if (alive) setIsLoadingGifs(false); });
+    }, gifSearch ? 400 : 0);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [activeDrawer, gifSearch, selectedGifTag]);
+
+  // In-chat server search: merge remote hits into the loaded window
+  // (highlights/jump below are purely local against `messages`).
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    const timer = setTimeout(() => {
+      void searchAndMergeMessages(conversationId, { content: q });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, conversationId, searchAndMergeMessages]);
 
   // Auto focus search input when search opens
   useEffect(() => {
     if (isSearchOpen) {
       setTimeout(() => searchInputRef.current?.focus(), 50);
-    } else {
-      setSearchQuery('');
     }
   }, [isSearchOpen]);
 
-  // Auto scroll to latest message
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  // Auto scroll to latest message (only when parked at the bottom)
   useEffect(() => {
-    if (!searchQuery) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (searchQuery) return;
+    if (messages.length > 0 && !stickToBottomRef.current) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, activeDrawer, replyingTo, editingMessage, searchQuery]);
 
   // Filter messages based on search query
@@ -161,10 +354,35 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     );
   }, [messages, searchQuery]);
 
+  // Jump to the first hit after local filter / server merge lands.
+  useEffect(() => {
+    if (!searchQuery.trim() || matchedMessageIds.size === 0) return;
+    const first = messages.find((m) => matchedMessageIds.has(m.id));
+    if (!first) return;
+    const el = listRef.current?.querySelector(`[data-msg-id="${first.id}"]`);
+    if (el instanceof HTMLElement) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedMessageIds]);
+
+  // Revoke object-URL previews for optimistic file bubbles.
+  useEffect(() => () => {
+    pendingUrlsRef.current.forEach((p) => {
+      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    });
+  }, []);
+
+  // The row may arrive async (deep-link → enterConversation fetches detail).
+  // Only surface "not found" if it never shows up.
+  const [showNotFound, setShowNotFound] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowNotFound(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!conversation) {
     return (
-      <div className="p-8 text-center text-xs text-slate-500">
-        Không tìm thấy cuộc trò chuyện.
+      <div className="p-8 text-center text-xs text-slate-500 animate-pulse">
+        {showNotFound ? 'Không tìm thấy cuộc trò chuyện.' : 'Đang tải cuộc trò chuyện...'}
       </div>
     );
   }
@@ -188,94 +406,205 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     }
   };
 
-  const handleSend = (e: React.FormEvent) => {
+  const stopTypingSignal = () => {
+    if (typingStopTimerRef.current) {
+      clearTimeout(typingStopTimerRef.current);
+      typingStopTimerRef.current = null;
+    }
+    if (typingThrottleRef.current) {
+      typingThrottleRef.current = 0;
+      void appHub.sendTyping(Number(conversationId), false).catch(() => {});
+    }
+  };
+
+  const notifyTyping = () => {
+    const now = Date.now();
+    if (now - typingThrottleRef.current < 1500) return;
+    typingThrottleRef.current = now;
+    void appHub.sendTyping(Number(conversationId), true).catch(() => {});
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    typingStopTimerRef.current = setTimeout(() => {
+      typingThrottleRef.current = 0;
+      typingStopTimerRef.current = null;
+      void appHub.sendTyping(Number(conversationId), false).catch(() => {});
+    }, 1500);
+  };
+
+  const handleInputChange = (value: string) => {
+    setInputText(value);
+    if (value) notifyTyping();
+    else stopTypingSignal();
+  };
+
+  /** Runs one optimistic send. The clientId doubles as the idempotencyKey,
+   *  so a retry after a failed send is deduped server-side. */
+  const runSend = async (p: PendingSend): Promise<boolean> => {
+    setPendingSends(prev => prev.map(x => x.clientId === p.clientId ? { ...x, status: 'sending' } : x));
+    const ok = await sendMessage(
+      conversationId,
+      p.text,
+      p.image,
+      p.locationPin,
+      p.video,
+      p.replyTo,
+      p.momentId,
+      p.clientId,
+    );
+    setPendingSends(prev => {
+      if (ok) {
+        if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+        return prev.filter(x => x.clientId !== p.clientId);
+      }
+      return prev.map(x => x.clientId === p.clientId ? { ...x, status: 'failed' } : x);
+    });
+    return ok;
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !pendingMoment) return;
 
     if (editingMessage) {
-      editMessage(conversationId, editingMessage.id, inputText.trim());
-      setEditingMessage(null);
-      setInputText('');
-    } else {
-      const replyData = replyingTo ? {
-        id: replyingTo.id,
-        senderName: replyingTo.senderId === currentUser.id 
-          ? currentUser.name 
-          : (conversation.participants.find(p => p.id === replyingTo.senderId)?.name || 'Bạn bè'),
-        text: replyingTo.text,
-        imageUrl: replyingTo.imageUrl
-      } : undefined;
-
-      sendMessage(
-        conversationId, 
-        inputText.trim(), 
-        undefined, 
-        undefined, 
-        undefined, 
-        replyData
-      );
-      setReplyingTo(null);
-      setInputText('');
+      const ok = await editMessage(conversationId, editingMessage.id, inputText.trim());
+      if (ok) {
+        setEditingMessage(null);
+        setInputText('');
+      }
+      // On failure keep the text in the box so the user can retry.
+      return;
     }
 
-    setActiveDrawer(null);
-  };
+    const replyData = replyingTo ? {
+      id: replyingTo.id,
+      senderName: replyingTo.senderName || (replyingTo.senderId === currentUser.id ? currentUser.name : partner.name),
+      text: replyingTo.text,
+      imageUrl: replyingTo.imageUrl
+    } : undefined;
 
-  const handleSendImage = (imgUrl: string) => {
-    sendMessage(conversationId, undefined, imgUrl);
+    const pending: PendingSend = {
+      clientId: crypto.randomUUID(),
+      status: 'sending',
+      text: inputText.trim() || undefined,
+      replyTo: replyData,
+      momentId: pendingMoment?.id,
+    };
+    setPendingSends(prev => [...prev, pending]);
+    setReplyingTo(null);
+    setInputText('');
     setActiveDrawer(null);
-    showToast('Đã gửi ảnh thành công 📷', 'success');
-  };
-
-  const handleSendVideo = (videoUrl: string) => {
-    sendMessage(conversationId, undefined, undefined, undefined, videoUrl);
-    setActiveDrawer(null);
-    showToast('Đã gửi video thành công 🎥', 'success');
+    stopTypingSignal();
+    const ok = await runSend(pending);
+    if (ok && pending.momentId) setPendingMoment(null);
   };
 
   const handleSendGif = (gifUrl: string) => {
-    sendMessage(conversationId, undefined, gifUrl);
     setActiveDrawer(null);
-    showToast('Đã gửi GIF từ Giphy ✨', 'success');
+    const pending: PendingSend = { clientId: crypto.randomUUID(), status: 'sending', image: gifUrl };
+    setPendingSends(prev => [...prev, pending]);
+    void runSend(pending).then((ok) => {
+      if (ok) showToast('Đã gửi GIF từ Giphy ✨', 'success');
+    });
+  };
+
+  const handleSendPhotoFile = (file: File) => {
+    const pending: PendingSend = {
+      clientId: crypto.randomUUID(),
+      status: 'sending',
+      image: file,
+      previewUrl: URL.createObjectURL(file),
+    };
+    setPendingSends(prev => [...prev, pending]);
+    void runSend(pending).then((ok) => {
+      if (ok) showToast('Đã gửi ảnh thành công 📷', 'success');
+    });
+  };
+
+  const handleSendVideoFile = (file: File) => {
+    const pending: PendingSend = {
+      clientId: crypto.randomUUID(),
+      status: 'sending',
+      video: file,
+      previewUrl: URL.createObjectURL(file),
+    };
+    setPendingSends(prev => [...prev, pending]);
+    void runSend(pending).then((ok) => {
+      if (ok) showToast('Đã gửi video thành công 🎥', 'success');
+    });
   };
 
   const handleSendLocation = () => {
-    sendMessage(conversationId, undefined, undefined, {
-      lat: currentUser.location.lat,
-      lng: currentUser.location.lng,
-      name: currentUser.location.address
-    });
-    showToast('Đã gửi vị trí hiện tại 📍', 'success');
+    if (!navigator.geolocation) {
+      showToast('Thiết bị không hỗ trợ định vị GPS.', 'error');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const pending: PendingSend = {
+          clientId: crypto.randomUUID(),
+          status: 'sending',
+          locationPin: {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            name: 'Vị trí hiện tại',
+          },
+        };
+        setPendingSends(prev => [...prev, pending]);
+        void runSend(pending).then((ok) => {
+          if (ok) showToast('Đã gửi vị trí hiện tại 📍', 'success');
+        });
+      },
+      () => showToast('Không thể lấy vị trí GPS. Hãy cho phép quyền định vị.', 'error'),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
   };
 
-  // Local Photo Upload
+  // Local Photo Upload (File goes straight to the presigned uploader)
   const handlePhotoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        handleSendImage(result);
-      }
-    };
-    reader.readAsDataURL(file);
+    e.target.value = '';
+    if (file) handleSendPhotoFile(file);
   };
 
   // Local Video Upload
   const handleVideoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = '';
+    if (file) handleSendVideoFile(file);
+  };
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        handleSendVideo(result);
-      }
-    };
-    reader.readAsDataURL(file);
+  const handleRetrySend = (p: PendingSend) => {
+    void runSend(p);
+  };
+
+  const handleDiscardSend = (p: PendingSend) => {
+    if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    setPendingSends(prev => prev.filter(x => x.clientId !== p.clientId));
+  };
+
+  // Infinite history paging: fetch the previous window and keep the
+  // viewport pinned to the message the user was looking at.
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (
+      el.scrollTop >= 60 ||
+      !hasMoreMessages(conversationId) ||
+      olderPageLockRef.current ||
+      isLoadingOlder
+    ) {
+      return;
+    }
+    olderPageLockRef.current = true;
+    setIsLoadingOlder(true);
+    const prevHeight = el.scrollHeight;
+    void loadOlderMessages(conversationId).finally(() => {
+      olderPageLockRef.current = false;
+      setIsLoadingOlder(false);
+      requestAnimationFrame(() => {
+        const node = listRef.current;
+        if (node) node.scrollTop += node.scrollHeight - prevHeight;
+      });
+    });
   };
 
   // Message Action Handlers
@@ -314,11 +643,19 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     setConfirmDeleteId(null);
   };
 
-  const handleConfirmBlock = () => {
-    blockFriend(partner.id);
+  const handleConfirmBlock = async () => {
+    if (!partnerUser) return;
+    const ok = await blockChat(conversationId, partnerUser.id);
     setShowBlockConfirm(false);
-    showToast(`Đã chặn ${partner.name} thành công`, 'info');
-    onBack();
+    if (ok) {
+      showToast(`Đã chặn ${partnerUser.name} 🚫`, 'info');
+      onBack();
+    }
+  };
+
+  const handleUnblock = () => {
+    if (!partnerUser) return;
+    void unblockChat(conversationId, partnerUser.id);
   };
 
   // Highlight search results in messages
@@ -339,13 +676,6 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       </>
     );
   };
-
-  // Filter GIFs
-  const filteredGifs = GIPHY_ITEMS.filter(gif => {
-    const matchesSearch = gif.title.toLowerCase().includes(gifSearch.toLowerCase());
-    const matchesTag = selectedGifTag === 'all' || gif.tag === selectedGifTag;
-    return matchesSearch && matchesTag;
-  });
 
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-50 overflow-hidden select-none">
@@ -381,12 +711,12 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
           <div 
             onClick={() => {
-              if (!conversation.isGroup) {
-                setSelectedUser(partner);
+              if (!conversation.isGroup && partnerUser) {
+                setSelectedUser(partnerUser);
               }
             }}
-            className={`relative shrink-0 ${!conversation.isGroup ? 'cursor-pointer group' : ''}`}
-            title={!conversation.isGroup ? `Xem hồ sơ ${partner.name}` : undefined}
+            className={`relative shrink-0 ${!conversation.isGroup && partnerUser ? 'cursor-pointer group' : ''}`}
+            title={!conversation.isGroup && partnerUser ? `Xem hồ sơ ${partner.name}` : undefined}
           >
             <img
               src={conversation.isGroup ? conversation.avatar : partner.avatar}
@@ -394,26 +724,30 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
               referrerPolicy="no-referrer"
               className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/20 group-hover:ring-indigo-600 transition-all"
             />
-            {!conversation.isGroup && (
+            {!conversation.isGroup && conversation.isOnline && (
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
             )}
           </div>
 
           <div 
             onClick={() => {
-              if (!conversation.isGroup) {
-                setSelectedUser(partner);
+              if (!conversation.isGroup && partnerUser) {
+                setSelectedUser(partnerUser);
               }
             }}
-            className={`min-w-0 ${!conversation.isGroup ? 'cursor-pointer group' : ''}`}
+            className={`min-w-0 ${!conversation.isGroup && partnerUser ? 'cursor-pointer group' : ''}`}
           >
             <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 leading-tight truncate whitespace-nowrap transition-colors">
               {conversation.isGroup ? conversation.name : partner.name}
             </div>
             <div className="text-[10px] text-slate-400 mt-0.5 truncate whitespace-nowrap">
               {conversation.isGroup
-                ? `${conversation.participants.length} thành viên`
-                : 'Đang hoạt động • Chạm để xem hồ sơ'}
+                ? groupTypingText || `${conversation.memberCount || memberDtos.length || '?'} thành viên`
+                : isPartnerTyping
+                ? 'Đang soạn tin...'
+                : convIsGroup === false && conversation.isOnline
+                ? 'Đang hoạt động • Chạm để xem hồ sơ'
+                : 'Không hoạt động • Chạm để xem hồ sơ'}
             </div>
           </div>
         </div>
@@ -423,7 +757,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           /* GROUP CHAT ACTIONS: SEARCH MSG & GROUP SETTINGS */
           <div className="flex items-center gap-1 shrink-0">
             <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
               className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                 isSearchOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-600 hover:bg-slate-100'
               }`}
@@ -444,7 +778,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           /* DIRECT MESSAGE ACTIONS: SEARCH MSG, CALLING (VOICE & VIDEO), BLOCK CHAT */
           <div className="flex items-center gap-1 shrink-0">
             <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
               className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                 isSearchOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-600 hover:bg-slate-100'
               }`}
@@ -454,16 +788,18 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             </button>
 
             <button
-              onClick={() => startCall(partner, false)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              onClick={() => partnerUser && startCall(partnerUser, false)}
+              disabled={!partnerUser}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
               title="Gọi thoại"
             >
               <Phone className="w-4 h-4" />
             </button>
 
             <button
-              onClick={() => startCall(partner, true)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              onClick={() => partnerUser && startCall(partnerUser, true)}
+              disabled={!partnerUser}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
               title="Gọi video"
             >
               <Video className="w-4 h-4" />
@@ -471,8 +807,9 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
             <button
               onClick={() => setShowBlockConfirm(true)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-              title="Chặn cuộc trò chuyện & quan hệ bạn bè"
+              disabled={!partnerUser}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
+              title="Chặn cuộc trò chuyện"
             >
               <Ban className="w-4 h-4" />
             </button>
@@ -498,7 +835,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             </span>
           )}
           <button
-            onClick={() => setIsSearchOpen(false)}
+            onClick={closeSearch}
             className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
@@ -508,24 +845,38 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
       {/* MESSAGES STREAM */}
       <div 
+        ref={listRef}
         className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3.5"
+        onScroll={handleListScroll}
         onClick={() => {
           setActiveDrawer(null);
           setActiveActionMenuMsgId(null);
         }}
       >
+        {isLoadingOlder && (
+          <div className="text-center py-2 text-[11px] text-slate-400 animate-pulse">
+            Đang tải tin nhắn cũ...
+          </div>
+        )}
         {messages.map((msg) => {
           const isMe = msg.senderId === currentUser.id;
-          const sender = conversation.participants.find(p => p.id === msg.senderId) || currentUser;
+          const sender = isMe
+            ? currentUser
+            : msg.senderName
+            ? emptyUser(msg.senderId, msg.senderName, msg.senderAvatar || '')
+            : currentUser;
           const isMenuOpen = activeActionMenuMsgId === msg.id;
           const isMatched = searchQuery.trim() ? matchedMessageIds.has(msg.id) : false;
 
-          // Check if message references a moment
-          const momentData = msg.momentId ? moments.find(m => m.id === msg.momentId) : null;
+          // Check if message references a moment (feed page or on-demand cache)
+          const momentData = msg.momentId
+            ? moments.find(m => m.id === msg.momentId) ?? extraMoments.find(m => m.id === msg.momentId)
+            : null;
 
           return (
             <div
               key={msg.id}
+              data-msg-id={msg.id}
               className={`flex flex-col relative ${isMe ? 'items-end' : 'items-start'} ${
                 searchQuery.trim() && !isMatched ? 'opacity-40' : ''
               }`}
@@ -546,7 +897,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                   <span className="text-[11px] font-bold text-slate-700 group-hover/sender:text-indigo-600 transition-colors">
                     {sender.name}
                   </span>
-                  {conversation.isGroup && conversation.adminId === sender.id && (
+                  {conversation.isGroup && adminUserId != null && Number(msg.senderId) === adminUserId && (
                     <span className="text-[8px] font-bold text-amber-700 bg-amber-50 px-1 py-0.2 rounded-xs border border-amber-200">
                       Admin
                     </span>
@@ -729,6 +1080,13 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                     </div>
                   )}
 
+                  {/* DELETED (TOMBSTONE) MESSAGE */}
+                  {msg.isDeleted && (
+                    <div className="px-3.5 py-2.5 rounded-2xl text-[11px] italic bg-slate-100 text-slate-400 border border-slate-200">
+                      Tin nhắn đã bị xóa
+                    </div>
+                  )}
+
                   {/* 5. TEXT BUBBLE WITH SEARCH HIGHLIGHT */}
                   {msg.text && (
                     <div
@@ -840,6 +1198,57 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             </div>
           );
         })}
+
+        {/* OPTIMISTIC PENDING / FAILED SENDS (retry reuses idempotencyKey) */}
+        {pendingSends.map((p) => (
+          <div key={p.clientId} className="flex flex-col items-end">
+            {p.previewUrl && p.video && (
+              <video src={p.previewUrl} playsInline className="rounded-2xl max-h-40 mb-1 border border-slate-200" />
+            )}
+            {p.previewUrl && p.image && (
+              <img src={p.previewUrl} alt="Đang gửi" className="rounded-2xl max-h-40 object-cover mb-1 border border-slate-200" />
+            )}
+            {p.locationPin && (
+              <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm mb-1 flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400">Vị trí chia sẻ</div>
+                  <div className="text-xs font-bold text-slate-800">{p.locationPin.name}</div>
+                </div>
+              </div>
+            )}
+            {p.text && (
+              <div className="px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-xs bg-indigo-600 text-white rounded-br-xs max-w-[88%]">
+                {p.text}
+              </div>
+            )}
+            {p.status === 'sending' ? (
+              <span className="text-[9px] text-slate-400 mt-0.5 px-1 animate-pulse">
+                Đang gửi...
+              </span>
+            ) : (
+              <div className="flex items-center gap-1.5 mt-0.5 px-1">
+                <AlertCircle className="w-3 h-3 text-rose-500" />
+                <span className="text-[9px] text-rose-500 font-semibold">Gửi thất bại</span>
+                <button
+                  onClick={() => handleRetrySend(p)}
+                  className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                >
+                  Thử lại
+                </button>
+                <button
+                  onClick={() => handleDiscardSend(p)}
+                  className="text-[9px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  Xóa
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -929,20 +1338,30 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           </div>
 
           <div className="flex-1 overflow-y-auto no-scrollbar grid grid-cols-3 gap-2">
-            {filteredGifs.map(gif => (
-              <button
-                key={gif.id}
-                onClick={() => handleSendGif(gif.url)}
-                className="rounded-xl overflow-hidden aspect-[4/3] bg-slate-100 border border-slate-200 hover:ring-2 hover:ring-purple-600 transition-all cursor-pointer relative group"
-              >
-                <img 
-                  src={gif.url} 
-                  alt={gif.title} 
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-                />
-              </button>
-            ))}
+            {isLoadingGifs ? (
+              <div className="col-span-3 text-center py-6 text-[11px] text-slate-400 animate-pulse">
+                Đang tìm GIF...
+              </div>
+            ) : gifItems.length === 0 ? (
+              <div className="col-span-3 text-center py-6 text-[11px] text-slate-400">
+                Không tìm thấy GIF phù hợp
+              </div>
+            ) : (
+              gifItems.map(gif => (
+                <button
+                  key={gif.id}
+                  onClick={() => handleSendGif(gif.url)}
+                  className="rounded-xl overflow-hidden aspect-[4/3] bg-slate-100 border border-slate-200 hover:ring-2 hover:ring-purple-600 transition-all cursor-pointer relative group"
+                >
+                  <img 
+                    src={gif.thumbUrl || gif.url} 
+                    alt="GIF" 
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                  />
+                </button>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -954,7 +1373,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             <Reply className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
             <div className="min-w-0">
               <span className="text-[10px] font-bold text-indigo-700 block truncate">
-                Đang trả lời {replyingTo.senderId === currentUser.id ? 'chính bạn' : partner.name}
+                Đang trả lời {replyingTo.senderId === currentUser.id ? 'chính bạn' : (replyingTo.senderName || partner.name)}
               </span>
               <span className="text-[11px] text-slate-600 truncate block">
                 {replyingTo.text || (replyingTo.imageUrl ? '📷 [Hình ảnh]' : replyingTo.videoUrl ? '🎥 [Video]' : '[Tệp đính kèm]')}
@@ -1000,7 +1419,70 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
         </div>
       )}
 
+      {/* PENDING SHARED MOMENT CHIP (?momentId=) ABOVE THE INPUT */}
+      {pendingMoment && !conversation.isBlocked && !editingMessage && (
+        <div className="px-3.5 py-2 bg-indigo-50/95 border-t border-indigo-100 flex items-center justify-between gap-2 animate-in slide-in-from-bottom-2 z-10">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src={pendingMoment.imageUrl}
+              alt={pendingMoment.caption}
+              referrerPolicy="no-referrer"
+              className="w-10 h-10 rounded-lg object-cover border border-indigo-200 shadow-xs"
+            />
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-indigo-700 block">
+                Khoảnh khắc đính kèm
+              </span>
+              <span className="text-[11px] text-slate-600 truncate block">
+                {pendingMoment.caption || 'Nhấn gửi để chia sẻ khoảnh khắc'}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPendingMoment(null)}
+            className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-indigo-100 cursor-pointer shrink-0"
+            title="Bỏ đính kèm khoảnh khắc"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* BLOCKED CONVERSATION BAR — replaces the composer while blocked */}
+      {conversation.isBlocked && (
+        <div className="shrink-0 bg-white border-t border-slate-100 px-4 py-3.5 flex items-center justify-between gap-3 z-10">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <Ban className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-800 truncate">
+                {conversation.blockedById === Number(currentUser.id)
+                  ? `Bạn đã chặn ${partner.name}`
+                  : 'Cuộc trò chuyện đã bị chặn'}
+              </div>
+              <div className="text-[10px] text-slate-400 truncate">
+                {conversation.blockedById === Number(currentUser.id)
+                  ? 'Bỏ chặn để tiếp tục gửi tin nhắn'
+                  : 'Bạn không thể gửi tin nhắn lúc này'}
+              </div>
+            </div>
+          </div>
+          {conversation.blockedById === Number(currentUser.id) && (
+            <button
+              onClick={handleUnblock}
+              disabled={!partnerUser}
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs cursor-pointer disabled:opacity-40 shrink-0"
+            >
+              Bỏ chặn
+            </button>
+          )}
+        </div>
+      )}
+
       {/* COMPOSER BOTTOM INPUT BAR: INLINE APPEND LIST ON '+' TAP, SHRINKS INPUT BOX */}
+      {!conversation.isBlocked && (
       <form onSubmit={handleSend} className="shrink-0 bg-white border-t border-slate-100 p-2.5 flex items-center gap-1.5 z-10">
         
         {/* LEFT SIDE TOOLS: EMOJI, PLUS (TOGGLES INLINE EXPANSION: PHOTO, VIDEO, LOCATION, GIF) */}
@@ -1091,7 +1573,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           ref={inputRef}
           type="text"
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          onChange={(e) => handleInputChange(e.target.value)}
           placeholder={editingMessage ? "Cập nhật nội dung..." : replyingTo ? "Nhập câu trả lời..." : "Nhập tin nhắn..."}
           className="flex-1 bg-slate-100 hover:bg-slate-200/50 focus:bg-white border border-transparent focus:border-slate-200 rounded-2xl px-3.5 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-w-[80px]"
         />
@@ -1099,7 +1581,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
         {/* Send / Update Button */}
         <button
           type="submit"
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim() && !pendingMoment}
           className={`w-9 h-9 rounded-2xl text-white flex items-center justify-center shadow-md disabled:opacity-30 active:scale-95 transition-all cursor-pointer shrink-0 ${
             editingMessage 
               ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' 
@@ -1110,6 +1592,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           {editingMessage ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
         </button>
       </form>
+      )}
 
       {/* FULLSCREEN MEDIA VIEWER MODAL (IMAGE/VIDEO) WITH DOWNLOAD AND CLOSE BUTTON ONLY */}
       {activeMedia && (
@@ -1151,10 +1634,10 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
               <Ban className="w-6 h-6" />
             </div>
             <h4 className="text-sm font-bold text-slate-900 mb-1.5">
-              Chặn {partner.name}?
+              Chặn {partnerUser?.name || partner.name}?
             </h4>
             <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Bạn sẽ không nhận được tin nhắn từ người này và quan hệ bạn bè sẽ bị chặn trên bản đồ.
+              Bạn sẽ không nhận được tin nhắn từ người này trong cuộc trò chuyện cho đến khi bỏ chặn.
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -1167,7 +1650,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                 onClick={handleConfirmBlock}
                 className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
               >
-                Chặn bạn bè
+                Chặn cuộc trò chuyện
               </button>
             </div>
           </div>

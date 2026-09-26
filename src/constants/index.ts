@@ -1,0 +1,18 @@
+export const APP_NAME = "FriendHereFE";
+export const API_TIMEOUT = 30000;
+export const TOKEN_KEY = "access_token";
+export const USER_ID_KEY = "user_id";
+export const REFRESH_TOKEN_KEY = "refresh_token";
+export const TOKEN_EXPIRES_AT_KEY = "token_expires_at";
+export const REFRESH_TOKEN_EXPIRES_AT_KEY = "refresh_token_expires_at";
+export const USER_INFO_KEY = "user_info";
+export const STORAGE_KEYS = {
+  THEME: "theme",
+  LOCALE: "locale",
+} as const;
+
+/** v2: last open page (home/moments) for app re-launch ("continue where you left off") */
+export const V2_LAST_PAGE_KEY = "v2_last_page";
+
+/** v2: last map view (center + zoom) — restored when reopening the location page */
+export const V2_LAST_MAP_VIEW_KEY = "v2_last_map_view";

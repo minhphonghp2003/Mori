@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { VisibilityTier } from '../../types';
-import { VISIBILITY_OPTIONS } from '../../data/mockData';
+import { VISIBILITY_OPTIONS } from '@/constants/visibility';
 import { 
   X, 
   MapPin, 
@@ -14,13 +14,14 @@ import {
   RotateCcw, 
   SwitchCamera, 
   Check, 
-  Zap, 
+  Zap,
   ZapOff,
   Play,
   Pause,
   Volume2,
   VolumeX,
-  Maximize2
+  Maximize2,
+  Loader2
 } from 'lucide-react';
 
 interface CreateMomentModalProps {
@@ -382,48 +383,70 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
   };
 
   // Publish Moment
-  const handlePublish = (e: React.FormEvent) => {
-    e.preventDefault();
+  const [isPublishing, setIsPublishing] = useState(false);
 
-    const allowedUserIds = applicableFriends
-      .filter(f => allowedFriendsMap[f.id] !== false)
-      .map(f => f.id);
-
-    const excludedUserIds = applicableFriends
-      .filter(f => allowedFriendsMap[f.id] === false)
-      .map(f => f.id);
-
-    if (mediaType === 'video') {
-      addMoment({
-        caption: caption.trim() || 'Khoảnh khắc video mới 🎬✨',
-        imageUrl: selectedVideoPoster || selectedImages[0] || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-        mediaType: 'video',
-        videoUrl: selectedVideoUrl,
-        locationName: currentUser.location.address,
-        includeLocation,
-        allowDirectMessage,
-        visibility,
-        allowedUserIds,
-        excludedUserIds,
-        allowComment: allowDirectMessage
-      });
-    } else {
-      addMoment({
-        caption: caption.trim() || 'Khoảnh khắc mới ✨',
-        imageUrl: selectedImages[0] || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
-        imageUrls: selectedImages,
-        mediaType: 'image',
-        locationName: currentUser.location.address,
-        includeLocation,
-        allowDirectMessage,
-        visibility,
-        allowedUserIds,
-        excludedUserIds,
-        allowComment: allowDirectMessage
-      });
+  const sourceToBlob = async (src: string): Promise<Blob> => {
+    try {
+      const res = await fetch(src);
+      if (!res.ok) throw new Error('bad status');
+      return await res.blob();
+    } catch {
+      throw new Error('Không thể xử lý media đã chọn. Vui lòng chụp lại hoặc chọn ảnh/video từ thiết bị.');
     }
+  };
 
-    onClose();
+  const extFromType = (type: string, fallback: string): string => {
+    const seg = type.split('/')[1]?.split(';')[0];
+    if (!seg) return fallback;
+    return seg === 'jpeg' ? 'jpg' : seg;
+  };
+
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isPublishing) return;
+    setIsPublishing(true);
+    try {
+      const excludedUserIds = applicableFriends
+        .filter((f) => allowedFriendsMap[f.id] === false)
+        .map((f) => f.id);
+
+      if (mediaType === 'video') {
+        const blob = await sourceToBlob(selectedVideoUrl);
+        const file = new File([blob], `moment.${extFromType(blob.type, 'mp4')}`, {
+          type: blob.type || 'video/mp4',
+        });
+        await addMoment({
+          caption: caption.trim() || 'Khoảnh khắc video mới 🎬✨',
+          video: file,
+          includeLocation,
+          visibility,
+          excludedUserIds,
+          allowComment: allowDirectMessage,
+        });
+      } else {
+        const blobs = await Promise.all(selectedImages.map((src) => sourceToBlob(src)));
+        const images = blobs.map(
+          (b, i) =>
+            new File([b], `moment_${i + 1}.${extFromType(b.type, 'jpg')}`, {
+              type: b.type || 'image/jpeg',
+            }),
+        );
+        await addMoment({
+          caption: caption.trim() || 'Khoảnh khắc mới ✨',
+          images,
+          includeLocation,
+          visibility,
+          excludedUserIds,
+          allowComment: allowDirectMessage,
+        });
+      }
+      onClose();
+    } catch {
+      // Toasts are already shown by sourceToBlob / addMoment; keep the
+      // editor open so the user can retry without re-capturing.
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -830,7 +853,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                     type="text"
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
-                    maxLength={150}
+                    maxLength={2000}
                     placeholder="Thêm chú thích cho khoảnh khắc này..."
                     className="w-full bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
                   />
@@ -966,10 +989,20 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 {/* Publish Action Button */}
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  disabled={isPublishing}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
                 >
-                  <span>Đăng khoảnh khắc ngay</span>
-                  <Check className="w-4 h-4 stroke-[3]" />
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang đăng lên...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Đăng khoảnh khắc ngay</span>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                    </>
+                  )}
                 </button>
               </form>
             </div>

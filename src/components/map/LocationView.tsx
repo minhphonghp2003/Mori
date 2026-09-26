@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useMemo, useRef, useState } from 'react';
+import MapGl, { Marker, type MapRef } from 'react-map-gl/maplibre';
 import { useApp } from '../../context/AppContext';
-import { VisibilityTier } from '../../types';
-import { VISIBILITY_OPTIONS } from '../../data/mockData';
+import { useAppSelector } from '@/store/hooks';
+import { env } from '@/config/env';
+import { emptyUser } from '@/lib/chat/mappers';
+import { getDistanceMeters, metersToKm } from '@/lib/location/geo';
+import { LOCATION_RETRY_EVENT } from '@/providers/location-provider';
+import type { User, VisibilityTier } from '../../types';
+import { VISIBILITY_OPTIONS } from '@/constants/visibility';
 import { 
   Navigation, 
   Plus, 
@@ -15,8 +23,35 @@ import {
   Star,
   Heart,
   Globe,
-  X
+  X,
+  MapPin,
+  Crosshair
 } from 'lucide-react';
+
+const DEFAULT_VIEW = { longitude: 105.854167, latitude: 21.028511, zoom: 12.5 };
+const MAP_VIEW_KEY = 'mori.map.view';
+
+type SavedView = { longitude: number; latitude: number; zoom: number };
+
+const loadMapView = (): SavedView => {
+  if (typeof window === 'undefined') return DEFAULT_VIEW;
+  try {
+    const raw = window.localStorage.getItem(MAP_VIEW_KEY);
+    if (raw) {
+      const v = JSON.parse(raw) as Partial<SavedView>;
+      if (
+        typeof v.longitude === 'number' &&
+        typeof v.latitude === 'number' &&
+        typeof v.zoom === 'number'
+      ) {
+        return v as SavedView;
+      }
+    }
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_VIEW;
+};
 
 export const LocationView: React.FC = () => {
   const { 
@@ -27,12 +62,14 @@ export const LocationView: React.FC = () => {
     updateVisibility
   } = useApp();
 
-  // Map viewport state: pan offset and zoom level
-  const [mapPos, setMapPos] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  
+  // Live location state (seeded by REST, kept fresh by hub events).
+  const myPosition = useAppSelector((s) => s.location);
+  const { latitude, longitude, status, visibility, locationDenied } = myPosition;
+  const locations = useAppSelector((s) => s.location.locations);
+
+  const mapRef = useRef<MapRef>(null);
+  const [initialView] = useState<SavedView>(loadMapView);
+
   // Status edit modal for self marker
   const [isEditingStatus, setIsEditingStatus] = useState(false);
   const [newStatusInput, setNewStatusInput] = useState(currentUser.status);
@@ -40,67 +77,14 @@ export const LocationView: React.FC = () => {
   // Privacy / Visibility edit modal
   const [isEditingPrivacy, setIsEditingPrivacy] = useState(false);
 
+  // Filter state: all, friends, strangers
+  const [mapFilter, setMapFilter] = useState<'all' | 'friends' | 'strangers'>('all');
 
-  // Base map center (Hanoi Old Quarter)
-  // Let's project lat/lng differences onto pixel offsets
-  const BASE_LAT = 21.028511;
-  const BASE_LNG = 105.854167;
-  const LAT_SCALE = 9000;
-  const LNG_SCALE = 9000;
-
-  const getMarkerCoords = (lat: number, lng: number) => {
-    const x = (lng - BASE_LNG) * LNG_SCALE * zoom + mapPos.x;
-    const y = -(lat - BASE_LAT) * LAT_SCALE * zoom + mapPos.y;
-    return { x, y };
-  };
-
-  // Center map on user
-  const centerOnUser = (lat: number, lng: number) => {
-    const targetX = -(lng - BASE_LNG) * LNG_SCALE * zoom;
-    const targetY = (lat - BASE_LAT) * LAT_SCALE * zoom;
-    setMapPos({ x: targetX, y: targetY });
-  };
-
-  // Drag handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - mapPos.x, y: e.clientY - mapPos.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setMapPos({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // Touch drag handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.touches[0].clientX - mapPos.x,
-        y: e.touches[0].clientY - mapPos.y
-      });
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    setMapPos({
-      x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y
-    });
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-  };
+  const myId = currentUser.id;
+  const myStatus = status || currentUser.status || 'Trực tuyến';
+  const currentVisibility = (visibility ?? currentUser.visibility) as VisibilityTier;
+  const hasMyPosition = latitude != null && longitude != null;
+  const hasMapStyle = !!env.NEXT_PUBLIC_MAP_STYLE_URL;
 
   // Visibility helper
   const getVisibilityInfo = (tier: VisibilityTier) => {
@@ -154,17 +138,85 @@ export const LocationView: React.FC = () => {
     }
   };
 
-  const currentVisibilityInfo = getVisibilityInfo(currentUser.visibility);
+  const currentVisibilityInfo = getVisibilityInfo(currentVisibility);
 
-  // Filter state: all, friends, strangers
-  const [mapFilter, setMapFilter] = useState<'all' | 'friends' | 'strangers'>('all');
+  const friendsById = useMemo(() => new Map(friends.map((f) => [f.id, f])), [friends]);
 
-  const visibleUsers = friends.filter((u) => {
-    const isFriend = u.relationship?.status === 'accepted';
+  // Other people currently sharing location → design-shaped marker users.
+  const markerUsers = useMemo(() => {
+    const myNumericId = Number(myId);
+    return locations
+      .filter((l) => l.userId !== myNumericId)
+      .map((l) => {
+        const friend = friendsById.get(String(l.userId));
+        const distanceMeters =
+          hasMyPosition && latitude != null && longitude != null
+            ? getDistanceMeters(latitude, longitude, l.latitude, l.longitude)
+            : null;
+        const user: User = {
+          ...emptyUser(String(l.userId), l.name, l.image ?? ''),
+          status: l.status ?? '',
+          battery: l.battery ?? 0,
+          location: { lat: l.latitude, lng: l.longitude, address: '', city: '' },
+          visibility: l.visibility as VisibilityTier,
+          relationship: friend?.relationship,
+          distanceKm: distanceMeters != null ? metersToKm(distanceMeters) : undefined,
+        };
+        return { loc: l, user };
+      });
+  }, [locations, friendsById, myId, latitude, longitude, hasMyPosition]);
+
+  const visibleUsers = markerUsers.filter(({ user }) => {
+    const isFriend = user.relationship?.status === 'accepted';
     if (mapFilter === 'friends') return isFriend;
     if (mapFilter === 'strangers') return !isFriend;
     return true; // 'all'
   });
+
+  // Map controls -----------------------------------------------------------
+  const persistView = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    try {
+      window.localStorage.setItem(
+        MAP_VIEW_KEY,
+        JSON.stringify({ longitude: center.lng, latitude: center.lat, zoom }),
+      );
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const centerOnUser = () => {
+    if (!hasMyPosition || latitude == null || longitude == null) return;
+    mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 15, duration: 600 });
+  };
+
+  const zoomBy = (delta: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const next = Math.min(Math.max(map.getZoom() + delta, 1), 18);
+    map.zoomTo(next, { duration: 250 });
+  };
+
+  const resetView = () => {
+    mapRef.current?.flyTo({
+      center: [DEFAULT_VIEW.longitude, DEFAULT_VIEW.latitude],
+      zoom: DEFAULT_VIEW.zoom,
+      duration: 600,
+    });
+  };
+
+  const openStatusEditor = () => {
+    setNewStatusInput(status || currentUser.status);
+    setIsEditingStatus(true);
+  };
+
+  const requestLocationPermission = () => {
+    window.dispatchEvent(new Event(LOCATION_RETRY_EVENT));
+  };
 
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-50 overflow-hidden select-none">
@@ -219,185 +271,92 @@ export const LocationView: React.FC = () => {
       </div>
 
       {/* Map Interactive Canvas */}
-      <div 
-        className="relative flex-1 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Render Vector Map Background */}
-        <div 
-          className="absolute inset-0 transition-transform duration-75 ease-out"
-          style={{
-            transform: `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`,
-            transformOrigin: 'center center'
-          }}
-        >
-          {/* Stylized Map Vector Artwork representing Hanoi city roads, lakes and parks */}
-          <svg className="w-[1800px] h-[1800px] -translate-x-[450px] -translate-y-[450px]" viewBox="0 0 1200 1200" fill="none">
-            {/* Background land */}
-            <rect width="1200" height="1200" fill="#f1f5f9" />
-
-            {/* City grid lines */}
-            <defs>
-              <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#e2e8f0" strokeWidth="0.8" />
-              </pattern>
-            </defs>
-            <rect width="1200" height="1200" fill="url(#grid)" />
-
-            {/* Red River (Sông Hồng) */}
-            <path
-              d="M 200 0 C 350 200, 500 250, 800 500 C 1000 650, 1150 900, 1200 1200"
-              stroke="#bfdbfe"
-              strokeWidth="90"
-              fill="none"
-              strokeLinecap="round"
-              opacity="0.8"
-            />
-            <path
-              d="M 200 0 C 350 200, 500 250, 800 500 C 1000 650, 1150 900, 1200 1200"
-              stroke="#93c5fd"
-              strokeWidth="70"
-              fill="none"
-              strokeLinecap="round"
-              opacity="0.7"
-            />
-
-            {/* West Lake (Hồ Tây) */}
-            <path
-              d="M 380 250 C 450 180, 560 210, 600 290 C 630 360, 570 420, 500 440 C 420 460, 340 400, 330 330 Z"
-              fill="#bae6fd"
-              stroke="#7dd3fc"
-              strokeWidth="4"
-              opacity="0.9"
-            />
-            <text x="440" y="330" fill="#0284c7" fontSize="14" fontWeight="600" opacity="0.6">Hồ Tây</text>
-
-            {/* Truc Bach Lake */}
-            <ellipse cx="610" cy="350" rx="35" ry="25" fill="#bae6fd" stroke="#7dd3fc" strokeWidth="2" />
-
-            {/* Sword Lake (Hồ Hoàn Kiếm) */}
-            <path
-              d="M 600 580 C 610 560, 630 570, 635 600 C 640 640, 620 670, 605 680 C 590 690, 580 670, 585 640 Z"
-              fill="#bae6fd"
-              stroke="#38bdf8"
-              strokeWidth="3"
-            />
-            <text x="635" y="630" fill="#0284c7" fontSize="12" fontWeight="700">Hồ Hoàn Kiếm</text>
-
-            {/* Thong Nhat Park & Bay Mau Lake */}
-            <rect x="540" y="740" width="100" height="90" rx="20" fill="#dcfce7" />
-            <ellipse cx="590" cy="785" rx="35" ry="25" fill="#bae6fd" />
-            <text x="560" y="770" fill="#16a34a" fontSize="11" fontWeight="600">CV Thống Nhất</text>
-
-            {/* Major Arterial Roads */}
-            {/* Ring Road 2 */}
-            <path d="M 150 450 Q 550 520 1100 480" stroke="#cbd5e1" strokeWidth="16" fill="none" />
-            <path d="M 150 450 Q 550 520 1100 480" stroke="#ffffff" strokeWidth="10" fill="none" />
-
-            {/* Ring Road 1 */}
-            <path d="M 250 620 Q 600 660 1050 620" stroke="#cbd5e1" strokeWidth="14" fill="none" />
-            <path d="M 250 620 Q 600 660 1050 620" stroke="#ffffff" strokeWidth="8" fill="none" />
-
-            {/* North-South Axis */}
-            <path d="M 600 100 L 600 1100" stroke="#cbd5e1" strokeWidth="14" fill="none" />
-            <path d="M 600 100 L 600 1100" stroke="#ffffff" strokeWidth="8" fill="none" />
-
-            {/* Diagonal Avenues */}
-            <path d="M 300 200 L 900 900" stroke="#ffffff" strokeWidth="8" fill="none" />
-            <path d="M 900 250 L 300 850" stroke="#ffffff" strokeWidth="8" fill="none" />
-
-            {/* Landmark text labels */}
-            <text x="490" y="470" fill="#64748b" fontSize="13" fontWeight="bold">Ba Đình</text>
-            <text x="680" y="560" fill="#64748b" fontSize="13" fontWeight="bold">Phố Cổ</text>
-            <text x="660" y="720" fill="#64748b" fontSize="13" fontWeight="bold">Hai Bà Trưng</text>
-            <text x="350" y="550" fill="#64748b" fontSize="13" fontWeight="bold">Cầu Giấy</text>
-          </svg>
-        </div>
-
-        {/* MAP MARKERS LAYER */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="relative w-full h-full">
-            {/* Center anchor (screen middle) */}
-            <div className="absolute left-1/2 top-1/2">
-              {/* CURRENT USER MARKER */}
-              {(() => {
-                const pos = getMarkerCoords(currentUser.location.lat, currentUser.location.lng);
-                return (
-                  <div
-                    className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer group z-30"
-                    style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
-                    onClick={() => setIsEditingStatus(true)}
-                  >
-                    {/* Status speech bubble with privacy indicator */}
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white px-2.5 py-1 rounded-full shadow-lg border border-slate-200 text-[11px] font-bold text-slate-800 flex items-center gap-1.5 group-hover:scale-105 transition-transform">
-                      <span>{currentUser.status}</span>
-                      <div className="h-3 w-px bg-slate-200" />
-                      <div 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsEditingPrivacy(true);
-                        }}
-                        className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-indigo-600 transition-colors"
-                        title="Đổi quyền riêng tư vị trí"
-                      >
-                        <currentVisibilityInfo.Icon className="w-3 h-3 text-indigo-500" />
-                        <span className="font-semibold">{currentVisibilityInfo.shortLabel}</span>
-                      </div>
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" />
-                    </div>
-
-                    {/* Pulse Animation Ring */}
-                    <span className="absolute -inset-2.5 bg-indigo-500/20 rounded-full animate-ping" />
-                    <span className="absolute -inset-1.5 bg-indigo-500/30 rounded-full" />
-
-                    {/* Avatar */}
-                    <div className="relative w-11 h-11 rounded-full ring-3 ring-indigo-600 shadow-xl overflow-hidden bg-white">
-                      <img
-                        src={currentUser.avatar}
-                        alt={currentUser.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    {/* Self Visibility Shield Indicator Badge on Avatar */}
-                    <span 
+      <div className="relative flex-1 w-full h-full overflow-hidden">
+        {hasMapStyle ? (
+          <MapGl
+            ref={mapRef}
+            reuseMaps
+            initialViewState={initialView}
+            mapStyle={env.NEXT_PUBLIC_MAP_STYLE_URL}
+            onMoveEnd={persistView}
+            style={{ width: '100%', height: '100%' }}
+            attributionControl={{ compact: true }}
+          >
+            {/* CURRENT USER MARKER */}
+            {hasMyPosition && latitude != null && longitude != null && (
+              <Marker longitude={longitude} latitude={latitude} anchor="center">
+                <div
+                  className="relative pointer-events-auto cursor-pointer group z-30"
+                  onClick={openStatusEditor}
+                >
+                  {/* Status speech bubble with privacy indicator */}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white px-2.5 py-1 rounded-full shadow-lg border border-slate-200 text-[11px] font-bold text-slate-800 flex items-center gap-1.5 group-hover:scale-105 transition-transform">
+                    <span>{myStatus}</span>
+                    <div className="h-3 w-px bg-slate-200" />
+                    <div 
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsEditingPrivacy(true);
                       }}
-                      className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md border border-slate-200 cursor-pointer hover:scale-110 transition-transform"
-                      title={`Quyền riêng tư: ${currentVisibilityInfo.label}`}
+                      className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-indigo-600 transition-colors"
+                      title="Đổi quyền riêng tư vị trí"
                     >
-                      <currentVisibilityInfo.Icon className="w-2.5 h-2.5 text-indigo-600" />
-                    </span>
+                      <currentVisibilityInfo.Icon className="w-3 h-3 text-indigo-500" />
+                      <span className="font-semibold">{currentVisibilityInfo.shortLabel}</span>
+                    </div>
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" />
                   </div>
-                );
-              })()}
 
-              {/* ALL ONLINE USERS MARKERS (FRIENDS & STRANGERS) */}
-              {visibleUsers.map((user) => {
-                const pos = getMarkerCoords(user.location.lat, user.location.lng);
-                const isFriend = user.relationship?.status === 'accepted';
-                const isLover = user.relationship?.type === 'lover' && isFriend;
-                const isBestFriend = user.relationship?.type === 'best_friend' && isFriend;
-                const isStranger = !isFriend;
+                  {/* Pulse Animation Ring */}
+                  <span className="absolute -inset-2.5 bg-indigo-500/20 rounded-full animate-ping" />
+                  <span className="absolute -inset-1.5 bg-indigo-500/30 rounded-full" />
 
-                let ringColor = 'ring-indigo-500';
-                if (isLover) ringColor = 'ring-rose-500';
-                else if (isBestFriend) ringColor = 'ring-amber-500';
-                else if (isStranger) ringColor = 'ring-emerald-500';
+                  {/* Avatar */}
+                  <div className="relative w-11 h-11 rounded-full ring-3 ring-indigo-600 shadow-xl overflow-hidden bg-white">
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
 
-                return (
+                  {/* Self Visibility Shield Indicator Badge on Avatar */}
+                  <span 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditingPrivacy(true);
+                    }}
+                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md border border-slate-200 cursor-pointer hover:scale-110 transition-transform"
+                    title={`Quyền riêng tư: ${currentVisibilityInfo.label}`}
+                  >
+                    <currentVisibilityInfo.Icon className="w-2.5 h-2.5 text-indigo-600" />
+                  </span>
+                </div>
+              </Marker>
+            )}
+
+            {/* ALL ONLINE USERS MARKERS (FRIENDS & STRANGERS) */}
+            {visibleUsers.map(({ loc, user }) => {
+              const isFriend = user.relationship?.status === 'accepted';
+              const isLover = user.relationship?.type === 'lover' && isFriend;
+              const isBestFriend = user.relationship?.type === 'best_friend' && isFriend;
+              const isStranger = !isFriend;
+
+              let ringColor = 'ring-indigo-500';
+              if (isLover) ringColor = 'ring-rose-500';
+              else if (isBestFriend) ringColor = 'ring-amber-500';
+              else if (isStranger) ringColor = 'ring-emerald-500';
+
+              return (
+                <Marker
+                  key={user.id}
+                  longitude={loc.longitude}
+                  latitude={loc.latitude}
+                  anchor="center"
+                >
                   <div
-                    key={user.id}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto cursor-pointer group z-10 transition-transform duration-200 hover:z-20 hover:scale-105"
-                    style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
+                    className="relative pointer-events-auto cursor-pointer group transition-transform duration-200 hover:z-20 hover:scale-105"
                     onClick={() => setSelectedUser(user)}
                   >
                     {/* Status speech bubble */}
@@ -426,18 +385,48 @@ export const LocationView: React.FC = () => {
                       </span>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                </Marker>
+              );
+            })}
+          </MapGl>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center px-6">
+            <MapPin className="w-8 h-8 text-slate-300" />
+            <div className="text-xs font-bold text-slate-600">Bản đồ chưa được cấu hình</div>
+            <p className="text-[11px] text-slate-400">
+              Thiếu NEXT_PUBLIC_MAP_STYLE_URL trong biến môi trường.
+            </p>
           </div>
-        </div>
+        )}
+
+        {/* Location permission denied card */}
+        {locationDenied && (
+          <div className="absolute inset-x-3 bottom-3 z-20 bg-white/95 backdrop-blur-md shadow-xl border border-slate-200 rounded-2xl p-3.5 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <Crosshair className="w-4.5 h-4.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-slate-800">Chưa cho phép truy cập vị trí</div>
+              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                Cho phép quyền vị trí để hiển thị bạn trên bản đồ và tìm người ở gần.
+              </p>
+            </div>
+            <button
+              onClick={requestLocationPermission}
+              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shrink-0 active:scale-95 transition-all cursor-pointer"
+            >
+              Bật quyền
+            </button>
+          </div>
+        )}
 
         {/* MAP FLOATING CONTROLS (Right side) */}
         <div className="absolute right-3.5 bottom-6 flex flex-col gap-2 pointer-events-auto z-20">
           {/* Center on Me */}
           <button
-            onClick={() => centerOnUser(currentUser.location.lat, currentUser.location.lng)}
-            className="w-11 h-11 rounded-2xl bg-white shadow-xl border border-slate-100 flex items-center justify-center text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition-all cursor-pointer active:scale-95"
+            onClick={centerOnUser}
+            disabled={!hasMyPosition}
+            className="w-11 h-11 rounded-2xl bg-white shadow-xl border border-slate-100 flex items-center justify-center text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
             title="Định vị của tôi"
           >
             <Navigation className="w-5 h-5 fill-indigo-600 text-indigo-600" />
@@ -445,7 +434,7 @@ export const LocationView: React.FC = () => {
 
           {/* Zoom In */}
           <button
-            onClick={() => setZoom(prev => Math.min(prev + 0.25, 2.5))}
+            onClick={() => zoomBy(1)}
             className="w-11 h-11 rounded-2xl bg-white shadow-xl border border-slate-100 flex items-center justify-center text-slate-700 hover:text-indigo-600 transition-all cursor-pointer active:scale-95"
             title="Phóng to"
           >
@@ -454,7 +443,7 @@ export const LocationView: React.FC = () => {
 
           {/* Zoom Out */}
           <button
-            onClick={() => setZoom(prev => Math.max(prev - 0.25, 0.6))}
+            onClick={() => zoomBy(-1)}
             className="w-11 h-11 rounded-2xl bg-white shadow-xl border border-slate-100 flex items-center justify-center text-slate-700 hover:text-indigo-600 transition-all cursor-pointer active:scale-95"
             title="Thu nhỏ"
           >
@@ -463,10 +452,7 @@ export const LocationView: React.FC = () => {
 
           {/* Compass / Reset Pan */}
           <button
-            onClick={() => {
-              setMapPos({ x: 0, y: 0 });
-              setZoom(1);
-            }}
+            onClick={resetView}
             className="w-11 h-11 rounded-2xl bg-white shadow-xl border border-slate-100 flex items-center justify-center text-slate-700 hover:text-indigo-600 transition-all cursor-pointer active:scale-95"
             title="Đặt lại bản đồ"
           >
@@ -506,7 +492,7 @@ export const LocationView: React.FC = () => {
             {/* Visibility options list */}
             <div className="space-y-1.5 mb-4">
               {VISIBILITY_OPTIONS.map((opt) => {
-                const isChecked = currentUser.visibility === opt.value;
+                const isChecked = currentVisibility === opt.value;
                 const info = getVisibilityInfo(opt.value as VisibilityTier);
                 const IconComponent = info.Icon;
 

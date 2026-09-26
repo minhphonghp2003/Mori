@@ -13,6 +13,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
   const [groupName, setGroupName] = useState('');
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const acceptedFriends = friends.filter(f => f.relationship?.status === 'accepted');
 
@@ -22,7 +23,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
     );
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupName.trim()) {
       showToast('Vui lòng nhập tên nhóm chat', 'error');
@@ -32,9 +33,15 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
       showToast('Vui lòng chọn ít nhất 2 thành viên để lập nhóm', 'error');
       return;
     }
+    if (isCreating) return;
 
-    const newId = createGroup(groupName.trim(), selectedFriendIds, isPrivate);
-    onSuccess(newId);
+    setIsCreating(true);
+    try {
+      const newId = await createGroup(groupName.trim(), selectedFriendIds, isPrivate);
+      if (newId) onSuccess(newId);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -141,9 +148,10 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 transition-all"
+              disabled={isCreating}
+              className="flex-1 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 transition-all disabled:opacity-60 disabled:cursor-wait"
             >
-              Tạo nhóm
+              {isCreating ? 'Đang tạo...' : 'Tạo nhóm'}
             </button>
           </div>
         </form>

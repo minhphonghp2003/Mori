@@ -1,6 +1,17 @@
-import React, { useState, useRef } from 'react';
-import { Conversation, User } from '../../types';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Conversation } from '../../types';
+import {
+  ConversationMemberDto,
+  ConversationMemberRole,
+  JoinRequestDto,
+  JoinRequestStatus,
+} from '../../types/chat';
 import { useApp } from '../../context/AppContext';
+import {
+  getPendingJoinRequests,
+  confirmJoinRequest,
+} from '@/services/chat';
+import { mapMember } from '@/lib/chat/mappers';
 import { 
   X, 
   Users, 
@@ -35,9 +46,8 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
     setSelectedUser,
     updateGroupInfo, 
     addGroupMembers, 
-    acceptGroupRequest, 
-    rejectGroupRequest, 
     leaveGroup,
+    loadMembers,
     showToast 
   } = useApp();
 
@@ -49,6 +59,47 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const groupAvatarInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Real members + pending join requests come from the API (design mocks are gone)
+  const [memberDtos, setMemberDtos] = useState<ConversationMemberDto[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<JoinRequestDto[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+
+  const refreshMembers = async () => {
+    try {
+      setMemberDtos(await loadMembers(conversation.id));
+    } catch (err) {
+      console.error('[GroupSettings] loadMembers failed:', err);
+    }
+  };
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const results = await Promise.allSettled([
+        loadMembers(conversation.id),
+        getPendingJoinRequests(Number(conversation.id)),
+      ]);
+      if (!alive) return;
+      if (results[0].status === 'fulfilled') setMemberDtos(results[0].value);
+      if (results[1].status === 'fulfilled') {
+        setPendingRequests(
+          results[1].value.data.filter((r) => r.status === JoinRequestStatus.Pending),
+        );
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [conversation.id, loadMembers]);
+
+  const memberUsers = useMemo(() => memberDtos.map(mapMember), [memberDtos]);
+  const adminUserId = useMemo(
+    () =>
+      memberDtos.find((m) => m.role === ConversationMemberRole.Host)?.userId ??
+      memberDtos[0]?.userId,
+    [memberDtos],
+  );
 
   const handleGroupAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,8 +122,8 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
     e.target.value = '';
   };
 
-  // Existing member IDs
-  const existingMemberIds = new Set(conversation.participants.map(p => p.id));
+  // Existing member IDs (from API-backed member list)
+  const existingMemberIds = new Set(memberUsers.map(p => p.id));
   
   // Available friends to add
   const availableFriends = friends.filter(f => !existingMemberIds.has(f.id) && f.relationship?.status !== 'blocked');
@@ -80,37 +131,55 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
     f.name.toLowerCase().includes(memberSearch.toLowerCase())
   );
 
-  const pendingRequests = conversation.pendingRequests || [];
-
   const handleSaveName = () => {
     if (!groupName.trim()) {
       showToast('Tên nhóm không được để trống', 'error');
       return;
     }
-    updateGroupInfo(conversation.id, { name: groupName.trim() });
+    void updateGroupInfo(conversation.id, { name: groupName.trim() });
     setIsEditingName(false);
   };
 
   const handleSelectAvatar = (url: string) => {
     setSelectedAvatar(url);
-    updateGroupInfo(conversation.id, { avatar: url });
+    void updateGroupInfo(conversation.id, { avatar: url });
   };
 
   const handleTogglePrivacy = () => {
     const nextPrivacy = !conversation.isPrivateGroup;
-    updateGroupInfo(conversation.id, { isPrivateGroup: nextPrivacy });
+    void updateGroupInfo(conversation.id, { isPrivateGroup: nextPrivacy });
   };
 
-  const handleAddSelectedMembers = () => {
+  const handleAddSelectedMembers = async () => {
     if (selectedFriendIds.length === 0) return;
-    addGroupMembers(conversation.id, selectedFriendIds);
+    const ok = await addGroupMembers(conversation.id, selectedFriendIds);
+    if (ok) await refreshMembers();
     setSelectedFriendIds([]);
     setActiveTab('members');
   };
 
+  const handleReviewRequest = async (req: JoinRequestDto, isApproved: boolean) => {
+    if (isLoadingRequests) return;
+    setIsLoadingRequests(true);
+    try {
+      await confirmJoinRequest(req.id, isApproved);
+      setPendingRequests(prev => prev.filter(r => r.id !== req.id));
+      if (isApproved) {
+        showToast(`Đã duyệt ${req.userName} vào nhóm.`, 'success');
+        await refreshMembers();
+      } else {
+        showToast(`Đã từ chối yêu cầu của ${req.userName}.`, 'info');
+      }
+    } catch (err) {
+      console.error('[GroupSettings] confirmJoinRequest failed:', err);
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
   const handleLeaveGroup = () => {
-    leaveGroup(conversation.id);
     onLeaveGroupSuccess();
+    void leaveGroup(conversation.id);
   };
 
   return (
@@ -214,7 +283,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
           )}
 
           <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 mb-2">
-            <span>{conversation.participants.length} thành viên</span>
+            <span>{conversation.memberCount || memberUsers.length} thành viên</span>
             <span>•</span>
             <span className={conversation.isPrivateGroup ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
               {conversation.isPrivateGroup ? 'Nhóm Riêng tư 🔒' : 'Nhóm Công khai 🌐'}
@@ -270,7 +339,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Thành viên ({conversation.participants.length})</span>
+            <span>Thành viên ({conversation.memberCount || memberUsers.length})</span>
           </button>
 
           <button
@@ -309,9 +378,9 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
           {/* TAB 1: MEMBERS LIST */}
           {activeTab === 'members' && (
             <div className="space-y-2">
-              {conversation.participants.map((member) => {
+              {memberUsers.map((member) => {
                 const isUserMe = member.id === currentUser.id;
-                const isAdmin = member.id === (conversation.adminId || conversation.participants[0]?.id);
+                const isAdmin = Number(member.id) === adminUserId;
 
                 return (
                   <div
@@ -444,41 +513,49 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                   <span>Không có yêu cầu tham gia nào đang chờ duyệt.</span>
                 </div>
               ) : (
-                pendingRequests.map((reqUser) => (
+                pendingRequests.map((req) => (
                   <div
-                    key={reqUser.id}
+                    key={req.id}
                     className="p-3 rounded-2xl bg-amber-50/40 border border-amber-200/80 flex items-center justify-between"
                   >
                     <div 
                       onClick={() => {
-                        setSelectedUser(reqUser);
+                        setSelectedUser(mapMember({
+                          userId: req.userId,
+                          userName: req.userName,
+                          userImage: req.userImage,
+                          role: ConversationMemberRole.Member,
+                          isOnline: false,
+                        }));
                         onClose();
                       }}
                       className="flex items-center gap-2.5 min-w-0 cursor-pointer group/req flex-1"
                       title="Xem trang cá nhân"
                     >
                       <img
-                        src={reqUser.avatar}
-                        alt={reqUser.name}
+                        src={req.userImage?.thumbUrl || ''}
+                        alt={req.userName}
                         referrerPolicy="no-referrer"
                         className="w-9 h-9 rounded-full object-cover group-hover/req:ring-2 group-hover/req:ring-indigo-400 transition-all"
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-900 truncate group-hover/req:text-indigo-600 transition-colors">{reqUser.name}</div>
-                        <div className="text-[10px] text-slate-500 truncate">{reqUser.bio || 'Yêu cầu tham gia nhóm'}</div>
+                        <div className="text-xs font-bold text-slate-900 truncate group-hover/req:text-indigo-600 transition-colors">{req.userName}</div>
+                        <div className="text-[10px] text-slate-500 truncate">Yêu cầu tham gia nhóm</div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
-                        onClick={() => rejectGroupRequest(conversation.id, reqUser.id)}
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-bold transition-colors cursor-pointer"
+                        onClick={() => handleReviewRequest(req, false)}
+                        disabled={isLoadingRequests}
+                        className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                       >
                         Từ chối
                       </button>
                       <button
-                        onClick={() => acceptGroupRequest(conversation.id, reqUser)}
-                        className="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs transition-colors cursor-pointer"
+                        onClick={() => handleReviewRequest(req, true)}
+                        disabled={isLoadingRequests}
+                        className="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                       >
                         Duyệt
                       </button>
