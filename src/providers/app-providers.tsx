@@ -25,7 +25,7 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
         <AppProvider>
           <PushListener>
             {children}
-            <OfflineBanner />
+            {/* <OfflineBanner /> */}
             <SwUpdateBanner />
             <ToastContainer />
           </PushListener>

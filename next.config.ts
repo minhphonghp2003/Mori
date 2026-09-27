@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       {
         protocol: "http",
         hostname: "phongpc.local",
-        port: "9000",
+        port: "3000",
       },
       {
         protocol: "https",
