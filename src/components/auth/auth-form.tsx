@@ -7,10 +7,10 @@ import { handleApiError } from "@/lib/axios";
 /** Shared form building blocks for the auth screens (indigo/slate design). */
 
 const inputClasses =
-  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-base text-slate-800 placeholder:text-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition disabled:opacity-60";
+  "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition disabled:opacity-60";
 
 export const AuthLabel = ({ children }: { children: ReactNode }) => (
-  <span className="block text-xs font-bold text-slate-700 mb-1.5">{children}</span>
+  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">{children}</span>
 );
 
 export const AuthInput = ({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) => (
@@ -57,7 +57,7 @@ export const AuthBackLink = ({
 }) => (
   <Link
     href={href}
-    className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-slate-600 transition mb-8"
+    className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition mb-8"
   >
     <ArrowLeft className="w-4 h-4" />
     {children}

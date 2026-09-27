@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { X, Users, Lock, Check } from 'lucide-react';
+import { Avatar } from '../common/Avatar';
 
 interface CreateGroupModalProps {
   onClose: () => void;
@@ -47,17 +48,17 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
-        className="w-full sm:max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 p-5 animate-in slide-in-from-bottom-8 duration-200"
+        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 p-5 animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-base font-bold text-slate-900">Tạo nhóm trò chuyện</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Tạo nhóm trò chuyện</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -65,7 +66,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
 
         <form onSubmit={handleCreate} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Tên nhóm
             </label>
             <input
@@ -73,20 +74,20 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="VD: Hội bạn thân, Team phượt..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             />
           </div>
 
           {/* Members Multi-select */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-bold text-slate-700">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 Thêm bạn bè ({selectedFriendIds.length} đã chọn)
               </label>
-              <span className="text-[10px] text-slate-400">Tối thiểu 2 người</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">Tối thiểu 2 người</span>
             </div>
 
-            <div className="max-h-48 overflow-y-auto no-scrollbar space-y-1.5 border border-slate-100 rounded-2xl p-2 bg-slate-50/50">
+            <div className="max-h-48 overflow-y-auto no-scrollbar space-y-1.5 border border-slate-100 dark:border-slate-800 rounded-2xl p-2 bg-slate-50/50 dark:bg-slate-800/50">
               {acceptedFriends.map((friend) => {
                 const isChecked = selectedFriendIds.includes(friend.id);
                 return (
@@ -94,24 +95,24 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
                     key={friend.id}
                     onClick={() => toggleSelectFriend(friend.id)}
                     className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${
-                      isChecked ? 'bg-indigo-50 text-indigo-900' : 'hover:bg-slate-100 text-slate-800'
+                      isChecked ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-900 dark:text-indigo-200' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <img
+                      <Avatar
                         src={friend.avatar}
-                        alt={friend.name}
-                        referrerPolicy="no-referrer"
+                        name={friend.name}
                         className="w-7 h-7 rounded-full object-cover"
+                        textClassName="text-[9px]"
                       />
                       <div>
                         <div className="text-xs font-bold">{friend.name}</div>
-                        <div className="text-[10px] text-slate-400">{friend.status}</div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500">{friend.status}</div>
                       </div>
                     </div>
 
                     <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
-                      isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'
+                      isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
                     }`}>
                       {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                     </div>
@@ -122,12 +123,12 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
           </div>
 
           {/* Private Group Toggle */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-indigo-500" />
               <div>
-                <div className="text-xs font-bold text-slate-800">Nhóm riêng tư</div>
-                <div className="text-[10px] text-slate-400">Chỉ thành viên được mời mới có thể tham gia</div>
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Nhóm riêng tư</div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500">Chỉ thành viên được mời mới có thể tham gia</div>
               </div>
             </div>
             <input
@@ -142,7 +143,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+              className="flex-1 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
             >
               Hủy
             </button>

@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import { ReduxProvider } from "./redux-provider";
 import { AuthProvider } from "./auth-provider";
+import { ThemeProvider } from "./theme-provider";
 import { AppProvider } from "@/context/AppContext";
 import { PushListener } from "./push-listener";
-import { OfflineBanner } from "@/components/common/OfflineBanner";
 import { SwUpdateBanner } from "@/components/common/SwUpdateBanner";
 import { ToastContainer } from "@/components/common/Toast";
 
@@ -22,14 +22,15 @@ export const AppProviders = ({ children }: AppProvidersProps) => {
   return (
     <ReduxProvider>
       <AuthProvider>
-        <AppProvider>
-          <PushListener>
-            {children}
-            {/* <OfflineBanner /> */}
-            <SwUpdateBanner />
-            <ToastContainer />
-          </PushListener>
-        </AppProvider>
+        <ThemeProvider>
+          <AppProvider>
+            <PushListener>
+              {children}
+              <SwUpdateBanner />
+              <ToastContainer />
+            </PushListener>
+          </AppProvider>
+        </ThemeProvider>
       </AuthProvider>
     </ReduxProvider>
   );

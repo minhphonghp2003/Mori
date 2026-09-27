@@ -17,14 +17,14 @@ export const MobileShell: React.FC<{ children: React.ReactNode }> = ({ children 
   const hideBottomNav = isChatDetailFullscreen || isImmersiveMoments;
 
   return (
-    <div className="h-[100dvh] w-full bg-slate-100 flex justify-center overflow-hidden">
+    <div className="h-[100dvh] w-full bg-slate-100 dark:bg-slate-950 flex justify-center overflow-hidden">
       {/* Active Call Overlay */}
       <CallModal />
 
       {/* Mobile-first Web Application Viewport */}
-      <div className="w-full max-w-md h-full flex flex-col bg-white sm:shadow-xl sm:border-x sm:border-slate-200 overflow-hidden relative">
+      <div className="w-full max-w-md h-full flex flex-col bg-white dark:bg-slate-900 sm:shadow-xl sm:border-x sm:border-slate-200 dark:sm:border-slate-800 overflow-hidden relative">
         {/* Main Content View (routed page) */}
-        <main className="flex-1 w-full overflow-hidden relative bg-white flex flex-col">
+        <main className="flex-1 w-full overflow-hidden relative bg-white dark:bg-slate-900 flex flex-col">
           {children}
         </main>
 

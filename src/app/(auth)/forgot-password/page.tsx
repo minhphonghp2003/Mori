@@ -53,8 +53,8 @@ export default function ForgotPasswordPage() {
       <AuthBackLink href="/login">Quay lại đăng nhập</AuthBackLink>
 
       <div className="mb-9">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Quên mật khẩu</h1>
-        <p className="mt-3 text-sm text-slate-400 font-medium">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Quên mật khẩu</h1>
+        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
           Nhập email của bạn và chúng tôi sẽ gửi link đặt lại mật khẩu.
         </p>
       </div>
@@ -65,9 +65,9 @@ export default function ForgotPasswordPage() {
             <CheckCircle2 className="w-8 h-8 text-emerald-500" />
           </div>
 
-          <h2 className="text-lg font-extrabold text-slate-900">Đã gửi email</h2>
+          <h2 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Đã gửi email</h2>
 
-          <p className="mt-2 max-w-[280px] text-sm text-slate-400 font-medium">
+          <p className="mt-2 max-w-[280px] text-sm text-slate-400 dark:text-slate-500 font-medium">
             Kiểm tra hộp thư của bạn để nhận link đặt lại mật khẩu.
           </p>
 
@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
               Gửi link đặt lại
             </AuthSubmitButton>
 
-            <p className="mt-6 text-center text-sm text-slate-400 font-medium">
+            <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
               Nhớ mật khẩu?{" "}
               <Link href="/login" className="font-bold text-indigo-600 hover:text-indigo-700">
                 Đăng nhập

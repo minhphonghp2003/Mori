@@ -296,8 +296,11 @@ export const setupResponseInterceptor = (instance: AxiosInstance): void => {
       }
 
       // Everything else: surface a localised message unless the caller opted out.
+      // 404 is never toasted — missing resources have dedicated not-found UI
+      // (detail pages, profile grids) and background refetches of deleted
+      // items must not nag.
       // 401 on credential endpoints falls through here too — the form shows it.
-      if (!originalRequest?.silent) {
+      if (!originalRequest?.silent && error.response?.status !== 404) {
         emitToast(handleApiError(error).message, "error");
       }
 

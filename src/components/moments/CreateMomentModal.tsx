@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
+import { Avatar } from '../common/Avatar';
 import { VisibilityTier } from '../../types';
 import { VISIBILITY_OPTIONS } from '@/constants/visibility';
 import { 
@@ -956,10 +957,9 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                               title={`${f.name}: ${isAllowed ? 'Được phép xem' : 'Bị ẩn'}`}
                             >
                               <div className="relative">
-                                <img
+                                <Avatar
                                   src={f.avatar}
-                                  alt={f.name}
-                                  referrerPolicy="no-referrer"
+                                  name={f.name}
                                   className={`w-11 h-11 rounded-full object-cover transition-all duration-200 ${
                                     isAllowed
                                       ? 'border-2 border-emerald-500 shadow-md shadow-emerald-500/20'

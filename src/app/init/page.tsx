@@ -71,9 +71,9 @@ export default function InitPage() {
   };
 
   return (
-    <main className="min-h-dvh w-full bg-slate-50 flex flex-col items-center justify-center px-6 py-10">
+    <main className="min-h-dvh w-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-6 py-10">
       <div className="w-full max-w-sm flex flex-col items-center">
-        <div className="p-1.5 bg-white rounded-[28px] shadow-xl shadow-slate-900/10 ring-1 ring-slate-200/70">
+        <div className="p-1.5 bg-white dark:bg-slate-900 rounded-[28px] shadow-xl shadow-slate-900/10 ring-1 ring-slate-200/70 dark:ring-slate-800">
           <Image
             src="/images/logo.webp"
             alt={env.NEXT_PUBLIC_APP_NAME}
@@ -84,10 +84,10 @@ export default function InitPage() {
           />
         </div>
 
-        <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
           {env.NEXT_PUBLIC_APP_NAME}
         </h1>
-        <p className="mt-2 text-center text-sm font-medium text-slate-400">
+        <p className="mt-2 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
           Gần nhau hơn. Gặp gỡ xung quanh. Trò chuyện ngay.
         </p>
 
@@ -95,7 +95,7 @@ export default function InitPage() {
           <button
             type="button"
             onClick={() => handleOAuth("google")}
-            className="w-full h-12 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold flex items-center justify-center gap-3 shadow-sm transition cursor-pointer active:scale-[0.98]"
+            className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold flex items-center justify-center gap-3 shadow-sm transition cursor-pointer active:scale-[0.98]"
           >
             <GoogleIcon />
             Tiếp tục với Google
@@ -112,7 +112,7 @@ export default function InitPage() {
 
           <div className="flex items-center gap-3 py-2">
             <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               hoặc
             </span>
             <span className="h-px flex-1 bg-slate-200" />
@@ -128,7 +128,7 @@ export default function InitPage() {
             </button>
           </Link>
 
-          <p className="pt-2 text-center text-sm font-medium text-slate-400">
+          <p className="pt-2 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
             Chưa có tài khoản?{" "}
             <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-700">
               Đăng ký

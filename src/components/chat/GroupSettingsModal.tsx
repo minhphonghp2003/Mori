@@ -12,6 +12,7 @@ import {
   confirmJoinRequest,
 } from '@/services/chat';
 import { mapMember } from '@/lib/chat/mappers';
+import { Avatar } from '../common/Avatar';
 import { 
   X, 
   Users, 
@@ -184,24 +185,24 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="shrink-0 px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="shrink-0 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-sm font-bold text-slate-900">Cài đặt nhóm</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Cài đặt nhóm</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Group Profile Header: Avatar & Name Edit */}
-        <div className="shrink-0 p-5 bg-gradient-to-b from-indigo-50/40 to-transparent flex flex-col items-center border-b border-slate-100">
+        <div className="shrink-0 p-5 bg-gradient-to-b from-indigo-50/40 dark:from-indigo-500/10 to-transparent flex flex-col items-center border-b border-slate-100 dark:border-slate-800">
           {/* Hidden file input for Group Avatar */}
           <input
             ref={groupAvatarInputRef}
@@ -217,11 +218,11 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             onClick={() => groupAvatarInputRef.current?.click()}
             title="Chạm để đổi ảnh đại diện nhóm từ thiết bị"
           >
-            <img
+            <Avatar
               src={selectedAvatar}
-              alt={groupName}
-              referrerPolicy="no-referrer"
+              name={groupName}
               className="w-20 h-20 rounded-full object-cover ring-4 ring-white shadow-md transition-transform group-hover:scale-105"
+              textClassName="text-2xl"
             />
             <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
               <Camera className="w-5 h-5" />
@@ -235,7 +236,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
           <button
             type="button"
             onClick={() => groupAvatarInputRef.current?.click()}
-            className="mb-2.5 px-3 py-1 bg-white hover:bg-indigo-50 border border-slate-200 text-indigo-600 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            className="mb-2.5 px-3 py-1 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-300 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
           >
             <Upload className="w-3 h-3" />
             <span>Tải ảnh từ máy / Thư viện</span>
@@ -249,7 +250,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 autoFocus
-                className="flex-1 px-3 py-1.5 text-xs font-bold text-slate-800 bg-white border border-indigo-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-500/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button
                 onClick={handleSaveName}
@@ -262,19 +263,19 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                   setGroupName(conversation.name || '');
                   setIsEditingName(false);
                 }}
-                className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900 text-center">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 text-center">
                 {conversation.name}
               </h2>
               <button
                 onClick={() => setIsEditingName(true)}
-                className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                className="w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors cursor-pointer"
                 title="Đổi tên nhóm"
               >
                 <Edit3 className="w-3.5 h-3.5" />
@@ -282,7 +283,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-xs text-slate-500 mt-1 mb-2">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 mb-2">
             <span>{conversation.memberCount || memberUsers.length} thành viên</span>
             <span>•</span>
             <span className={conversation.isPrivateGroup ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
@@ -291,7 +292,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
           </div>
 
           {/* Group Privacy Setting Card */}
-          <div className="w-full max-w-sm p-2.5 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between shadow-xs">
+          <div className="w-full max-w-sm p-2.5 bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-2xl flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2.5">
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                 conversation.isPrivateGroup ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
@@ -299,7 +300,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                 {conversation.isPrivateGroup ? <Lock className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
               </div>
               <div className="text-left">
-                <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                   <span>{conversation.isPrivateGroup ? 'Nhóm Riêng tư' : 'Nhóm Công khai'}</span>
                   <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
                     conversation.isPrivateGroup ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
@@ -307,7 +308,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                     {conversation.isPrivateGroup ? 'Private' : 'Public'}
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-400 leading-tight">
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">
                   {conversation.isPrivateGroup 
                     ? 'Yêu cầu quản trị viên duyệt khi xin vào' 
                     : 'Bất kỳ ai cũng có thể tìm thấy và tham gia'}
@@ -329,13 +330,13 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
         </div>
 
         {/* Tab Navigation: Members | Add | Requests */}
-        <div className="shrink-0 flex items-center border-b border-slate-100 px-4 bg-white">
+        <div className="shrink-0 flex items-center border-b border-slate-100 dark:border-slate-800 px-4 bg-white dark:bg-slate-900">
           <button
             onClick={() => setActiveTab('members')}
             className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
               activeTab === 'members'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -347,7 +348,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
               activeTab === 'add'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
@@ -359,7 +360,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer relative ${
               activeTab === 'requests'
                 ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
@@ -385,7 +386,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                 return (
                   <div
                     key={member.id}
-                    className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/60 hover:bg-slate-100/70 border border-slate-100 transition-colors"
+                    className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/60 dark:bg-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-700/70 border border-slate-100 dark:border-slate-700 transition-colors"
                   >
                     <div 
                       onClick={() => {
@@ -396,10 +397,9 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                       title="Xem trang cá nhân"
                     >
                       <div className="relative shrink-0">
-                        <img
+                        <Avatar
                           src={member.avatar}
-                          alt={member.name}
-                          referrerPolicy="no-referrer"
+                          name={member.name}
                           className="w-10 h-10 rounded-full object-cover ring-2 ring-white group-hover/member:ring-indigo-400 transition-all"
                         />
                         {isAdmin && (
@@ -409,7 +409,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5 group-hover/member:text-indigo-600 transition-colors">
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 group-hover/member:text-indigo-600 dark:group-hover/member:text-indigo-400 transition-colors">
                           <span className="truncate">{member.name}</span>
                           {isUserMe && (
                             <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded-md shrink-0">
@@ -417,7 +417,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                           {isAdmin ? 'Quản trị viên nhóm' : 'Thành viên'}
                         </div>
                       </div>
@@ -438,18 +438,18 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
           {activeTab === 'add' && (
             <div className="space-y-3">
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5" />
                 <input
                   type="text"
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
                   placeholder="Tìm bạn bè để thêm vào nhóm..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 rounded-xl border border-transparent focus:border-indigo-300 focus:bg-white focus:outline-none"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 rounded-xl border border-transparent focus:border-indigo-300 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
 
               {filteredAvailableFriends.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">
+                <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
                   {memberSearch ? 'Không tìm thấy bạn bè phù hợp' : 'Tất cả bạn bè đã ở trong nhóm này!'}
                 </div>
               ) : (
@@ -465,19 +465,18 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                           );
                         }}
                         className={`flex items-center justify-between p-2 rounded-2xl border transition-all cursor-pointer ${
-                          isSelected ? 'bg-indigo-50/80 border-indigo-200' : 'bg-white border-slate-100 hover:bg-slate-50'
+                          isSelected ? 'bg-indigo-50/80 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <img
+                          <Avatar
                             src={friend.avatar}
-                            alt={friend.name}
-                            referrerPolicy="no-referrer"
+                            name={friend.name}
                             className="w-8 h-8 rounded-full object-cover"
                           />
                           <div>
-                            <div className="text-xs font-bold text-slate-800">{friend.name}</div>
-                            <div className="text-[10px] text-slate-400 truncate max-w-[160px]">{friend.bio}</div>
+                            <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{friend.name}</div>
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-[160px]">{friend.bio}</div>
                           </div>
                         </div>
 
@@ -532,15 +531,14 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                       className="flex items-center gap-2.5 min-w-0 cursor-pointer group/req flex-1"
                       title="Xem trang cá nhân"
                     >
-                      <img
-                        src={req.userImage?.thumbUrl || ''}
-                        alt={req.userName}
-                        referrerPolicy="no-referrer"
+                      <Avatar
+                        src={req.userImage?.thumbUrl || null}
+                        name={req.userName}
                         className="w-9 h-9 rounded-full object-cover group-hover/req:ring-2 group-hover/req:ring-indigo-400 transition-all"
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-900 truncate group-hover/req:text-indigo-600 transition-colors">{req.userName}</div>
-                        <div className="text-[10px] text-slate-500 truncate">Yêu cầu tham gia nhóm</div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover/req:text-indigo-600 dark:group-hover/req:text-indigo-400 transition-colors">{req.userName}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Yêu cầu tham gia nhóm</div>
                       </div>
                     </div>
 
@@ -548,7 +546,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                       <button
                         onClick={() => handleReviewRequest(req, false)}
                         disabled={isLoadingRequests}
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                       >
                         Từ chối
                       </button>
@@ -569,7 +567,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
         </div>
 
         {/* Footer: Leave Group Option */}
-        <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/60">
+        <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60">
           {confirmLeave ? (
             <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center animate-in fade-in">
               <p className="text-xs text-rose-800 font-bold mb-2">
@@ -578,7 +576,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setConfirmLeave(false)}
-                  className="flex-1 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+                  className="flex-1 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
                 >
                   Ở lại
                 </button>

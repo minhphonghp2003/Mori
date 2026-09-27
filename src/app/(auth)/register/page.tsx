@@ -61,8 +61,8 @@ export default function RegisterPage() {
       <AuthBackLink href="/init">Quay lại</AuthBackLink>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Tạo tài khoản</h1>
-        <p className="mt-3 text-sm text-slate-400 font-medium">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Tạo tài khoản</h1>
+        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
           Tham gia {process.env.NEXT_PUBLIC_APP_NAME ?? "Mori"} và bắt đầu khám phá bạn bè xung
           quanh bạn.
         </p>
@@ -161,7 +161,7 @@ export default function RegisterPage() {
             Tạo tài khoản
           </AuthSubmitButton>
 
-          <p className="mt-6 text-center text-sm text-slate-400 font-medium">
+          <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
             Đã có tài khoản?{" "}
             <Link href="/login" className="font-bold text-indigo-600 hover:text-indigo-700">
               Đăng nhập

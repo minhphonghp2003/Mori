@@ -41,10 +41,10 @@ export default function LoginPage() {
       <AuthBackLink href="/init">Quay lại</AuthBackLink>
 
       <div className="mb-9">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
           Chào mừng trở lại
         </h1>
-        <p className="mt-3 text-sm text-slate-400 font-medium">
+        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
           Đăng nhập để tiếp tục trò chuyện và xem bạn bè ở đâu.
         </p>
       </div>
@@ -93,7 +93,7 @@ export default function LoginPage() {
             Đăng nhập
           </AuthSubmitButton>
 
-          <p className="mt-6 text-center text-sm text-slate-400 font-medium">
+          <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
             Chưa có tài khoản?{" "}
             <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-700">
               Tạo tài khoản

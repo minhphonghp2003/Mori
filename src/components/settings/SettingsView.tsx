@@ -2,14 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../context/AppContext';
 import { useLogout } from '../../hooks/auth/use-logout';
+import { useIsPwa } from '../../hooks/use-is-pwa';
+import { useTheme } from '../../providers/theme-provider';
 import { requestNotificationPermission, syncFcmTokenAfterAuth, deleteFcmToken } from '../../lib/fcm';
 import { FriendshipType, VisibilityTier, User as UserType, Timeline, Moment } from '../../types';
+import { Avatar } from '../common/Avatar';
 import { VISIBILITY_OPTIONS } from '../../constants/visibility';
 import { CreateTimelineModal } from '../timelines/CreateTimelineModal';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { 
   User, 
-  MapPin, 
   Heart, 
   Star, 
   Users, 
@@ -17,6 +19,7 @@ import {
   UserPlus, 
   ShieldCheck, 
   Bell, 
+  Moon,
   LogOut, 
   Camera, 
   MessageCircle, 
@@ -67,6 +70,9 @@ export const SettingsView: React.FC = () => {
   } = useApp();
   const router = useRouter();
   const { mutate: logout } = useLogout();
+  const { theme, toggleTheme } = useTheme();
+  // Already installed → the download banner has nothing to offer.
+  const isPwa = useIsPwa();
 
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'timelines' | 'friends' | 'settings'>('settings');
   const [showCreateTimeline, setShowCreateTimeline] = useState(false);
@@ -112,10 +118,14 @@ export const SettingsView: React.FC = () => {
   const [friendToBlock, setFriendToBlock] = useState<UserType | null>(null);
   const [friendToRemove, setFriendToRemove] = useState<UserType | null>(null);
 
-  // Single toggle notification as requested
-  const [notificationsEnabled, setNotificationsEnabled] = useState(
-    () => typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted',
-  );
+  // Single toggle notification as requested (SSR-safe default, synced post-hydration).
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setNotificationsEnabled(Notification.permission === "granted");
+    }
+  }, []);
 
   const handleToggleNotifications = async (enable: boolean) => {
     if (enable) {
@@ -289,9 +299,9 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-50 overflow-y-auto no-scrollbar select-none">
+    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none">
       {/* Top Profile Header Hero - Clean, minimal, non-messy */}
-      <div className="bg-white border-b border-slate-100 p-5 shadow-xs">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-5 shadow-xs">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3.5">
             {/* Avatar */}
@@ -300,11 +310,11 @@ export const SettingsView: React.FC = () => {
               onClick={handleOpenEditProfile}
               title="Chạm để chỉnh sửa ảnh đại diện & hồ sơ"
             >
-              <img
+              <Avatar
                 src={currentUser.avatar}
-                alt={currentUser.name}
-                referrerPolicy="no-referrer"
+                name={currentUser.name}
                 className="w-15 h-15 rounded-2xl object-cover ring-2 ring-indigo-500/20 shadow-sm group-hover:opacity-90 transition-opacity"
+                textClassName="text-xl"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
               <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -315,21 +325,13 @@ export const SettingsView: React.FC = () => {
             {/* Name, Info & Clean Status Badge - Forced 1 line with ellipsis */}
             <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2 overflow-hidden">
-                <h2 className="text-base font-bold text-slate-900 leading-none whitespace-nowrap truncate">{currentUser.name}</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-none whitespace-nowrap truncate">{currentUser.name}</h2>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
+                  <span className="text-xs text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">
                     {currentUser.age} tuổi
                   </span>
                   {renderGenderIcon(currentUser.gender)}
                 </div>
-              </div>
-
-              {/* Status Quote - Strictly forced to 1 line with ellipsis overflow */}
-              <div 
-                className="text-xs font-semibold text-indigo-700 bg-indigo-50/80 px-2.5 py-1 rounded-lg inline-block max-w-[170px] sm:max-w-[220px] truncate whitespace-nowrap overflow-hidden text-ellipsis align-middle"
-                title={currentUser.status}
-              >
-                "{currentUser.status}"
               </div>
             </div>
           </div>
@@ -337,84 +339,59 @@ export const SettingsView: React.FC = () => {
           {/* Single, neat Edit Profile Button - strictly 1 line */}
           <button
             onClick={handleOpenEditProfile}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap truncate shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap truncate shrink-0"
             title="Chỉnh sửa hồ sơ"
           >
-            <Edit3 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <Edit3 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
             <span className="whitespace-nowrap truncate">Sửa hồ sơ</span>
           </button>
         </div>
 
-        {/* Bio if exists */}
-        {currentUser.bio && (
-          <p className="mt-2.5 text-xs text-slate-600 leading-relaxed italic line-clamp-2">
-            "{currentUser.bio}"
+        {/* Bio section (replaces the location row) */}
+        {currentUser.bio?.trim() ? (
+          <p className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic line-clamp-3">
+            "{currentUser.bio.trim()}"
           </p>
-        )}
-
-        {/* Location - Clean and subtle */}
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 overflow-hidden">
-          <MapPin className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-          <span className="truncate whitespace-nowrap overflow-hidden text-ellipsis">{currentUser.location.address}</span>
-        </div>
+        ) : null}
       </div>
 
-      {/* Sub-tab Navigation Bar */}
-      <div className="p-2.5 bg-white border-b border-slate-100 flex items-center gap-1.5 sticky top-0 z-10 overflow-x-auto no-scrollbar">
-        {/* 1. Cài đặt (Setting) */}
-        <button
-          onClick={() => setActiveSubTab('settings')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap truncate flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-            activeSubTab === 'settings'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
+      {/* Sub-tab Navigation — unified segmented control */}
+      <div className="px-3 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
+        <div
+          role="tablist"
+          aria-label="Điều hướng cài đặt"
+          className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1"
         >
-          <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-          <span className="whitespace-nowrap truncate">Cài đặt</span>
-        </button>
-
-        {/* 2. Khoảnh khắc (Moment) */}
-        <button
-          onClick={() => setActiveSubTab('profile')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap truncate flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-            activeSubTab === 'profile'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          <Camera className="w-3.5 h-3.5 shrink-0" />
-          <span className="whitespace-nowrap truncate">Khoảnh khắc ({myMoments.length})</span>
-        </button>
-
-        {/* 3. Hành trình (Timeline) */}
-        <button
-          onClick={() => setActiveSubTab('timelines')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap truncate flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-            activeSubTab === 'timelines'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          <Compass className="w-3.5 h-3.5 shrink-0" />
-          <span className="whitespace-nowrap truncate">Hành trình ({timelines.length})</span>
-        </button>
-
-        {/* 4. Bạn bè (Friend) */}
-        <button
-          onClick={() => setActiveSubTab('friends')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap truncate flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-            activeSubTab === 'friends'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5 shrink-0" />
-          <span className="whitespace-nowrap truncate">Bạn bè ({acceptedFriends.length})</span>
-          {pendingReceived.length > 0 && (
-            <span className="w-2 h-2 rounded-full bg-rose-500 inline-block ml-0.5 shrink-0" />
-          )}
-        </button>
+          {(
+            [
+              { id: 'settings', label: 'Cài đặt', Icon: ShieldCheck, dot: false },
+              { id: 'profile', label: 'Khoảnh khắc', Icon: Camera, dot: false },
+              { id: 'timelines', label: 'Hành trình', Icon: Compass, dot: false },
+              { id: 'friends', label: 'Bạn bè', Icon: Users, dot: pendingReceived.length > 0 },
+            ] as const
+          ).map(({ id, label, Icon, dot }) => {
+            const isActive = activeSubTab === id;
+            return (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveSubTab(id)}
+                className={`relative flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{label}</span>
+                {dot && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -423,7 +400,8 @@ export const SettingsView: React.FC = () => {
         {/* 1. SETTINGS TAB */}
         {activeSubTab === 'settings' && (
           <div className="space-y-4">
-            {/* Download Banner */}
+            {/* Download Banner — hidden once installed as a PWA */}
+            {!isPwa && (
             <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl p-5 text-white shadow-md">
               <div className="flex items-start justify-between mb-2">
                 <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -442,17 +420,18 @@ export const SettingsView: React.FC = () => {
                 <span>Tải ứng dụng</span>
               </button>
             </div>
+            )}
 
             {/* Notification Setting - Single Clean Toggle */}
-            <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 flex items-center justify-center">
                     <Bell className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900">Thông báo</div>
-                    <div className="text-[10px] text-slate-400">Nhận thông báo khi có tin nhắn & cuộc gọi</div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100">Thông báo</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500">Nhận thông báo khi có tin nhắn & cuộc gọi</div>
                   </div>
                 </div>
 
@@ -465,18 +444,43 @@ export const SettingsView: React.FC = () => {
                     }}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" />
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" />
+                </label>
+              </div>
+            </div>
+
+            {/* Dark Mode Toggle */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 flex items-center justify-center">
+                    <Moon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100">Giao diện tối</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500">Dịu mắt khi dùng ban đêm</div>
+                  </div>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={theme === 'dark'}
+                    onChange={toggleTheme}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" />
                 </label>
               </div>
             </div>
 
             {/* Location Privacy Settings */}
-            <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-xs font-bold text-slate-900">Quyền riêng tư vị trí</h3>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">Quyền riêng tư vị trí</h3>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Chọn đối tượng có thể nhìn thấy bạn trên bản đồ:
               </p>
 
@@ -489,13 +493,13 @@ export const SettingsView: React.FC = () => {
                       onClick={() => updateVisibility(opt.value as VisibilityTier)}
                       className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer ${
                         isChecked
-                          ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 font-bold'
-                          : 'bg-slate-50 hover:bg-slate-100 border border-transparent text-slate-700'
+                          ? 'bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30 text-indigo-900 dark:text-indigo-200 font-bold'
+                          : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent text-slate-700 dark:text-slate-300'
                       }`}
                     >
                       <div>
                         <div className="text-xs">{opt.label}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">{opt.desc}</div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{opt.desc}</div>
                       </div>
                       {isChecked && (
                         <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
@@ -511,7 +515,7 @@ export const SettingsView: React.FC = () => {
             {/* Logout button */}
             <button
               onClick={() => setShowLogoutModal(true)}
-              className="w-full py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              className="w-full py-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>Đăng xuất tài khoản</span>
@@ -524,8 +528,8 @@ export const SettingsView: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold text-slate-900">Hành trình của bạn & bạn bè</h3>
-                <p className="text-[10px] text-slate-400">Các tuyến đường và bộ sưu tập chuyến đi</p>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">Hành trình của bạn & bạn bè</h3>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">Các tuyến đường và bộ sưu tập chuyến đi</p>
               </div>
               <button
                 onClick={() => setShowCreateTimeline(true)}
@@ -537,14 +541,14 @@ export const SettingsView: React.FC = () => {
             </div>
 
             {isLoadingTimelines && timelines.length === 0 ? (
-              <div className="bg-white rounded-3xl p-8 text-center border border-slate-100 flex flex-col items-center gap-2">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-100 dark:border-slate-800 flex flex-col items-center gap-2">
                 <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-                <p className="text-xs text-slate-400">Đang tải hành trình...</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">Đang tải hành trình...</p>
               </div>
             ) : timelines.length === 0 ? (
-              <div className="bg-white rounded-3xl p-8 text-center border border-slate-100">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-100 dark:border-slate-800">
                 <Compass className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs text-slate-400">Chưa có hành trình nào</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">Chưa có hành trình nào</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -552,9 +556,9 @@ export const SettingsView: React.FC = () => {
                   <div
                     key={tl.id}
                     onClick={() => router.push(`/timelines/${tl.id}`)}
-                    className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
+                    className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
                   >
-                    <div className="relative h-32 w-full overflow-hidden bg-slate-100">
+                    <div className="relative h-32 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                       <img
                         src={tl.bannerImage}
                         alt={tl.title}
@@ -576,23 +580,23 @@ export const SettingsView: React.FC = () => {
                     <div className="p-3 flex items-center justify-between text-xs gap-2">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="flex -space-x-1.5 overflow-hidden shrink-0">
-                          <img
+                          <Avatar
                             src={tl.ownerAvatar}
-                            alt={tl.ownerName}
-                            referrerPolicy="no-referrer"
+                            name={tl.ownerName}
                             className="inline-block w-6 h-6 rounded-full ring-2 ring-white object-cover"
+                            textClassName="text-[8px]"
                           />
                           {tl.partners.map((p) => (
-                            <img
+                            <Avatar
                               key={p.id}
                               src={p.avatar}
-                              alt={p.name}
-                              referrerPolicy="no-referrer"
+                              name={p.name}
                               className="inline-block w-6 h-6 rounded-full ring-2 ring-white object-cover"
+                              textClassName="text-[8px]"
                             />
                           ))}
                         </div>
-                        <span className="text-[11px] text-slate-500 font-medium truncate whitespace-nowrap">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate whitespace-nowrap">
                           Tạo bởi {tl.ownerName}
                         </span>
                       </div>
@@ -605,7 +609,7 @@ export const SettingsView: React.FC = () => {
                               e.stopPropagation();
                               setTimelineToDelete(tl);
                             }}
-                            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-xl text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
                             title="Xóa hành trình"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -630,27 +634,26 @@ export const SettingsView: React.FC = () => {
           <div className="space-y-4">
             {/* Pending Received */}
             {pendingReceived.length > 0 && (
-              <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 flex items-center gap-1.5">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-1.5">
                   <UserPlus className="w-4 h-4 text-indigo-600" />
                   <span>Lời mời kết bạn ({pendingReceived.length})</span>
                 </h3>
                 <div className="space-y-2">
                   {pendingReceived.map((req) => (
-                    <div key={req.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl">
+                    <div key={req.id} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                       <div 
                         className="flex items-center gap-2.5 cursor-pointer flex-1"
                         onClick={() => setSelectedUser(req)}
                       >
-                        <img
+                        <Avatar
                           src={req.avatar}
-                          alt={req.name}
-                          referrerPolicy="no-referrer"
+                          name={req.name}
                           className="w-10 h-10 rounded-full object-cover"
                         />
                         <div>
-                          <div className="text-xs font-bold text-slate-900 hover:text-indigo-600">{req.name}</div>
-                          <div className="text-[10px] text-slate-400">{req.status}</div>
+                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400">{req.name}</div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500">{req.status}</div>
                         </div>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
@@ -662,7 +665,7 @@ export const SettingsView: React.FC = () => {
                         </button>
                         <button
                           onClick={() => respondFriendRequest(req.id, false)}
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-300 cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
                         >
                           Từ chối
                         </button>
@@ -675,22 +678,21 @@ export const SettingsView: React.FC = () => {
 
             {/* Pending Sent */}
             {pendingSent.length > 0 && (
-              <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-500 mb-2">Lời mời đã gửi</h3>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">Lời mời đã gửi</h3>
                 <div className="space-y-2">
                   {pendingSent.map((req) => (
-                    <div key={req.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-xl">
+                    <div key={req.id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
                       <div 
                         className="flex items-center gap-2 cursor-pointer flex-1"
                         onClick={() => setSelectedUser(req)}
                       >
-                        <img
+                        <Avatar
                           src={req.avatar}
-                          alt={req.name}
-                          referrerPolicy="no-referrer"
+                          name={req.name}
                           className="w-8 h-8 rounded-full object-cover"
                         />
-                        <span className="text-xs font-medium text-slate-800 hover:text-indigo-600">{req.name}</span>
+                        <span className="text-xs font-medium text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400">{req.name}</span>
                       </div>
                       <button
                         onClick={() => cancelFriendRequest(req.id)}
@@ -705,14 +707,14 @@ export const SettingsView: React.FC = () => {
             )}
 
             {/* Accepted Friends List with Profile Tap, Block and Remove options */}
-            <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs">
-              <h3 className="text-xs font-bold text-slate-900 mb-3 flex items-center justify-between">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
+              <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center justify-between">
                 <span>Danh sách bạn bè ({acceptedFriends.length})</span>
-                <span className="text-[10px] text-slate-400 font-normal">Chạm tên/ảnh để xem hồ sơ</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Chạm tên/ảnh để xem hồ sơ</span>
               </h3>
 
               {acceptedFriends.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-400">
+                <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500">
                   Bạn chưa có bạn bè nào.
                 </div>
               ) : (
@@ -724,7 +726,7 @@ export const SettingsView: React.FC = () => {
                     return (
                       <div
                         key={friend.id}
-                        className="relative p-2.5 hover:bg-slate-50 rounded-2xl transition-colors border border-slate-50"
+                        className="relative p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors border border-slate-50 dark:border-slate-800"
                       >
                         <div className="flex items-center justify-between">
                           {/* Tap friend to view full profile */}
@@ -733,21 +735,20 @@ export const SettingsView: React.FC = () => {
                             onClick={() => setSelectedUser(friend)}
                           >
                             <div className="relative shrink-0">
-                              <img
+                              <Avatar
                                 src={friend.avatar}
-                                alt={friend.name}
-                                referrerPolicy="no-referrer"
+                                name={friend.name}
                                 className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200"
                               />
                               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                             </div>
                             <div className="truncate">
-                              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
+                              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
                                 <span className="hover:text-indigo-600 truncate">{friend.name}</span>
                                 {type === 'lover' && <span className="text-xs shrink-0">❤️</span>}
                                 {type === 'best_friend' && <span className="text-xs shrink-0">⭐</span>}
                               </div>
-                              <div className="text-[10px] text-slate-400 truncate">{friend.status}</div>
+                              <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{friend.status}</div>
                             </div>
                           </div>
 
@@ -756,7 +757,7 @@ export const SettingsView: React.FC = () => {
                             <select
                               value={type}
                               onChange={(e) => changeFriendshipType(friend.id, e.target.value as FriendshipType)}
-                              className="text-[11px] font-semibold bg-slate-100 text-slate-700 py-1 px-2 rounded-xl border-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                              className="text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-1 px-2 rounded-xl border-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                             >
                               <option value="friend">Bạn bè</option>
                               <option value="best_friend">Bạn thân ⭐</option>
@@ -766,7 +767,7 @@ export const SettingsView: React.FC = () => {
                             {/* Chat button */}
                             <button
                               onClick={() => openChatWithUser(friend)}
-                              className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                              className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                               title="Nhắn tin"
                             >
                               <MessageCircle className="w-3.5 h-3.5" />
@@ -775,7 +776,7 @@ export const SettingsView: React.FC = () => {
                             {/* More Actions Menu Button */}
                             <button
                               onClick={() => setFriendActionMenuId(isMenuOpen ? null : friend.id)}
-                              className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+                              className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                               title="Tùy chọn khác"
                             >
                               <MoreVertical className="w-3.5 h-3.5" />
@@ -785,13 +786,13 @@ export const SettingsView: React.FC = () => {
 
                         {/* Dropdown Action Menu */}
                         {isMenuOpen && (
-                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-end gap-2 animate-in fade-in duration-100">
+                          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 animate-in fade-in duration-100">
                             <button
                               onClick={() => {
                                 setFriendToBlock(friend);
                                 setFriendActionMenuId(null);
                               }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 hover:bg-amber-100 dark:hover:bg-amber-500/25 transition-colors cursor-pointer"
                             >
                               <Ban className="w-3 h-3" />
                               <span>Chặn bạn</span>
@@ -802,7 +803,7 @@ export const SettingsView: React.FC = () => {
                                 setFriendToRemove(friend);
                                 setFriendActionMenuId(null);
                               }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/25 transition-colors cursor-pointer"
                             >
                               <UserX className="w-3 h-3" />
                               <span>Hủy kết bạn</span>
@@ -818,26 +819,25 @@ export const SettingsView: React.FC = () => {
 
             {/* Blocked Friends List (if any) */}
             {blockedFriends.length > 0 && (
-              <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
+                <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-1.5">
                   <Ban className="w-4 h-4 text-amber-600" />
                   <span>Danh sách đã chặn ({blockedFriends.length})</span>
                 </h3>
                 <div className="space-y-2">
                   {blockedFriends.map((bf) => (
-                    <div key={bf.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-2xl">
+                    <div key={bf.id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                       <div className="flex items-center gap-2">
-                        <img
+                        <Avatar
                           src={bf.avatar}
-                          alt={bf.name}
-                          referrerPolicy="no-referrer"
+                          name={bf.name}
                           className="w-8 h-8 rounded-full object-cover opacity-60"
                         />
-                        <span className="text-xs font-medium text-slate-700">{bf.name}</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{bf.name}</span>
                       </div>
                       <button
                         onClick={() => unblockFriend(bf.id)}
-                        className="px-2.5 py-1 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold cursor-pointer"
+                        className="px-2.5 py-1 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
                       >
                         Bỏ chặn
                       </button>
@@ -851,10 +851,10 @@ export const SettingsView: React.FC = () => {
 
         {/* 4. MOMENTS SUB-TAB */}
         {activeSubTab === 'profile' && (
-          <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-900 mb-3">Khoảnh khắc đã đăng</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3">Khoảnh khắc đã đăng</h3>
             {myMoments.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400">
+              <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
                 Chưa có ảnh nào được đăng.
               </div>
             ) : (
@@ -863,7 +863,7 @@ export const SettingsView: React.FC = () => {
                   <div 
                     key={m.id} 
                     onClick={() => setViewingMoment(m)}
-                    className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 group cursor-pointer hover:shadow-md transition-all active:scale-95"
+                    className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 group cursor-pointer hover:shadow-md transition-all active:scale-95"
                   >
                     {m.mediaType === 'video' || m.videoUrl ? (
                       <video
@@ -897,15 +897,15 @@ export const SettingsView: React.FC = () => {
       {/* UNIFIED EDIT PROFILE MODAL */}
       {showEditProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-sm max-h-[90vh] overflow-y-auto no-scrollbar p-5 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm max-h-[90vh] overflow-y-auto no-scrollbar p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
               <div className="flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-base font-bold text-slate-900">Chỉnh sửa hồ sơ</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Chỉnh sửa hồ sơ</h3>
               </div>
               <button
                 onClick={() => setShowEditProfileModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -922,8 +922,8 @@ export const SettingsView: React.FC = () => {
               />
 
               {/* Avatar Selector Section */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 flex flex-col items-center">
-                <label className="text-[11px] font-bold text-slate-700 mb-2">Ảnh đại diện</label>
+              <div className="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 flex flex-col items-center">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2">Ảnh đại diện</label>
 
                 {/* Avatar Preview with Camera Overlay */}
                 <div 
@@ -931,11 +931,11 @@ export const SettingsView: React.FC = () => {
                   onClick={() => avatarFileInputRef.current?.click()}
                   title="Chạm để chọn ảnh từ thư viện hoặc chụp ảnh mới"
                 >
-                  <img
+                  <Avatar
                     src={profileForm.avatar}
-                    alt="Preview"
-                    referrerPolicy="no-referrer"
+                    name={profileForm.name}
                     className="w-20 h-20 rounded-full object-cover ring-4 ring-indigo-500/30 shadow-md transition-transform group-hover:scale-105"
+                    textClassName="text-2xl"
                   />
                   <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera className="w-5 h-5" />
@@ -959,50 +959,50 @@ export const SettingsView: React.FC = () => {
 
               {/* Full Name */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Họ tên hiển thị</label>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Họ tên hiển thị</label>
                 <input
                   type="text"
                   value={profileForm.name}
                   onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
                   required
                   maxLength={40}
-                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               {/* Status Mood */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Trạng thái tâm trạng</label>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Trạng thái tâm trạng</label>
                 <input
                   type="text"
                   value={profileForm.status}
                   onChange={(e) => setProfileForm(prev => ({ ...prev, status: e.target.value }))}
                   placeholder="Ví dụ: Đang cafe ☕, Đi dạo bờ hồ 🛵..."
                   maxLength={45}
-                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
               {/* Age & Gender */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Tuổi</label>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tuổi</label>
                   <input
                     type="number"
                     min={12}
                     max={99}
                     value={profileForm.age}
                     onChange={(e) => setProfileForm(prev => ({ ...prev, age: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Giới tính</label>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Giới tính</label>
                   <select
                     value={profileForm.gender}
                     onChange={(e) => setProfileForm(prev => ({ ...prev, gender: e.target.value as 'Nam' | 'Nữ' | 'Khác' }))}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                   >
                     <option value="Nam">Nam</option>
                     <option value="Nữ">Nữ</option>
@@ -1013,16 +1013,16 @@ export const SettingsView: React.FC = () => {
 
               {/* Bio */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Tiểu sử giới thiệu</label>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tiểu sử giới thiệu</label>
                 <textarea
                   value={profileForm.bio}
                   onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
                   rows={2}
                   maxLength={150}
                   placeholder="Giới thiệu đôi nét về bản thân..."
-                  className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
-                <span className="text-[10px] text-slate-400 text-right block">{profileForm.bio.length}/150</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 text-right block">{profileForm.bio.length}/150</span>
               </div>
 
               {/* Actions */}
@@ -1030,7 +1030,7 @@ export const SettingsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowEditProfileModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
                 >
                   Hủy
                 </button>
@@ -1051,19 +1051,19 @@ export const SettingsView: React.FC = () => {
       {/* BLOCK FRIEND CONFIRMATION MODAL */}
       {friendToBlock && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center mx-auto mb-3">
               <Ban className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Chặn người dùng?</h3>
-            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Bạn có chắc chắn muốn chặn <span className="font-bold text-slate-800">{friendToBlock.name}</span>? Hai bạn sẽ không nhìn thấy vị trí và khoảnh khắc của nhau nữa.
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Chặn người dùng?</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+              Bạn có chắc chắn muốn chặn <span className="font-bold text-slate-800 dark:text-slate-200">{friendToBlock.name}</span>? Hai bạn sẽ không nhìn thấy vị trí và khoảnh khắc của nhau nữa.
             </p>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setFriendToBlock(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
               >
                 Hủy
               </button>
@@ -1081,19 +1081,19 @@ export const SettingsView: React.FC = () => {
       {/* REMOVE FRIEND CONFIRMATION MODAL */}
       {friendToRemove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
               <UserX className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Hủy kết bạn?</h3>
-            <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-              Bạn có chắc chắn muốn hủy kết bạn với <span className="font-bold text-slate-800">{friendToRemove.name}</span>?
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Hủy kết bạn?</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+              Bạn có chắc chắn muốn hủy kết bạn với <span className="font-bold text-slate-800 dark:text-slate-200">{friendToRemove.name}</span>?
             </p>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setFriendToRemove(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
               >
                 Hủy
               </button>
@@ -1116,35 +1116,35 @@ export const SettingsView: React.FC = () => {
       {/* DOWNLOAD APP MODAL */}
       {showDownloadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
               <div className="flex items-center gap-2">
                 <Download className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-base font-bold text-slate-900">Tải ứng dụng FriendHere</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Tải ứng dụng FriendHere</h3>
               </div>
               <button
                 onClick={() => setShowDownloadModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
               Bạn có thể thêm ứng dụng trực tiếp vào màn hình chính của điện thoại để sử dụng như một ứng dụng thông thường:
             </p>
 
             <div className="space-y-3 mb-5">
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
-                <div className="font-bold text-slate-800 mb-1">Trên iPhone / iPad (Safari):</div>
-                <div className="text-slate-500 text-[11px] leading-relaxed">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 text-xs">
+                <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Trên iPhone / iPad (Safari):</div>
+                <div className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
                   Nhấn vào nút <span className="font-bold text-indigo-600">Chia sẻ (Share)</span> ở thanh dưới Safari, sau đó chọn <span className="font-bold text-indigo-600">"Thêm vào MH chính" (Add to Home Screen)</span>.
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
-                <div className="font-bold text-slate-800 mb-1">Trên Android (Chrome):</div>
-                <div className="text-slate-500 text-[11px] leading-relaxed">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 text-xs">
+                <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Trên Android (Chrome):</div>
+                <div className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
                   Nhấn vào menu <span className="font-bold text-indigo-600">ba chấm (⋮)</span> ở góc trên, sau đó chọn <span className="font-bold text-indigo-600">"Cài đặt ứng dụng" (Install App)</span>.
                 </div>
               </div>
@@ -1166,19 +1166,19 @@ export const SettingsView: React.FC = () => {
       {/* LOGOUT CONFIRMATION MODAL */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
               <LogOut className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Đăng xuất tài khoản?</h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Đăng xuất tài khoản?</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               Bạn có chắc chắn muốn đăng xuất khỏi FriendHere?
             </p>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
               >
                 Hủy
               </button>
@@ -1196,21 +1196,21 @@ export const SettingsView: React.FC = () => {
       {/* DELETE TIMELINE CONFIRMATION MODAL */}
       {timelineToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-slate-900 mb-1 whitespace-nowrap truncate">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1 whitespace-nowrap truncate">
               Xóa hành trình?
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
               Bạn có chắc muốn xóa "{timelineToDelete.title}"? Hành động này sẽ gỡ bỏ hành trình vĩnh viễn.
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setTimelineToDelete(null)}
-                className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer whitespace-nowrap truncate"
+                className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer whitespace-nowrap truncate"
               >
                 Hủy
               </button>

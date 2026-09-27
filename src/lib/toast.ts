@@ -9,6 +9,13 @@
 
 export type ToastType = "success" | "info" | "error";
 
+/**
+ * Global toast kill-switch. While false, neither success nor error toasts
+ * render anywhere (calls stay in place so flipping this back on restores
+ * all feedback with zero code changes).
+ */
+export const TOASTS_ENABLED = false;
+
 type ToastListener = (text: string, type: ToastType) => void;
 
 const MAX_QUEUED = 10;

@@ -9,7 +9,6 @@ import {
   addConversation,
   addConversations,
   deleteMessage as removeMessageAction,
-  mergeMessages,
   mergeMessageReaction,
   prependMessages,
   removeConversation,
@@ -85,10 +84,16 @@ export interface ChatActions {
   leaveConversation: () => Promise<void>;
   resolvePartnerUser: (conversationId: string) => Promise<User | null>;
   loadMembers: (conversationId: string) => Promise<ConversationMemberDto[]>;
-  searchAndMergeMessages: (
+  /**
+   * Server search (`/messages/search` returns an ascending context window
+   * around the hit). Replaces the thread window (paging continues from the
+   * window head) and resolves the numeric target id to jump to — null when
+   * nothing matches. Toasts stay with the caller (it owns showToast).
+   */
+  openSearchWindow: (
     conversationId: string,
     params: { messageId?: number; content?: string },
-  ) => Promise<number>;
+  ) => Promise<{ targetId: number } | null>;
   isLoadingMore: boolean;
 }
 
@@ -762,26 +767,33 @@ export function useChatActions({
     [],
   );
 
-  /** Content / messageId search whose hits are merged into the loaded window
-   *  so the design's local highlight & scroll-into-view can find them. */
-  const searchAndMergeMessages = useCallback(
+  /** Server search window (see interface) — replaces the thread list. */
+  const openSearchWindow = useCallback(
     async (
       conversationId: string,
       params: { messageId?: number; content?: string },
-    ): Promise<number> => {
+    ): Promise<{ targetId: number } | null> => {
       const convId = Number(conversationId);
-      if (!convId) return 0;
+      if (!convId) return null;
       try {
         const res = await chatService.searchMessages(convId, params);
-        if (res.data.length > 0) {
-          dispatch(
-            mergeMessages({ conversationId: convId, messages: res.data }),
-          );
-        }
-        return res.data.length;
+        if (!res.data.length) return null;
+        dispatch(
+          setMessages({
+            conversationId: convId,
+            // Server order is already oldest-first — no reverse.
+            messages: res.data,
+            hasMore: true,
+            prevId: res.data[0].id - 1,
+          }),
+        );
+        const middle = res.data[Math.floor(res.data.length / 2)];
+        const targetId =
+          params.messageId ?? middle?.id ?? res.data[res.data.length - 1].id;
+        return { targetId };
       } catch (err) {
-        console.error("[chat] searchAndMergeMessages failed:", err);
-        return 0;
+        console.error("[chat] openSearchWindow failed:", err);
+        return null;
       }
     },
     [dispatch],
@@ -811,7 +823,7 @@ export function useChatActions({
     leaveConversation,
     resolvePartnerUser,
     loadMembers,
-    searchAndMergeMessages,
+    openSearchWindow,
     isLoadingMore,
   };
 }

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { setToastListener } from '../lib/toast';
+import { setToastListener, TOASTS_ENABLED } from '../lib/toast';
 import { 
   User, 
   Moment, 
@@ -156,10 +156,11 @@ interface AppContextType {
   refreshConversations: ChatActions['refreshConversations'];
   loadMoreConversations: ChatActions['loadMoreConversations'];
   loadOlderMessages: ChatActions['loadOlderMessages'];
+  loadMessages: ChatActions['loadMessages'];
   hasMoreMessages: (conversationId: string) => boolean;
   resolvePartnerUser: ChatActions['resolvePartnerUser'];
   loadMembers: ChatActions['loadMembers'];
-  searchAndMergeMessages: ChatActions['searchAndMergeMessages'];
+  openSearchWindow: ChatActions['openSearchWindow'];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -290,6 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const showToast = useCallback(
     (text: string, type: 'success' | 'info' | 'error' = 'info') => {
+      if (!TOASTS_ENABLED) return;
       const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
       setToasts(prev => [...prev, { id, text, type }]);
       setTimeout(() => {
@@ -702,20 +704,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   // Profile / Status actions — pushed to the hub so other map users see them.
+  // The local state + toast only land after the server confirms; a dropped
+  // hub must never look like a saved status.
   const updateStatus = (newStatus: string) => {
     const trimmed = newStatus.slice(0, 45);
-    void appHub.updateStatus(trimmed);
-    dispatch(setMyStatus(trimmed));
-    setCurrentUser(prev => ({ ...prev, status: trimmed, lastUpdated: 'Vừa xong' }));
-    showToast('Đã cập nhật trạng thái mới ✨', 'success');
+    void (async () => {
+      try {
+        await appHub.updateStatus(trimmed);
+        dispatch(setMyStatus(trimmed));
+        setCurrentUser(prev => ({ ...prev, status: trimmed, lastUpdated: 'Vừa xong' }));
+        showToast('Đã cập nhật trạng thái mới ✨', 'success');
+      } catch (err) {
+        console.error('[AppContext] updateStatus failed:', err);
+        showToast('Mất kết nối, chưa cập nhật được trạng thái', 'error');
+      }
+    })();
   };
 
   const updateVisibility = (tier: VisibilityTier) => {
-    void appHub.updateVisibility(tier);
-    dispatch(setMyVisibility(tier));
-    setCurrentUser(prev => ({ ...prev, visibility: tier }));
-    const labels = ['Chỉ mình tôi', 'Bạn bè', 'Bạn thân', 'Người yêu', 'Công khai'];
-    showToast(`Đã đổi quyền riêng tư vị trí: ${labels[tier]} 📍`, 'success');
+    void (async () => {
+      try {
+        await appHub.updateVisibility(tier);
+        dispatch(setMyVisibility(tier));
+        setCurrentUser(prev => ({ ...prev, visibility: tier }));
+        const labels = ['Chỉ mình tôi', 'Bạn bè', 'Bạn thân', 'Người yêu', 'Công khai'];
+        showToast(`Đã đổi quyền riêng tư vị trí: ${labels[tier]} 📍`, 'success');
+      } catch (err) {
+        console.error('[AppContext] updateVisibility failed:', err);
+        showToast('Mất kết nối, chưa đổi được quyền riêng tư', 'error');
+      }
+    })();
   };
 
   const updateBattery = (battery: number, isCharging = false) => {
@@ -1262,10 +1280,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshConversations: chatActions.refreshConversations,
         loadMoreConversations: chatActions.loadMoreConversations,
         loadOlderMessages: chatActions.loadOlderMessages,
+        loadMessages: chatActions.loadMessages,
         hasMoreMessages,
         resolvePartnerUser: chatActions.resolvePartnerUser,
         loadMembers: chatActions.loadMembers,
-        searchAndMergeMessages: chatActions.searchAndMergeMessages
+        openSearchWindow: chatActions.openSearchWindow
       }}
     >
       {children}

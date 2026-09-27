@@ -175,6 +175,20 @@ describe("axios interceptors", () => {
     setToastListener(null);
   });
 
+  it("suppresses the not-found toast but still rejects", async () => {
+    const listener = vi.fn();
+    setToastListener(listener);
+
+    const instance = makeInstance();
+    queue.push((config) => {
+      throw httpError(config, 404, "not found");
+    });
+
+    await expect(instance.get("/Moment/123")).rejects.toBeTruthy();
+    expect(listener).not.toHaveBeenCalled();
+    setToastListener(null);
+  });
+
   it("surfaces the rate-limit message through the toast bridge", async () => {
     const listener = vi.fn();
     setToastListener(listener);

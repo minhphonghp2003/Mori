@@ -67,9 +67,9 @@ function ResetPasswordContent() {
             <Link2Off className="w-8 h-8 text-rose-500" />
           </div>
 
-          <h2 className="text-lg font-extrabold text-slate-900">Liên kết không hợp lệ</h2>
+          <h2 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Liên kết không hợp lệ</h2>
 
-          <p className="mt-2 max-w-[280px] text-sm text-slate-400 font-medium">
+          <p className="mt-2 max-w-[280px] text-sm text-slate-400 dark:text-slate-500 font-medium">
             Liên kết đặt lại mật khẩu bị thiếu hoặc đã hết hạn. Vui lòng yêu cầu liên kết mới.
           </p>
 
@@ -91,11 +91,11 @@ function ResetPasswordContent() {
           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
         </div>
 
-        <h2 className="text-lg font-extrabold text-slate-900">
+        <h2 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
           Đặt lại mật khẩu thành công
         </h2>
 
-        <p className="mt-2 text-sm text-slate-400 font-medium">
+        <p className="mt-2 text-sm text-slate-400 dark:text-slate-500 font-medium">
           Đang chuyển hướng đến trang đăng nhập...
         </p>
       </div>
@@ -107,10 +107,10 @@ function ResetPasswordContent() {
       <AuthBackLink href="/login">Quay lại đăng nhập</AuthBackLink>
 
       <div className="mb-9">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
           Đặt lại mật khẩu
         </h1>
-        <p className="mt-3 text-sm text-slate-400 font-medium">
+        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
           Nhập mật khẩu mới cho tài khoản của bạn.
         </p>
       </div>
@@ -153,7 +153,7 @@ function ResetPasswordContent() {
             Đặt lại mật khẩu
           </AuthSubmitButton>
 
-          <p className="mt-6 text-center text-sm text-slate-400 font-medium">
+          <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
             <Link
               href="/forgot-password"
               className="font-bold text-indigo-600 hover:text-indigo-700"

@@ -4,6 +4,8 @@ import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { emitToast } from "@/lib/toast";
 import { primePush } from "@/lib/fcm";
+import { httpClient } from "@/lib/axios";
+import { countOutbox, flushOutbox } from "@/lib/offline";
 import { getCallController } from "@/lib/call/controller";
 import { PUSH_TYPE } from "@/types/notification";
 
@@ -25,6 +27,28 @@ export const PushListener = ({ children }: { children: ReactNode }) => {
   // Silent push prime on every app start (no permission prompt).
   useEffect(() => {
     void primePush();
+  }, []);
+
+  // Reconnected — replay mutations the offline adapter queued, silently.
+  useEffect(() => {
+    const onOnline = () => {
+      void (async () => {
+        try {
+          const before = await countOutbox();
+          if (before === 0) return;
+          await flushOutbox(httpClient);
+          const after = await countOutbox();
+          const synced = before - after;
+          if (synced > 0) {
+            emitToast(`Đã đồng bộ ${synced} thay đổi khi offline ⛅`, "success");
+          }
+        } catch {
+          // Next reconnect retries.
+        }
+      })();
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
   }, []);
 
   useEffect(() => {

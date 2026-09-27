@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
+import { Avatar } from '../common/Avatar';
 
 interface TimelineDetailViewProps {
   timeline: Timeline;
@@ -54,12 +55,12 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-50 overflow-y-auto no-scrollbar select-none">
+    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none">
       {/* Top Floating Back Bar */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-2.5 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-indigo-600 transition-colors cursor-pointer whitespace-nowrap truncate"
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer whitespace-nowrap truncate"
         >
           <ArrowLeft className="w-4 h-4 shrink-0" />
           <span className="whitespace-nowrap truncate">Quay lại</span>
@@ -68,7 +69,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
         <div className="flex items-center gap-1">
           <button
             onClick={handleShare}
-            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
+            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
             title="Chia sẻ hành trình"
           >
             <Share2 className="w-4 h-4" />
@@ -77,7 +78,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
           {isOwner && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer shrink-0"
+              className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer shrink-0"
               title="Xóa hành trình"
             >
               <Trash2 className="w-4 h-4" />
@@ -116,13 +117,12 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                 <span className="text-[10px] text-white/70 mr-1 whitespace-nowrap truncate">Cùng đi:</span>
                 <div className="flex -space-x-2">
                   {timeline.partners.map((partner) => (
-                    <img
+                    <Avatar
                       key={partner.id}
                       src={partner.avatar}
-                      alt={partner.name}
-                      referrerPolicy="no-referrer"
+                      name={partner.name}
                       className="w-6 h-6 rounded-full object-cover ring-2 ring-slate-900"
-                      title={partner.name}
+                      textClassName="text-[8px]"
                     />
                   ))}
                 </div>
@@ -142,8 +142,8 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
               <PlaneTakeoff className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider whitespace-nowrap truncate">Khởi hành</div>
-              <div className="text-[11px] text-slate-500 whitespace-nowrap truncate">{timeline.startDate}</div>
+              <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider whitespace-nowrap truncate">Khởi hành</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">{timeline.startDate}</div>
             </div>
           </div>
 
@@ -151,11 +151,11 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
           <div className="space-y-6">
             {timeline.moments.length === 0 && (
               <div className="relative flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-white border-2 border-dashed border-slate-300 text-slate-400 flex items-center justify-center font-bold text-xs z-10 shrink-0 mt-2">
+                <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 flex items-center justify-center font-bold text-xs z-10 shrink-0 mt-2">
                   ?
                 </div>
-                <div className="flex-1 bg-white rounded-3xl p-4 border border-dashed border-slate-200 text-center">
-                  <p className="text-[11px] text-slate-400">
+                <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-4 border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
                     Chưa có khoảnh khắc nào trên hành trình này.
                   </p>
                 </div>
@@ -164,7 +164,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
             {timeline.moments.map((m, index) => (
               <div key={m.id} className="relative flex items-start gap-3">
                 {/* Stop node badge */}
-                <div className="w-8 h-8 rounded-full bg-white border-2 border-indigo-600 text-indigo-600 flex items-center justify-center font-bold text-xs shadow-xs z-10 shrink-0 mt-2">
+                <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shadow-xs z-10 shrink-0 mt-2">
                   {index + 1}
                 </div>
 
@@ -184,9 +184,9 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                     allowComment: true,
                     reactions: []
                   })}
-                  className="flex-1 bg-white rounded-3xl p-3.5 border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-98"
+                  className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-98"
                 >
-                  <div className="relative aspect-16/10 rounded-2xl overflow-hidden mb-2.5 bg-slate-100">
+                  <div className="relative aspect-16/10 rounded-2xl overflow-hidden mb-2.5 bg-slate-100 dark:bg-slate-800">
                     <img
                       src={m.imageUrl}
                       alt={m.title}
@@ -200,11 +200,11 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                   </div>
 
                   <div className="flex items-center justify-between mb-1 gap-2">
-                    <h3 className="text-xs font-bold text-slate-900 whitespace-nowrap truncate group-hover:text-indigo-600 transition-colors">{m.title}</h3>
-                    <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap truncate shrink-0">{m.time}</span>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.title}</h3>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap truncate shrink-0">{m.time}</span>
                   </div>
 
-                  <p className="text-[11px] text-slate-600 leading-relaxed font-normal line-clamp-2">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed font-normal line-clamp-2">
                     {m.caption}
                   </p>
                 </div>
@@ -218,19 +218,19 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
               <Flag className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider whitespace-nowrap truncate">Kết thúc hành trình</div>
-              <div className="text-[11px] text-slate-500 whitespace-nowrap truncate">{timeline.endDate} · Kỷ niệm đọng lại mãi mãi ✨</div>
+              <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider whitespace-nowrap truncate">Kết thúc hành trình</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">{timeline.endDate} · Kỷ niệm đọng lại mãi mãi ✨</div>
             </div>
           </div>
         </div>
 
         {/* BOTTOM DELETE TIMELINE BUTTON (Owner only) */}
         {isOwner && (
-          <div className="mt-6 pt-4 border-t border-slate-200 pb-10">
+          <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 pb-10">
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-full py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap truncate"
+              className="w-full py-2.5 rounded-2xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap truncate"
             >
               <Trash2 className="w-4 h-4 shrink-0" />
               <span className="whitespace-nowrap truncate">Xóa hành trình này</span>
@@ -242,21 +242,21 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
       {/* DELETE CONFIRMATION MODAL */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-slate-900 mb-1 whitespace-nowrap truncate">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1 whitespace-nowrap truncate">
               Xác nhận xóa hành trình?
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
               Hành trình "{timeline.title}" và toàn bộ các điểm dừng sẽ bị gỡ bỏ vĩnh viễn.
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer whitespace-nowrap truncate"
+                className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer whitespace-nowrap truncate"
               >
                 Hủy
               </button>

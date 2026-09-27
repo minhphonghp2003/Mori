@@ -4,6 +4,7 @@ import type { Moment } from '../../types';
 import { getAvailableMoments, formatMomentDate } from '../../services/moment';
 import { mapMoment } from '../../lib/moment/mappers';
 import { X, Compass, Calendar, Users, Camera, Check, Loader2 } from 'lucide-react';
+import { Avatar } from '../common/Avatar';
 
 interface CreateTimelineModalProps {
   onClose: () => void;
@@ -116,17 +117,17 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div 
-        className="w-full sm:max-w-md bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 p-5 max-h-[90vh] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-8 duration-200"
+        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 p-5 max-h-[90vh] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <Compass className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-base font-bold text-slate-900">Tạo hành trình mới</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Tạo hành trình mới</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -134,7 +135,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Tên chuyến đi / Hành trình
             </label>
             <input
@@ -143,27 +144,27 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
               placeholder="VD: Chuyến đi Đà Lạt mùa sương 🌲, Săn mây Tà Xùa..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             />
           </div>
 
           {/* Dates scope which of YOUR moments can be attached */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-slate-400" />
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                 <span>Ngày bắt đầu</span>
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-slate-400" />
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                 <span>Ngày kết thúc</span>
               </label>
               <input
@@ -171,19 +172,19 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                 value={endDate}
                 min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-slate-200"
               />
             </div>
           </div>
 
           {/* Tag Co-Travelers */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
               <Users className="w-3.5 h-3.5 text-indigo-500" />
               <span>Bạn đồng hành ({selectedPartnerIds.length} người)</span>
             </label>
             {acceptedFriends.length === 0 ? (
-              <p className="text-[11px] text-slate-400 bg-slate-50 rounded-xl px-3 py-2">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2">
                 Bạn chưa có bạn bè nào để thêm vào hành trình.
               </p>
             ) : (
@@ -198,14 +199,14 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-indigo-600 text-white shadow-xs'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      <img
+                      <Avatar
                         src={friend.avatar}
-                        alt={friend.name}
-                        referrerPolicy="no-referrer"
+                        name={friend.name}
                         className="w-5 h-5 rounded-full object-cover"
+                        textClassName="text-[8px]"
                       />
                       <span>{friend.name}</span>
                     </button>
@@ -217,17 +218,17 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
 
           {/* Select moments (yours, in range, not on another timeline) */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
               <Camera className="w-3.5 h-3.5 text-indigo-500" />
               <span>Gắn khoảnh khắc vào hành trình ({selectedMomentIds.length} ảnh)</span>
             </label>
             {isLoadingAvailable ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400">
+              <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400 dark:text-slate-500">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Đang tải khoảnh khắc...</span>
               </div>
             ) : available.length === 0 ? (
-              <p className="text-[11px] text-slate-400 bg-slate-50 rounded-xl px-3 py-3 text-center">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-3 text-center">
                 Không có khoảnh khắc nào của bạn trong khoảng ngày này.
               </p>
             ) : (
@@ -264,7 +265,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+              className="flex-1 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
             >
               Hủy
             </button>

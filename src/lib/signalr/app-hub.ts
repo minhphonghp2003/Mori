@@ -540,12 +540,26 @@ class AppHub {
   }
 
   async updateVisibility(visibility: number): Promise<void> {
-    if (!this.connection) return;
-    try {
-      await this.connection.invoke("UpdateVisibility", visibility);
-    } catch (err) {
-      console.error("[AppHub] UpdateVisibility error:", err);
+    const conn = await this.ensureSendable();
+    await conn.invoke("UpdateVisibility", visibility);
+  }
+
+  /**
+   * Wait for any in-flight start, then require a live connection.
+   * User-initiated updates (status/visibility) must fail loudly instead of
+   * vanishing while the hub is down — the UI only confirms after this.
+   */
+  private async ensureSendable(): Promise<signalR.HubConnection> {
+    if (this.connectionReady) {
+      try {
+        await this.connectionReady;
+      } catch {}
     }
+    const conn = this.connection;
+    if (!conn || conn.state !== signalR.HubConnectionState.Connected) {
+      throw new Error("AppHub not connected");
+    }
+    return conn;
   }
 
   async updateBattery(battery: number): Promise<void> {
@@ -558,12 +572,8 @@ class AppHub {
   }
 
   async updateStatus(status: string): Promise<void> {
-    if (!this.connection) return;
-    try {
-      await this.connection.invoke("UpdateStatus", status);
-    } catch (err) {
-      console.error("[AppHub] UpdateStatus error:", err);
-    }
+    const conn = await this.ensureSendable();
+    await conn.invoke("UpdateStatus", status);
   }
 
   async joinConversation(id: number): Promise<void> {

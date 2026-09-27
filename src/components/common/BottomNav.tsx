@@ -27,14 +27,14 @@ export const BottomNav: React.FC = () => {
   const totalUnread = Math.max(listUnread, totalUnreadCount || 0);
 
   return (
-    <nav className="shrink-0 bg-white border-t border-slate-100 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] px-2 pt-1 pb-1.5 z-30 select-none">
+    <nav className="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] px-2 pt-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] z-30 select-none">
       <div className="grid grid-cols-5 items-center max-w-md mx-auto relative">
         
         {/* 1. HOME (Nearby Users) */}
         <Link
           href={TAB_HREF.home}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'home' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            activeTab === 'home' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">
@@ -48,7 +48,7 @@ export const BottomNav: React.FC = () => {
         <Link
           href={TAB_HREF.moments}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'moments' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            activeTab === 'moments' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">
@@ -62,7 +62,7 @@ export const BottomNav: React.FC = () => {
         <div className="flex flex-col items-center justify-center relative -top-3">
           <Link
             href={TAB_HREF.map}
-            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.38)] ring-4 ring-white flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
+            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.38)] ring-4 ring-white dark:ring-slate-900 flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
               activeTab === 'map' ? 'scale-108 ring-indigo-100 shadow-[0_10px_25px_rgba(79,70,229,0.5)]' : 'hover:scale-105'
             }`}
             title="Bản đồ"
@@ -75,13 +75,13 @@ export const BottomNav: React.FC = () => {
         <Link
           href={TAB_HREF.chat}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'chat' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            activeTab === 'chat' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">
             <MessageCircle className={`w-5 h-5 transition-transform ${activeTab === 'chat' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
             {totalUnread > 0 && (
-              <span className="absolute -top-1 -right-1.5 min-w-[17px] h-[17px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-xs border-2 border-white ring-1 ring-rose-500/20">
+              <span className="absolute -top-1 -right-1.5 min-w-[17px] h-[17px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-xs border-2 border-white dark:border-slate-900 ring-1 ring-rose-500/20">
                 {totalUnread > 99 ? '99+' : totalUnread}
               </span>
             )}
@@ -94,7 +94,7 @@ export const BottomNav: React.FC = () => {
         <Link
           href={TAB_HREF.setting}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'setting' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'
+            activeTab === 'setting' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">

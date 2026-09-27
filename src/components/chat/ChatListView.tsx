@@ -5,6 +5,7 @@ import { getDiscoverableGroups } from '@/services/chat';
 import { mapDiscoverableGroup } from '@/lib/chat/mappers';
 import { DiscoverableGroup, Conversation } from '../../types';
 import { CreateGroupModal } from './CreateGroupModal';
+import { Avatar } from '../common/Avatar';
 import { 
   Users, 
   MessageSquare, 
@@ -107,9 +108,9 @@ export const ChatListView: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-50 overflow-hidden select-none">
+    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden select-none">
       {/* Top Header Bar: Button tabs (all, archived, discover) & Add Group in the SAME LINE (No 'Tin nhan' title) */}
-      <div className="shrink-0 bg-white border-b border-slate-100 px-3 py-2.5 shadow-xs z-10">
+      <div className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 shadow-xs z-10">
         <div className="flex items-center justify-between gap-2">
           {/* Button Tabs: all, archived, discover */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
@@ -118,7 +119,7 @@ export const ChatListView: React.FC = () => {
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap truncate shrink-0 ${
                 filterTab === 'all'
                   ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               Tất cả
@@ -129,14 +130,14 @@ export const ChatListView: React.FC = () => {
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap truncate shrink-0 flex items-center gap-1.5 ${
                 filterTab === 'archived'
                   ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               <Archive className="w-3.5 h-3.5 shrink-0" />
               <span>Lưu trữ</span>
               {archivedCount > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  filterTab === 'archived' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                  filterTab === 'archived' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                 }`}>
                   {archivedCount}
                 </span>
@@ -148,14 +149,14 @@ export const ChatListView: React.FC = () => {
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap truncate shrink-0 flex items-center gap-1.5 ${
                 filterTab === 'discover'
                   ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span>Khám phá</span>
               {unjoinedGroups.length > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  filterTab === 'discover' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-700'
+                  filterTab === 'discover' ? 'bg-white/20 text-white' : 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300'
                 }`}>
                   {unjoinedGroups.length}
                 </span>
@@ -166,7 +167,7 @@ export const ChatListView: React.FC = () => {
           {/* Add Group Button in the SAME LINE as button tabs */}
           <button
             onClick={() => setShowCreateGroup(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap truncate shrink-0 active:scale-95"
+            className="px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 text-indigo-600 dark:text-indigo-300 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap truncate shrink-0 active:scale-95"
             title="Tạo nhóm mới"
           >
             <Plus className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" />
@@ -176,7 +177,7 @@ export const ChatListView: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto no-scrollbar bg-white" onScroll={handleScroll}>
+      <div className="flex-1 overflow-y-auto no-scrollbar bg-white dark:bg-slate-900" onScroll={handleScroll}>
         
         {/* TAB 1: ALL ACTIVE CONVERSATIONS */}
         {filterTab === 'all' && (
@@ -184,9 +185,9 @@ export const ChatListView: React.FC = () => {
             <div className="p-3.5 space-y-3.5">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center gap-3 animate-pulse">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-200 shrink-0" />
+                  <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-700 shrink-0" />
                   <div className="flex-1 space-y-1.5">
-                    <div className="h-3 bg-slate-200 rounded w-1/3" />
+                    <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
                     <div className="h-2.5 bg-slate-100 rounded w-2/3" />
                   </div>
                 </div>
@@ -195,8 +196,8 @@ export const ChatListView: React.FC = () => {
           ) : allActiveConversations.length === 0 ? (
             <div className="text-center py-14 px-4">
               <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <div className="text-sm font-bold text-slate-700 whitespace-nowrap truncate">Chưa có tin nhắn nào</div>
-              <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto mb-4">
+              <div className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate">Chưa có tin nhắn nào</div>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto mb-4">
                 Hãy khám phá các nhóm cộng đồng để bắt đầu trò chuyện.
               </p>
               <button
@@ -207,7 +208,7 @@ export const ChatListView: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100/80">
+            <div className="divide-y divide-slate-100/80 dark:divide-slate-800">
               {allActiveConversations.map((conv) => {
                 return (
                   <ConversationItem
@@ -241,7 +242,7 @@ export const ChatListView: React.FC = () => {
                 );
               })}
               {isLoadingMoreConversations && (
-                <div className="py-3 text-center text-[11px] text-slate-400 font-medium">
+                <div className="py-3 text-center text-[11px] text-slate-400 dark:text-slate-500 font-medium">
                   Đang tải thêm...
                 </div>
               )}
@@ -259,14 +260,14 @@ export const ChatListView: React.FC = () => {
           archivedConversations.length === 0 ? (
             <div className="text-center py-14 px-4">
               <Archive className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <div className="text-sm font-bold text-slate-700 whitespace-nowrap truncate">Không có tin nhắn lưu trữ</div>
-              <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              <div className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate">Không có tin nhắn lưu trữ</div>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">
                 Các cuộc trò chuyện được lưu trữ sẽ xuất hiện tại đây giúp hộp thư chính luôn ngăn nắp.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100/80">
-              <div className="p-3 bg-indigo-50/50 border-b border-indigo-100/50 flex items-center justify-between text-xs text-indigo-700">
+            <div className="divide-y divide-slate-100/80 dark:divide-slate-800">
+              <div className="p-3 bg-indigo-50/50 dark:bg-indigo-500/10 border-b border-indigo-100/50 dark:border-indigo-500/20 flex items-center justify-between text-xs text-indigo-700 dark:text-indigo-300">
                 <span className="font-semibold">Đang lưu trữ {archivedConversations.length} cuộc trò chuyện</span>
                 <span className="text-[11px] text-indigo-500">Chạm để mở</span>
               </div>
@@ -311,10 +312,10 @@ export const ChatListView: React.FC = () => {
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold text-slate-900 whitespace-nowrap truncate">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate">
                   Nhóm cộng đồng gợi ý
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   Chỉ hiển thị các nhóm bạn chưa tham gia
                 </p>
               </div>
@@ -326,11 +327,11 @@ export const ChatListView: React.FC = () => {
             {isLoadingDiscover ? (
               <div className="space-y-3">
                 {[0, 1].map((i) => (
-                  <div key={i} className="p-3.5 rounded-2xl bg-white border border-slate-200/80 animate-pulse">
+                  <div key={i} className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 animate-pulse">
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-200 shrink-0" />
+                      <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-700 shrink-0" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-3 bg-slate-200 rounded w-1/2" />
+                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2" />
                         <div className="h-2.5 bg-slate-100 rounded w-3/4" />
                       </div>
                     </div>
@@ -338,12 +339,12 @@ export const ChatListView: React.FC = () => {
                 ))}
               </div>
             ) : unjoinedGroups.length === 0 ? (
-              <div className="text-center py-14 px-4 bg-slate-50 rounded-3xl border border-slate-100">
+              <div className="text-center py-14 px-4 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-800">
                 <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <div className="text-xs font-bold text-slate-700 whitespace-nowrap truncate">
+                <div className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap truncate">
                   Đã tham gia tất cả các nhóm!
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">
                   Bạn đã tham gia toàn bộ các nhóm đề xuất hiện tại. Hãy tạo thêm nhóm mới cùng bạn bè!
                 </p>
                 <button
@@ -361,19 +362,18 @@ export const ChatListView: React.FC = () => {
                   return (
                     <div 
                       key={grp.id}
-                      className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col gap-3 hover:border-indigo-200 transition-colors"
+                      className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col gap-3 hover:border-indigo-200 transition-colors"
                     >
                       <div className="flex items-start gap-3">
-                        <img
+                        <Avatar
                           src={grp.avatar}
-                          alt={grp.name}
-                          referrerPolicy="no-referrer"
+                          name={grp.name}
                           className="w-12 h-12 rounded-2xl object-cover shrink-0 ring-2 ring-slate-100"
                         />
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs font-bold text-slate-900 truncate">
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                               {grp.name}
                             </h4>
                             {grp.isPrivate ? (
@@ -390,13 +390,13 @@ export const ChatListView: React.FC = () => {
                           </div>
 
                           {grp.description && (
-                            <p className="text-[11px] text-slate-600 line-clamp-2 mt-1 leading-relaxed">
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">
                               {grp.description}
                             </p>
                           )}
 
-                          <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
-                            <span className="font-semibold text-slate-600">
+                          <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400 dark:text-slate-500">
+                            <span className="font-semibold text-slate-600 dark:text-slate-400">
                               👥 {grp.memberCount} thành viên
                             </span>
                             {grp.activityTime && (
@@ -410,8 +410,8 @@ export const ChatListView: React.FC = () => {
                       </div>
 
                       {/* Action buttons based on privacy type */}
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <span className="text-[10px] text-slate-400">
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
                           {grp.isPrivate 
                             ? 'Cần quản trị viên phê duyệt yêu cầu' 
                             : 'Nhóm tự do tham gia và trò chuyện ngay'}
@@ -423,7 +423,7 @@ export const ChatListView: React.FC = () => {
                             disabled={hasRequested}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
                               hasRequested
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                                 : 'bg-amber-50 hover:bg-amber-100 text-amber-700 active:scale-95'
                             }`}
                           >
@@ -466,20 +466,20 @@ export const ChatListView: React.FC = () => {
           onClick={() => setDeleteConfirmConv(null)}
         >
           <div 
-            className="w-full max-w-xs bg-white rounded-3xl p-5 text-center shadow-2xl border border-slate-100"
+            className="w-full max-w-xs bg-white dark:bg-slate-900 rounded-3xl p-5 text-center shadow-2xl border border-slate-100 dark:border-slate-800"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
               <AlertTriangle className="w-6 h-6" />
             </div>
-            <h4 className="text-sm font-bold text-slate-900 whitespace-nowrap truncate">Xóa cuộc trò chuyện?</h4>
-            <p className="text-xs text-slate-500 mt-1 mb-4 leading-relaxed">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate">Xóa cuộc trò chuyện?</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4 leading-relaxed">
               Bạn có chắc chắn muốn xóa cuộc trò chuyện này? Toàn bộ tin nhắn sẽ bị xóa vĩnh viễn.
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setDeleteConfirmConv(null)}
-                className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer whitespace-nowrap truncate"
+                className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer whitespace-nowrap truncate"
               >
                 Hủy bỏ
               </button>
@@ -542,7 +542,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 p-3.5 hover:bg-slate-50 cursor-pointer transition-colors active:bg-slate-100 group relative"
+      className="flex items-center gap-3 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors active:bg-slate-100 dark:active:bg-slate-700 group relative"
     >
       {/* Avatar with online dot */}
       <div 
@@ -555,10 +555,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         className="relative shrink-0 hover:opacity-90 transition-opacity"
         title={!conv.isGroup ? `Xem hồ sơ của ${displayName}` : undefined}
       >
-        <img
+        <Avatar
           src={displayAvatar}
-          alt={displayName}
-          referrerPolicy="no-referrer"
+          name={displayName}
           className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100"
         />
         {!conv.isGroup && conv.isOnline && (
@@ -570,7 +569,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5 gap-2">
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className="text-xs font-bold text-slate-900 truncate whitespace-nowrap">
+            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate whitespace-nowrap">
               {displayName}
             </span>
             {conv.isPinned && (
@@ -578,7 +577,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
             )}
             {conv.isMuted && (
               <span title="Đã tắt thông báo">
-                <BellOff className="w-3 h-3 text-slate-400 shrink-0" />
+                <BellOff className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
               </span>
             )}
             {conv.isGroup && (
@@ -588,13 +587,13 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
             )}
           </div>
 
-          <span className="text-[10px] text-slate-400 shrink-0 font-medium whitespace-nowrap truncate">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 font-medium whitespace-nowrap truncate">
             {conv.lastMessage.timestamp}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-slate-500 truncate whitespace-nowrap leading-relaxed flex-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate whitespace-nowrap leading-relaxed flex-1">
             {conv.lastMessage.isDeleted
               ? 'Tin nhắn đã bị thu hồi'
               : conv.lastMessage.imageUrl
@@ -625,8 +624,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                 onClick={onToggleMenu}
                 className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                   isMenuOpen 
-                    ? 'bg-slate-200 text-slate-800' 
-                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200' 
+                    : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
                 }`}
                 title="Tùy chọn cuộc trò chuyện"
               >
@@ -644,13 +643,13 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                     }}
                   />
                   <div
-                    className="absolute right-0 top-full mt-1.5 z-40 w-44 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 p-1.5 animate-in fade-in zoom-in-95 duration-100 text-slate-700 select-none"
+                    className="absolute right-0 top-full mt-1.5 z-40 w-44 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-1.5 animate-in fade-in zoom-in-95 duration-100 text-slate-700 dark:text-slate-300 select-none"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* Archive / Unarchive */}
                     <button
                       onClick={onArchive}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer text-left whitespace-nowrap truncate"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer text-left whitespace-nowrap truncate"
                     >
                       {conv.isArchived ? (
                         <>
@@ -668,7 +667,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                     {/* Mute / Unmute */}
                     <button
                       onClick={onMute}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer text-left whitespace-nowrap truncate"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer text-left whitespace-nowrap truncate"
                     >
                       {conv.isMuted ? (
                         <>

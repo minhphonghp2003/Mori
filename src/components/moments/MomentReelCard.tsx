@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Moment, User, ReactionEmoji, Timeline, VisibilityTier } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { TimelineDetailView } from '../timelines/TimelineDetailView';
+import { Avatar } from '../common/Avatar';
 import { emptyUser } from '@/lib/chat/mappers';
 import { VISIBILITY_OPTIONS } from '@/constants/visibility';
 import { 
@@ -424,10 +425,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           className="flex items-center gap-2.5 cursor-pointer group"
         >
           <div className="relative">
-            <img
-              src={moment.userAvatar}
-              alt={moment.userName}
-              referrerPolicy="no-referrer"
+            <Avatar
+              src={author.avatar || moment.userAvatar}
+              name={author.name || moment.userName}
               className="w-10 h-10 rounded-full object-cover ring-2 ring-white/90 shadow-md group-hover:scale-105 transition-transform"
             />
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-black rounded-full" />
@@ -811,7 +811,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           }}
         >
           <div 
-            className="w-full h-full sm:max-w-md bg-white sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-6 duration-200"
+            className="w-full h-full sm:max-w-md bg-white dark:bg-slate-900 sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-6 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <TimelineDetailView
