@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { getUserById } from '@/services/user';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { Avatar } from '../common/Avatar';
+import { formatDistance } from '@/lib/location/geo';
 import { 
   X, 
   MessageCircle, 
@@ -228,10 +229,10 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap truncate shrink-0 ${relBadge.color}`}>
                   {relBadge.label}
                 </span>
-                {!isSelf && liveUser.distanceKm !== undefined && (
+                {!isSelf && !!liveUser.distanceM && (
                   <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-0.5 whitespace-nowrap truncate">
                     <MapPin className="w-3 h-3 text-indigo-500 shrink-0" />
-                    <span>Cách {liveUser.distanceKm} km</span>
+                    <span>Cách {formatDistance(liveUser.distanceM)}</span>
                   </span>
                 )}
               </div>
@@ -319,10 +320,10 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                   </button>
                 </div>
               ) : friendStatus === 'none' ? (
-                <div className="flex items-center justify-between p-2 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <div className="flex items-center justify-between p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
                   <div className="flex items-center gap-1.5 min-w-0 pr-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="text-xs text-emerald-800 font-medium whitespace-nowrap truncate">
+                    <span className="text-xs text-emerald-800 dark:text-emerald-300 font-medium whitespace-nowrap truncate">
                       Người lạ đang online gần bạn
                     </span>
                   </div>
@@ -570,16 +571,16 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                     Vị trí hiện tại
                   </div>
                   <div className="flex items-start gap-2.5 text-xs text-slate-800 dark:text-slate-200">
-                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0">
                       <MapPin className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold whitespace-nowrap truncate">
                         {liveUser.location.lat.toFixed(5)}, {liveUser.location.lng.toFixed(5)}
                       </div>
-                      {liveUser.distanceKm !== undefined && (
-                        <div className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap truncate">
-                          Cách {liveUser.distanceKm} km
+                      {!!liveUser.distanceM && (
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 whitespace-nowrap truncate">
+                          Cách {formatDistance(liveUser.distanceM)}
                         </div>
                       )}
                     </div>

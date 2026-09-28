@@ -36,3 +36,23 @@ export interface UpdateUserInput {
   age?: number;
   genderId?: number;
 }
+
+/**
+ * GET /api/user item — full roster (online + offline), no visibility
+ * filtering. Location/distance fields are null when never shared.
+ */
+export interface UserListItemDto {
+  userId: number;
+  name: string;
+  genderId: number;
+  image: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  accuracy: number | null;
+  speed: number | null;
+  battery: number | null;
+  status: string | null;
+  updatedAt: string | null;
+  distance: number | null;
+  isOnline: boolean;
+}

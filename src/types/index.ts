@@ -31,6 +31,8 @@ export interface User {
     status: FriendshipStatus;
   };
   distanceKm?: number;
+  /** Raw meters backing the distance chip ("523 m" / "1.2 km"). */
+  distanceM?: number;
 }
 
 export type ReactionEmoji = '❤️' | '👍' | '😂' | '😮' | '😢' | '😡';

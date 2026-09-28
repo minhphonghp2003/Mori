@@ -184,6 +184,7 @@ export const LocationView: React.FC = () => {
           visibility: l.visibility as VisibilityTier,
           relationship: friend?.relationship,
           distanceKm: distanceMeters != null ? metersToKm(distanceMeters) : undefined,
+          distanceM: distanceMeters ?? undefined,
         };
         return { loc: l, user };
       });

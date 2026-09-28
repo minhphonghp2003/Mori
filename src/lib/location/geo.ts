@@ -18,5 +18,9 @@ export function getDistanceMeters(
   return R * c;
 }
 
-/** Meters → km with one decimal ("Cách 1.2 km"). */
-export const metersToKm = (meters: number): number => Math.round(meters / 100) / 10;
+/** Meters → km, ceiled to one decimal ("Cách 0.6 km"). 0 stays 0 (hidden by callers). */
+export const metersToKm = (meters: number): number => Math.ceil(meters / 100) / 10;
+
+/** Display string: meters under 1 km ("523 m"), ceiled km above ("1.2 km"). */
+export const formatDistance = (meters: number): string =>
+  meters < 1000 ? `${Math.ceil(meters)} m` : `${metersToKm(meters)} km`;

@@ -377,12 +377,12 @@ export const ChatListView: React.FC = () => {
                               {grp.name}
                             </h4>
                             {grp.isPrivate ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded-md shrink-0">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 px-1.5 py-0.2 rounded-md shrink-0">
                                 <Lock className="w-2.5 h-2.5" />
                                 <span>Riêng tư</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-md shrink-0">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 px-1.5 py-0.2 rounded-md shrink-0">
                                 <Globe className="w-2.5 h-2.5" />
                                 <span>Công khai</span>
                               </span>
@@ -581,7 +581,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
               </span>
             )}
             {conv.isGroup && (
-              <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded-md shrink-0">
+              <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 px-1.5 py-0.2 rounded-md shrink-0">
                 Nhóm
               </span>
             )}
