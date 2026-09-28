@@ -1,5 +1,5 @@
 import { httpClient } from "@/lib/axios";
-import type { ApiResponse, CursorPageResponse } from "@/types/api";
+import type { ApiResponse } from "@/types/api";
 import type { User, UserListItemDto, UpdateUserInput } from "@/types/user";
 
 export const getUserById = async (id: number): Promise<User> => {
@@ -13,16 +13,29 @@ export const getCurrentUser = async (): Promise<User> => {
 };
 
 /** Full roster (online + offline, caller excluded server-side). */
+export interface AllUsersPage {
+  data: UserListItemDto[];
+  success: boolean;
+  message?: string | null;
+  /** Opaque shuffle cursor — pass back verbatim, never interpret. */
+  prevId: number | null;
+  hasMore: boolean;
+  /** Shuffle session from page 1 — echo on following pages. */
+  seed?: number | null;
+}
+
 export const getAllUsers = async (params?: {
-  prevId?: number | null;
   take?: number;
   genderId?: number | null;
-}): Promise<CursorPageResponse<UserListItemDto>> => {
-  const { data } = await httpClient.get<CursorPageResponse<UserListItemDto>>("/User", {
+  seed?: number | null;
+  prevId?: number | null;
+}): Promise<AllUsersPage> => {
+  const { data } = await httpClient.get<AllUsersPage>("/User", {
     params: {
-      prevId: params?.prevId ?? undefined,
-      take: params?.take ?? 100,
+      take: params?.take ?? 10,
       genderId: params?.genderId ?? undefined,
+      seed: params?.seed ?? undefined,
+      prevId: params?.prevId ?? undefined,
     },
   });
   return data;

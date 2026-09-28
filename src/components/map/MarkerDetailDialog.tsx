@@ -197,7 +197,6 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                 className="w-15 h-15 rounded-2xl object-cover ring-3 ring-indigo-500/20 shadow-md"
                 textClassName="text-xl"
               />
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
 
             {/* Basic Info */}
@@ -322,9 +321,8 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               ) : friendStatus === 'none' ? (
                 <div className="flex items-center justify-between p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
                   <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <span className="text-xs text-emerald-800 dark:text-emerald-300 font-medium whitespace-nowrap truncate">
-                      Người lạ đang online gần bạn
+                      Người lạ gần bạn
                     </span>
                   </div>
                   <button

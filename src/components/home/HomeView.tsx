@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../common/Avatar';
 import { emptyUser } from '@/lib/chat/mappers';
@@ -24,34 +24,106 @@ export const HomeView: React.FC = () => {
 
   // Full roster (GET /api/user — online + offline, no visibility gate),
   // filtered server-side by genderId following the API input.
+  // Infinite scroll: seed/prevId persist across pages of one shuffle.
   const [roster, setRoster] = useState<UserListItemDto[]>([]);
   const [isLoadingRoster, setIsLoadingRoster] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const pagingRef = useRef<{ seed: number | null; prevId: number | null; hasMore: boolean }>({
+    seed: null,
+    prevId: null,
+    hasMore: true,
+  });
+  const seenRef = useRef<Set<number>>(new Set());
+  const loadingRef = useRef(false);
+  /** Consecutive fresh shuffles that added nothing (skewed shuffle cover). */
+  const emptyStreakRef = useRef(0);
+  /** True only after the empty budget is spent. */
+  const exhaustedRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      setIsLoadingRoster(true);
-      try {
-        const genderId = genderFilter === 'Nam' ? 1 : genderFilter === 'Nữ' ? 2 : undefined;
-        const out: UserListItemDto[] = [];
-        let prevId: number | null = null;
-        for (let page = 0; page < 10; page++) {
-          const res = await getAllUsers({ prevId, take: 100, genderId });
-          out.push(...res.data);
-          if (!res.hasMore || res.prevId == null) break;
-          prevId = res.prevId;
+  const fetchPage = useCallback(
+    async (reset: boolean, gender: typeof genderFilter) => {
+      if (loadingRef.current) return;
+      if (!reset && (!pagingRef.current.hasMore || exhaustedRef.current)) return;
+      loadingRef.current = true;
+      if (reset) setIsLoadingRoster(true);
+      else setIsLoadingMore(true);
+
+      const runOnce = async (freshCursor: boolean) => {
+        const res = await getAllUsers({
+          take: 10,
+          genderId: gender === 'Nam' ? 1 : gender === 'Nữ' ? 2 : undefined,
+          seed: freshCursor ? undefined : (pagingRef.current.seed ?? undefined),
+          prevId: freshCursor ? undefined : (pagingRef.current.prevId ?? undefined),
+        });
+        const fresh: UserListItemDto[] = [];
+        for (const u of res.data) {
+          if (!seenRef.current.has(u.userId)) {
+            seenRef.current.add(u.userId);
+            fresh.push(u);
+          }
         }
-        if (alive) setRoster(out);
+        if (res.seed != null) pagingRef.current.seed = res.seed;
+        pagingRef.current.prevId = res.prevId;
+        pagingRef.current.hasMore = res.hasMore;
+        return fresh;
+      };
+
+      try {
+        if (reset) {
+          pagingRef.current = { seed: null, prevId: null, hasMore: true };
+          seenRef.current = new Set();
+          exhaustedRef.current = false;
+          emptyStreakRef.current = 0;
+          const fresh = await runOnce(true);
+          setRoster(fresh);
+          if (fresh.length === 0) exhaustedRef.current = true;
+        } else {
+          const fresh = await runOnce(false);
+          if (fresh.length > 0) {
+            emptyStreakRef.current = 0;
+            setRoster((prev) => [...prev, ...fresh]);
+          } else {
+            // Zero new rows: the cursor may be stuck returning a seen
+            // window — retry with fresh shuffles (bounded) before giving up.
+            let recovered: UserListItemDto[] = [];
+            while (emptyStreakRef.current < 4) {
+              emptyStreakRef.current += 1;
+              recovered = await runOnce(true);
+              if (recovered.length > 0) break;
+            }
+            if (recovered.length > 0) {
+              emptyStreakRef.current = 0;
+              setRoster((prev) => [...prev, ...recovered]);
+            } else {
+              exhaustedRef.current = true;
+            }
+          }
+        }
       } catch (err) {
         console.error('[HomeView] getAllUsers failed:', err);
       } finally {
-        if (alive) setIsLoadingRoster(false);
+        loadingRef.current = false;
+        if (reset) setIsLoadingRoster(false);
+        else setIsLoadingMore(false);
       }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [genderFilter]);
+    },
+    [],
+  );
+
+  // Gender change (or mount) starts a fresh shuffle from page 1.
+  useEffect(() => {
+    setRoster([]);
+    scrollRef.current?.scrollTo({ top: 0 });
+    void fetchPage(true, genderFilter);
+  }, [genderFilter, fetchPage]);
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
+      void fetchPage(false, genderFilter);
+    }
+  };
 
   const nearbyUsers: (User & { isOnline: boolean })[] = useMemo(() => {
     const myNumericId = Number(currentUser.id);
@@ -102,7 +174,11 @@ export const HomeView: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none">
+    <div
+      ref={scrollRef}
+      onScroll={handleListScroll}
+      className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none"
+    >
       {/* Compact Gender Filter Bar (server-side genderId, no header) */}
       <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 shadow-xs flex items-center gap-2">
         {/* Gender Filter Chips — follows GET /api/user ?genderId= */}
@@ -155,12 +231,18 @@ export const HomeView: React.FC = () => {
                 onClick={() => setSelectedUser(user)}
                 className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 border border-slate-100/90 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer group flex items-center justify-between gap-2.5"
               >
-                {/* Left: Avatar */}
+                {/* Left: Avatar with presence dot */}
                 <div className="relative shrink-0">
                   <Avatar
                     src={user.avatar}
                     name={user.name}
                     className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-100 group-hover:ring-indigo-500 transition-all"
+                  />
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-white rounded-full ${
+                      user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                    }`}
+                    title={user.isOnline ? 'Đang online' : 'Ngoại tuyến'}
                   />
                 </div>
 
@@ -196,15 +278,6 @@ export const HomeView: React.FC = () => {
                       {user.status}
                     </div>
                   ) : null}
-
-                  {/* Coordinates — only when a live fix backs them */}
-                  {user.isOnline && (
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate flex items-center gap-1 mt-0.5">
-                      <span className="truncate">
-                        {user.location.lat.toFixed(5)}, {user.location.lng.toFixed(5)}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Right: Only Send Message Button */}
@@ -221,6 +294,11 @@ export const HomeView: React.FC = () => {
               </div>
             );
           })
+        )}
+        {isLoadingMore && (
+          <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 animate-pulse pb-2">
+            Đang tải thêm...
+          </p>
         )}
       </div>
     </div>
