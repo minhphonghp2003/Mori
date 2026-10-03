@@ -916,19 +916,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })();
   };
 
+  // Fire-and-forget: patch visibility locally and sync to the server in
+  // the background. The returned DTO is ignored and the list is never
+  // refetched — visibility only.
   const changeMomentVisibility = (momentId: string, tier: VisibilityTier) => {
     const numericId = Number(momentId);
     if (!numericId || tier < 0 || tier > 4) return;
-    void (async () => {
-      try {
-        const dto = await changeMomentVisibilityApi(numericId, VISIBILITY_NAMES[tier]);
-        const mapped = mapMoment(dto);
-        setMoments((prev) => prev.map((m) => (m.id === momentId ? { ...m, ...mapped } : m)));
-        showToast(`Đã đổi quyền xem: ${VISIBILITY_LABELS[tier]} 🔒`, 'success');
-      } catch (err) {
-        console.error('[AppContext] changeMomentVisibility failed:', err);
-      }
-    })();
+    setMoments((prev) => prev.map((m) => (m.id === momentId ? { ...m, visibility: tier } : m)));
+    showToast(`Đã đổi quyền xem: ${VISIBILITY_LABELS[tier]} 🔒`, 'success');
+    void changeMomentVisibilityApi(numericId, VISIBILITY_NAMES[tier]).catch((err) => {
+      console.error('[AppContext] changeMomentVisibility failed:', err);
+    });
   };
 
   // Calling actions — delegated to the CallProvider (real WebRTC) mounted

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Moment, User, ReactionEmoji, Timeline, VisibilityTier } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { TimelineDetailView } from '../timelines/TimelineDetailView';
@@ -11,12 +11,10 @@ import {
   Heart, 
   MessageCircle, 
   Share2, 
-  MapPin, 
-  Play, 
+  MapPin,
+  Play,
   Pause,
-  Volume2,
-  VolumeX,
-  Trash2, 
+  Trash2,
   ArrowLeft, 
   X, 
   AlertTriangle, 
@@ -75,10 +73,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   } = useFirstMessage();
 
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
-  const [showVideoControls, setShowVideoControls] = useState(false);
   // Center floating emoji shown when reacting (tap heart / picker emoji).
   const [floatingEmoji, setFloatingEmoji] = useState<{ emoji: string; key: number } | null>(null);
   const floatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,7 +87,6 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTapRef = useRef<number>(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isHoldingRef = useRef<boolean>(false);
@@ -149,6 +145,111 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     return () => window.removeEventListener('click', handleWindowClick);
   }, [showReactionPicker, showVisibilityPicker]);
 
+  // The feed mounts every card at once — track whether this card is the
+  // on-screen one so only it plays.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [isActive, setIsActive] = useState(false);
+  const activeRef = useRef(false);
+  // Invalidates in-flight play() attempts so a stale promise resolving
+  // late can never restart a video that was paused meanwhile (fast scroll).
+  const playGenRef = useRef(0);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      activeRef.current = true;
+      setIsActive(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        const active = entry.isIntersecting && entry.intersectionRatio >= 0.6;
+        activeRef.current = active;
+        setIsActive(active);
+      },
+      { threshold: [0, 0.6, 1] },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  // Auto-enable audio: browsers block unmuted autoplay until the user has
+  // interacted with the page, so try with sound first and fall back to
+  // muted autoplay when the play() promise rejects.
+  const tryAutoplay = useCallback(async () => {
+    const v = videoRef.current;
+    if (!isVideo || !v) return;
+    const gen = ++playGenRef.current;
+    try {
+      v.muted = false;
+      await v.play();
+      if (playGenRef.current !== gen) {
+        v.pause();
+        return;
+      }
+      setIsMuted(false);
+      setIsPlaying(true);
+    } catch {
+      if (playGenRef.current !== gen) return;
+      try {
+        v.muted = true;
+        await v.play();
+        if (playGenRef.current !== gen) {
+          v.pause();
+          return;
+        }
+        setIsMuted(true);
+        setIsPlaying(true);
+      } catch {
+        // Leave it paused — the user can hit play in the controller.
+      }
+    }
+  }, [isVideo]);
+
+  // Only the on-screen card plays; scrolling past pauses it. Re-runs when
+  // the card scrolls into view — after any tap, autoplay with audio is
+  // allowed and the video unmutes by itself.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!isVideo || !v) return;
+    if (!isActive || autoPlayVideo === false) {
+      if (!isActive) {
+        playGenRef.current++;
+        v.pause();
+        setIsPlaying(false);
+      }
+      return;
+    }
+    void tryAutoplay();
+  }, [isVideo, moment.videoUrl, isActive, autoPlayVideo, tryAutoplay]);
+
+  // Browser tab hidden → pause (audio must not survive a tab switch);
+  // visible again → resume if still the on-screen card. Unmount (route /
+  // modal switch) pauses as a final safety net.
+  useEffect(() => {
+    const onVisibility = () => {
+      const v = videoRef.current;
+      if (!isVideo || !v) return;
+      if (document.hidden) {
+        playGenRef.current++;
+        v.pause();
+        setIsPlaying(false);
+      } else if (activeRef.current && autoPlayVideo !== false) {
+        void tryAutoplay();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [isVideo, autoPlayVideo, tryAutoplay]);
+
+  useEffect(() => () => {
+    try {
+      videoRef.current?.pause();
+    } catch {
+      // Element already gone — nothing to stop.
+    }
+  }, []);
+
   const showFloatingEmoji = (emoji: string) => {
     if (floatTimerRef.current) clearTimeout(floatTimerRef.current);
     setFloatingEmoji({ emoji, key: Date.now() });
@@ -199,18 +300,17 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   const handleTogglePlayPause = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!videoRef.current) return;
+    // Manual intent wins over any in-flight autoplay attempt.
+    playGenRef.current++;
     if (videoRef.current.paused) {
-      videoRef.current.play();
+      videoRef.current.play().catch(() => {
+        // Unmuted resume blocked — stay paused, user can retry.
+        setIsPlaying(false);
+      });
       setIsPlaying(true);
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowVideoControls(false);
-      }, 3000);
     } else {
       videoRef.current.pause();
       setIsPlaying(false);
-      setShowVideoControls(true);
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     }
   };
 
@@ -230,22 +330,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
       return;
     }
 
-    if (isVideo) {
-      // Tap on video: Toggle video controller (time seeker, play/stop)
-      setShowVideoControls(prev => {
-        const next = !prev;
-        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        if (next && isPlaying) {
-          controlsTimeoutRef.current = setTimeout(() => {
-            setShowVideoControls(false);
-          }, 3500);
-        }
-        return next;
-      });
-    } else {
-      // Single tap toggles immersive media-only mode for images
-      onToggleImmersive();
-    }
+    // Single tap toggles the moment info overlays (video controller lives
+    // at the bottom and is always visible, never toggled by tapping).
+    onToggleImmersive();
   };
 
   // Horizontal Swipe Handling for Multi-image Moments (No next/prev button)
@@ -303,14 +390,6 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     onClose?.();
   };
 
-  const handleToggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!videoRef.current) return;
-    const nextMuted = !isMuted;
-    videoRef.current.muted = nextMuted;
-    setIsMuted(nextMuted);
-  };
-
   const handleVideoSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     const newTime = Number(e.target.value);
@@ -328,7 +407,8 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   };
 
   return (
-    <div 
+    <div
+      ref={rootRef}
       className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden select-none"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -351,26 +431,6 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             onLoadedMetadata={(e) => setVideoDuration(e.currentTarget.duration)}
             className="w-full h-full object-cover"
           />
-          {/* Center Play / Stop Controller Overlay (When tapped or paused) */}
-          {(showVideoControls || !isPlaying) && (
-            <div 
-              className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-auto z-25 animate-in fade-in duration-150"
-              onClick={handleMediaClick}
-            >
-              <button
-                type="button"
-                onClick={handleTogglePlayPause}
-                className="w-18 h-18 rounded-full bg-black/75 backdrop-blur-md border border-white/30 flex items-center justify-center text-white hover:scale-110 active:scale-90 transition-all shadow-2xl cursor-pointer"
-                title={isPlaying ? 'Dừng video' : 'Phát tiếp'}
-              >
-                {isPlaying ? (
-                  <Pause className="w-8 h-8 fill-white" />
-                ) : (
-                  <Play className="w-8 h-8 fill-white translate-x-0.5" />
-                )}
-              </button>
-            </div>
-          )}
         </div>
       ) : (
         <div 
@@ -452,8 +512,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
         </div>
       )}
 
-      {/* Left Bottom Information Overlay - Hidden in Immersive Media-Only mode */}
-      <div className={`absolute left-3 bottom-5 right-18 z-20 text-white space-y-2 pointer-events-auto transition-all duration-300 ${
+      {/* Left Bottom Information Overlay - Hidden in Immersive Media-Only mode.
+          Lifted on videos so the appended controller sits right below it. */}
+      <div className={`absolute left-3 ${isVideo ? 'bottom-11' : 'bottom-5'} right-18 z-20 text-white space-y-2 pointer-events-auto transition-all duration-300 ${
         isImmersive ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'
       }`}>
         {/* Author row */}
@@ -533,7 +594,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
       </div>
 
       {/* Right Side TikTok / Reel Action Column - Hidden in Immersive Media-Only mode */}
-      <div className={`absolute right-3 bottom-6 z-20 flex flex-col items-center gap-3.5 text-white pointer-events-auto transition-all duration-300 ${
+      <div className={`absolute right-3 ${isVideo ? 'bottom-12' : 'bottom-6'} z-20 flex flex-col items-center gap-3.5 text-white pointer-events-auto transition-all duration-300 ${
         isImmersive ? 'opacity-0 translate-x-4 pointer-events-none' : 'opacity-100 translate-x-0'
       }`}>
         {/* Like / Reaction Button with Long-press emoji picker */}
@@ -617,25 +678,6 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             Chia sẻ
           </span>
         </button>
-
-        {/* Mute/Unmute Button for Video Moments */}
-        {isVideo && (
-          <button
-            type="button"
-            onClick={handleToggleMute}
-            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
-            title={isMuted ? 'Bật âm thanh' : 'Tắt tiếng'}
-          >
-            <div className={`w-11 h-11 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
-              isMuted ? 'bg-black/50 border-white/20 text-white hover:bg-black/70' : 'bg-indigo-600/80 border-indigo-400 text-white shadow-md shadow-indigo-600/30'
-            }`}>
-              {isMuted ? <VolumeX className="w-4.5 h-4.5 stroke-white" /> : <Volume2 className="w-4.5 h-4.5 stroke-white" />}
-            </div>
-            <span className="text-[10px] font-bold text-white/90 drop-shadow-sm whitespace-nowrap truncate">
-              {isMuted ? 'Tắt tiếng' : 'Bật tiếng'}
-            </span>
-          </button>
-        )}
 
         {/* Visibility button if owner (opens quick picker above) */}
         {isMine && (
@@ -727,51 +769,41 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
         )}
       </div>
 
-      {/* Video Controller: Time Seeker & Controls */}
+      {/* Video controller: appended right below the moment info, toggles
+          with it. Compact single-row seeker (mute lives in the side column). */}
       {isVideo && (
-        <div 
-          className={`absolute inset-x-0 bottom-0 z-35 px-4 pb-3 pt-6 flex flex-col gap-1.5 bg-gradient-to-t from-black/95 via-black/70 to-transparent pointer-events-auto transition-all duration-300 ${
-            showVideoControls || !isPlaying ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        <div
+          className={`absolute inset-x-0 bottom-0 z-30 px-3 pb-2 pt-3 flex items-center gap-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-all duration-300 ${
+            isImmersive ? 'opacity-0 translate-y-3 pointer-events-none' : 'opacity-100 translate-y-0'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleTogglePlayPause}
-              className="text-white hover:text-indigo-400 active:scale-90 transition-all cursor-pointer p-1"
-              title={isPlaying ? 'Dừng video' : 'Phát video'}
-            >
-              {isPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
-            </button>
+          <button
+            type="button"
+            onClick={handleTogglePlayPause}
+            className="text-white hover:text-indigo-400 active:scale-90 transition-all cursor-pointer p-0.5 shrink-0"
+            title={isPlaying ? 'Dừng video' : 'Phát video'}
+          >
+            {isPlaying ? <Pause className="w-3.5 h-3.5 fill-white" /> : <Play className="w-3.5 h-3.5 fill-white" />}
+          </button>
 
-            <span className="text-[11px] font-mono text-white/90 shrink-0 font-medium select-none">
-              {formatVideoTime(videoCurrentTime)}
-            </span>
+          <span className="text-[10px] font-mono text-white/90 shrink-0 font-medium select-none">
+            {formatVideoTime(videoCurrentTime)}
+          </span>
 
-            <input
-              type="range"
-              min={0}
-              max={videoDuration || 10}
-              step={0.1}
-              value={videoCurrentTime}
-              onChange={handleVideoSeek}
-              className="flex-1 h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:h-2 transition-all"
-            />
+          <input
+            type="range"
+            min={0}
+            max={videoDuration || 10}
+            step={0.1}
+            value={videoCurrentTime}
+            onChange={handleVideoSeek}
+            className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer accent-indigo-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:bg-white"
+          />
 
-            <span className="text-[11px] font-mono text-white/60 shrink-0 font-medium select-none">
-              {formatVideoTime(videoDuration)}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleToggleMute}
-              className="text-white hover:text-indigo-400 active:scale-90 transition-all cursor-pointer p-1"
-              title={isMuted ? 'Bật âm thanh' : 'Tắt tiếng'}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-          </div>
+          <span className="text-[10px] font-mono text-white/60 shrink-0 font-medium select-none">
+            {formatVideoTime(videoDuration)}
+          </span>
         </div>
       )}
 
