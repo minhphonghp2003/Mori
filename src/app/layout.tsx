@@ -10,7 +10,7 @@ const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
 });
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "FriendHere";
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Mori";
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {

@@ -1,7 +1,7 @@
 // Service worker with auto-update support
 // Bump CACHE_VERSION when you want to force a full refresh
 const CACHE_VERSION = "10";
-const CACHE_NAME = `friendhere-v${CACHE_VERSION}`;
+const CACHE_NAME = `Mori-v${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline";
 
 // App-shell routes to pre-cache at install so navigation works offline.

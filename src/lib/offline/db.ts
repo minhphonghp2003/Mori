@@ -6,7 +6,7 @@
  *  - "outbox"     → queued mutations waiting to sync (keyPath: "id", autoIncrement)
  */
 
-const DB_NAME = "friendhere-offline";
+const DB_NAME = "Mori-offline";
 const DB_VERSION = 1;
 
 export const STORE_CACHE = "api-cache";

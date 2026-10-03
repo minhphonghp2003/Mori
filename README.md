@@ -5,8 +5,8 @@ timelines and 1:1 voice/video calls — rebuilt as a **Next.js 16 App Router**
 app on the previous production stack (Redux Toolkit, axios interceptors,
 single SignalR hub, FCM/PWA), keeping the indigo/slate design system.
 
-Backend: `FriendHere` (ASP.NET, separate repo). API contract:
-`FriendHere/API-DOCUMENTATION.md`. Refactor plan:
+Backend: `Mori` (ASP.NET, separate repo). API contract:
+`Mori/API-DOCUMENTATION.md`. Refactor plan:
 `.claude/plans/clever-hashing-pine.md` (8 phases, all complete).
 
 ## Prerequisites

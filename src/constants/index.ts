@@ -1,4 +1,4 @@
-export const APP_NAME = "FriendHereFE";
+export const APP_NAME = "MoriFE";
 export const API_TIMEOUT = 30000;
 export const TOKEN_KEY = "access_token";
 export const USER_ID_KEY = "user_id";
