@@ -294,12 +294,14 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
         }
         loaded++;
         if (loaded === readCount) {
-          setSelectedImages(newImages.slice(0, 10));
+          // Append to existing picks (capped at 10) — "Thêm ảnh" must not
+          // wipe what was already selected.
+          setSelectedImages((prev) => [...prev, ...newImages].slice(0, 10));
           setPreviewImageIndex(0);
           setMediaType('image');
           setIsImmersive(false);
           setStep('edit');
-          showToast(`Đã chọn ${newImages.length} ảnh 📸`, 'success');
+          showToast(`Đã thêm ${newImages.length} ảnh 📸`, 'success');
         }
       };
       reader.readAsDataURL(file);
@@ -860,38 +862,73 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                   />
                 </div>
 
-                {/* 2 Clean Toggle Pills (Location & Direct Message) */}
-                <div className="flex items-center gap-2">
-                  {/* Location Toggle Pill */}
+                {/* Location & Direct Message switch rows */}
+                <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl divide-y divide-white/10 overflow-hidden">
+                  {/* Location row */}
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={includeLocation}
                     onClick={() => setIncludeLocation(!includeLocation)}
-                    className={`flex-1 py-2 px-3 rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
-                      includeLocation
-                        ? 'bg-indigo-950/80 border-indigo-400 text-indigo-200'
-                        : 'bg-black/50 border-white/15 text-white/50'
-                    }`}
+                    className="w-full flex items-center gap-3 p-3 text-left cursor-pointer active:bg-white/5 transition-colors"
                   >
-                    <MapPin className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
-                    <span className="text-[11px] font-semibold truncate whitespace-nowrap">
-                      {includeLocation ? currentUser.location.address : 'Ẩn vị trí'}
+                    <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      includeLocation ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/40' : 'bg-white/10 text-white/40'
+                    }`}>
+                      <MapPin className="w-4 h-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-xs font-bold truncate ${
+                        includeLocation ? 'text-white' : 'text-white/50'
+                      }`}>
+                        Đính kèm vị trí
+                      </span>
+                      <span className="block text-[11px] text-white/50 truncate">
+                        {includeLocation
+                          ? (currentUser.location.address || 'Vị trí hiện tại của bạn')
+                          : 'Mọi người sẽ không thấy vị trí'}
+                      </span>
+                    </span>
+                    <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                      includeLocation ? 'bg-indigo-500' : 'bg-white/20'
+                    }`}>
+                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                        includeLocation ? 'left-[22px]' : 'left-0.5'
+                      }`} />
                     </span>
                   </button>
 
-                  {/* Direct Message Toggle Pill */}
+                  {/* Direct Message row */}
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={allowDirectMessage}
                     onClick={() => setAllowDirectMessage(!allowDirectMessage)}
-                    className={`py-2 px-3 rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-                      allowDirectMessage
-                        ? 'bg-emerald-950/80 border-emerald-400 text-emerald-200'
-                        : 'bg-black/50 border-white/15 text-white/50'
-                    }`}
-                    title="Cho phép bạn bè nhắn tin từ khoảnh khắc"
+                    className="w-full flex items-center gap-3 p-3 text-left cursor-pointer active:bg-white/5 transition-colors"
                   >
-                    <MessageSquare className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-                    <span className="text-[11px] font-semibold whitespace-nowrap">
-                      {allowDirectMessage ? 'Nhắn tin' : 'Tắt chat'}
+                    <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      allowDirectMessage ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/40' : 'bg-white/10 text-white/40'
+                    }`}>
+                      <MessageSquare className="w-4 h-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-xs font-bold truncate ${
+                        allowDirectMessage ? 'text-white' : 'text-white/50'
+                      }`}>
+                        Cho phép nhắn tin
+                      </span>
+                      <span className="block text-[11px] text-white/50 truncate">
+                        {allowDirectMessage
+                          ? 'Bạn bè có thể nhắn tin từ khoảnh khắc này'
+                          : 'Tắt trò chuyện từ khoảnh khắc'}
+                      </span>
+                    </span>
+                    <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                      allowDirectMessage ? 'bg-emerald-500' : 'bg-white/20'
+                    }`}>
+                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                        allowDirectMessage ? 'left-[22px]' : 'left-0.5'
+                      }`} />
                     </span>
                   </button>
                 </div>
@@ -990,7 +1027,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 <button
                   type="submit"
                   disabled={isPublishing}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+                  className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
                 >
                   {isPublishing ? (
                     <>
