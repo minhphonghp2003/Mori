@@ -698,7 +698,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                   <button
                     type="button"
                     onClick={handleTogglePlayVideo}
-                    className="text-white hover:text-indigo-400 active:scale-90 transition-all cursor-pointer p-1"
+                    className="text-white hover:text-emerald-400 active:scale-90 transition-all cursor-pointer p-1"
                     title={isVideoPlaying ? 'Dừng video' : 'Phát tiếp'}
                   >
                     {isVideoPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
@@ -715,7 +715,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                     step={0.1}
                     value={videoCurrentTime}
                     onChange={handleVideoSeek}
-                    className="flex-1 h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:h-2 transition-all"
+                    className="flex-1 h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:h-2 transition-all"
                   />
 
                   <span className="text-[11px] font-mono text-white/60 shrink-0 font-medium select-none">
@@ -725,7 +725,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                   <button
                     type="button"
                     onClick={handleToggleMuteVideo}
-                    className="text-white hover:text-indigo-400 active:scale-90 transition-all cursor-pointer p-1"
+                    className="text-white hover:text-emerald-400 active:scale-90 transition-all cursor-pointer p-1"
                     title={isVideoMuted ? 'Bật âm thanh' : 'Tắt tiếng'}
                   >
                     {isVideoMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -804,7 +804,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                       step={0.1}
                       value={videoCurrentTime}
                       onChange={handleVideoSeek}
-                      className="flex-1 h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                      className="flex-1 h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                     />
 
                     <span className="text-[10px] font-mono text-white/60 shrink-0 w-8">
@@ -873,7 +873,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                     className="w-full flex items-center gap-3 p-3 text-left cursor-pointer active:bg-white/5 transition-colors"
                   >
                     <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                      includeLocation ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/40' : 'bg-white/10 text-white/40'
+                      includeLocation ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/40' : 'bg-white/10 text-white/40'
                     }`}>
                       <MapPin className="w-4 h-4" />
                     </span>
@@ -890,7 +890,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                       </span>
                     </span>
                     <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
-                      includeLocation ? 'bg-indigo-500' : 'bg-white/20'
+                      includeLocation ? 'bg-emerald-500' : 'bg-white/20'
                     }`}>
                       <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
                         includeLocation ? 'left-[22px]' : 'left-0.5'
@@ -937,7 +937,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-2xl p-3 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-white/90">
-                      <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                      <Eye className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Quyền xem:</span>
                     </div>
 
@@ -1027,7 +1027,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 <button
                   type="submit"
                   disabled={isPublishing}
-                  className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
                 >
                   {isPublishing ? (
                     <>

@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 interface LoadingSpinnerProps {
   size?: "xs" | "sm" | "md" | "lg";
   className?: string;
-  /** White spinner for dark/black surfaces (replaces the indigo default). */
+  /** White spinner for dark/black surfaces (replaces the emerald default). */
   light?: boolean;
 }
 
@@ -25,7 +25,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     role="status"
     aria-label="Đang tải"
     className={`inline-flex items-center justify-center ${
-      light ? "text-white" : "text-indigo-600 dark:text-indigo-400"
+      light ? "text-white" : "text-emerald-600 dark:text-emerald-400"
     } ${className}`}
   >
     <Loader2 className={`${SIZES[size]} animate-spin`} />

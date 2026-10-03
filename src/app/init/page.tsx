@@ -121,7 +121,7 @@ export default function InitPage() {
           <Link href="/login" className="block">
             <button
               type="button"
-              className="w-full h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold flex items-center justify-center gap-2.5 shadow-lg shadow-indigo-600/25 transition cursor-pointer active:scale-[0.98]"
+              className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/25 transition cursor-pointer active:scale-[0.98]"
             >
               <LogIn className="w-4.5 h-4.5" />
               Đăng nhập bằng email
@@ -130,7 +130,7 @@ export default function InitPage() {
 
           <p className="pt-2 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
             Chưa có tài khoản?{" "}
-            <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-700">
+            <Link href="/register" className="font-bold text-emerald-600 hover:text-emerald-700">
               Đăng ký
             </Link>
           </p>

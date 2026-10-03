@@ -875,7 +875,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             <Avatar
               src={conversation.isGroup ? conversation.avatar : partner.avatar}
               name={conversation.name || partner.name}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-indigo-500/20 transition-all group-hover:ring-indigo-600"
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-emerald-500/20 transition-all group-hover:ring-emerald-600"
             />
             {!conversation.isGroup && conversation.isOnline && (
               <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
@@ -883,7 +883,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             {conversation.isGroup && (
               <span
                 title="Nhóm trò chuyện"
-                className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-indigo-600 text-white shadow-xs dark:border-slate-900"
+                className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-xs dark:border-slate-900"
               >
                 <Users className="h-2.5 w-2.5" />
               </span>
@@ -898,7 +898,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             }}
             className={`min-w-0 ${!conversation.isGroup && partnerUser ? "group cursor-pointer" : ""}`}
           >
-            <div className="truncate text-xs leading-tight font-bold whitespace-nowrap text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400">
+            <div className="truncate text-xs leading-tight font-bold whitespace-nowrap text-slate-900 transition-colors group-hover:text-emerald-600 dark:text-slate-100 dark:group-hover:text-emerald-400">
               {conversation.isGroup ? conversation.name : partner.name}
             </div>
             <div className="mt-0.5 truncate text-[10px] whitespace-nowrap text-slate-400 dark:text-slate-500">
@@ -922,7 +922,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
               className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl transition-colors ${
                 isSearchOpen
-                  ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300"
+                  ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
               title="Tìm kiếm tin nhắn trong nhóm"
@@ -932,7 +932,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
 
             <button
               onClick={() => setShowGroupSettings(true)}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-emerald-300"
               title="Cài đặt nhóm (Ảnh, Tên, Quyền riêng tư, Thành viên)"
             >
               <Settings className="h-4 w-4" />
@@ -945,7 +945,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
               className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl transition-colors ${
                 isSearchOpen
-                  ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300"
+                  ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
                   : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
               title="Tìm kiếm tin nhắn"
@@ -956,7 +956,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             <button
               onClick={() => partnerUser && startCall(partnerUser, false)}
               disabled={!partnerUser}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-indigo-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-emerald-300"
               title="Gọi thoại"
             >
               <Phone className="h-4 w-4" />
@@ -965,7 +965,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             <button
               onClick={() => partnerUser && startCall(partnerUser, true)}
               disabled={!partnerUser}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-indigo-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-emerald-300"
               title="Gọi video"
             >
               <Video className="h-4 w-4" />
@@ -987,21 +987,21 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
       {isSearchOpen && (
         <form
           onSubmit={handleSearchSubmit}
-          className="animate-in slide-in-from-top-2 z-10 flex shrink-0 items-center gap-2 border-b border-indigo-100 bg-white px-3.5 py-2 shadow-xs dark:border-indigo-500/20 dark:bg-slate-900"
+          className="animate-in slide-in-from-top-2 z-10 flex shrink-0 items-center gap-2 border-b border-emerald-100 bg-white px-3.5 py-2 shadow-xs dark:border-emerald-500/20 dark:bg-slate-900"
         >
-          <Search className="h-4 w-4 shrink-0 text-indigo-600" />
+          <Search className="h-4 w-4 shrink-0 text-emerald-600" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm nội dung tin nhắn..."
-            className="flex-1 rounded-xl border border-transparent bg-slate-100 px-3 py-1.5 text-xs focus:border-indigo-300 focus:bg-white focus:outline-none dark:bg-slate-800 dark:focus:bg-slate-800"
+            className="flex-1 rounded-xl border border-transparent bg-slate-100 px-3 py-1.5 text-xs focus:border-emerald-300 focus:bg-white focus:outline-none dark:bg-slate-800 dark:focus:bg-slate-800"
           />
           {isSearching ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-indigo-600" />
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-600" />
           ) : searchMode && highlightQuery ? (
-            <span className="max-w-[120px] shrink-0 truncate text-[11px] font-bold text-indigo-600">
+            <span className="max-w-[120px] shrink-0 truncate text-[11px] font-bold text-emerald-600">
               “{highlightQuery}”
             </span>
           ) : null}
@@ -1063,7 +1063,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               data-msg-id={msg.id}
               className={`relative flex flex-col rounded-2xl transition-colors ${isMe ? "items-end" : "items-start"} ${
                 highlightedId === msg.id
-                  ? "-mx-1 bg-indigo-50/70 px-1 py-0.5 ring-2 ring-indigo-500"
+                  ? "-mx-1 bg-emerald-50/70 px-1 py-0.5 ring-2 ring-emerald-500"
                   : ""
               }`}
             >
@@ -1077,10 +1077,10 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                   <Avatar
                     src={sender.avatar}
                     name={sender.name}
-                    className="h-5 w-5 rounded-full object-cover ring-1 ring-slate-200 transition-all group-hover/sender:ring-indigo-600 dark:ring-white/10"
+                    className="h-5 w-5 rounded-full object-cover ring-1 ring-slate-200 transition-all group-hover/sender:ring-emerald-600 dark:ring-white/10"
                     textClassName="text-[8px]"
                   />
-                  <span className="text-[11px] font-bold text-slate-700 transition-colors group-hover/sender:text-indigo-600 dark:text-slate-300 dark:group-hover/sender:text-indigo-400">
+                  <span className="text-[11px] font-bold text-slate-700 transition-colors group-hover/sender:text-emerald-600 dark:text-slate-300 dark:group-hover/sender:text-emerald-400">
                     {sender.name}
                   </span>
                   {conversation.isGroup &&
@@ -1120,12 +1120,12 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                       }}
                       className={`mb-1 max-w-full min-w-0 cursor-pointer rounded-xl border-l-3 px-2.5 py-1.5 text-[11px] transition-all hover:opacity-80 active:scale-98 ${
                         isMe
-                          ? "border-indigo-300 bg-indigo-700/30 text-indigo-50"
-                          : "border-indigo-500 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                          ? "border-emerald-300 bg-emerald-700/30 text-emerald-50"
+                          : "border-emerald-500 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300"
                       }`}
                       title="Chạm để xem tin nhắn gốc"
                     >
-                      <div className="flex min-w-0 items-center gap-1 text-[10px] font-bold text-indigo-400">
+                      <div className="flex min-w-0 items-center gap-1 text-[10px] font-bold text-emerald-400">
                         <Reply className="h-2.5 w-2.5 shrink-0" />
                         <span className="min-w-0 [overflow-wrap:anywhere]">
                           {msg.replyTo.senderName}
@@ -1200,8 +1200,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                         className="pointer-events-none h-auto max-h-56 w-full rounded-2xl object-cover"
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-indigo-600 shadow-lg transition-transform group-hover/video:scale-110">
-                          <Play className="ml-0.5 h-5 w-5 fill-indigo-600" />
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-emerald-600 shadow-lg transition-transform group-hover/video:scale-110">
+                          <Play className="ml-0.5 h-5 w-5 fill-emerald-600" />
                         </div>
                       </div>
                       <div className="absolute right-2 bottom-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs">
@@ -1233,8 +1233,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                         {/* Video Play Overlay Icon if video */}
                         {momentData.mediaType === "video" && (
                           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-indigo-600 shadow-lg">
-                              <Play className="ml-0.5 h-5 w-5 fill-indigo-600" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-emerald-600 shadow-lg">
+                              <Play className="ml-0.5 h-5 w-5 fill-emerald-600" />
                             </div>
                           </div>
                         )}
@@ -1242,7 +1242,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                         {/* Top Badge: Camera + Khoảnh khắc & Time ago */}
                         <div className="pointer-events-none absolute inset-x-2.5 top-2.5 flex items-center justify-between">
                           <div className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
-                            <Camera className="h-3 w-3 text-indigo-400" />
+                            <Camera className="h-3 w-3 text-emerald-400" />
                             <span>Khoảnh khắc</span>
                           </div>
                           <div className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-medium text-white">
@@ -1301,7 +1301,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                     <div
                       className={`relative max-w-full rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-all shadow-xs ${
                         isMe
-                          ? "rounded-br-xs bg-indigo-600 text-white"
+                          ? "rounded-br-xs bg-emerald-600 text-white"
                           : "rounded-bl-xs border border-slate-100 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       }`}
                     >
@@ -1352,7 +1352,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                           onClick={() => handleStartReply(msg)}
                           className="flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
-                          <Reply className="h-3.5 w-3.5 text-indigo-600" />
+                          <Reply className="h-3.5 w-3.5 text-emerald-600" />
                           <span>Trả lời</span>
                         </button>
 
@@ -1397,7 +1397,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                 {isMe && (
                   <span>
                     {msg.status === "read" ? (
-                      <CheckCheck className="h-3 w-3 text-indigo-500" />
+                      <CheckCheck className="h-3 w-3 text-emerald-500" />
                     ) : (
                       <Check className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     )}
@@ -1444,7 +1444,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                 </div>
               )}
               {p.text && (
-                <div className="max-w-[88%] rounded-2xl rounded-br-xs bg-indigo-600 px-3.5 py-2.5 text-xs leading-relaxed text-white shadow-xs">
+                <div className="max-w-[88%] rounded-2xl rounded-br-xs bg-emerald-600 px-3.5 py-2.5 text-xs leading-relaxed text-white shadow-xs">
                   {p.text}
                 </div>
               )}
@@ -1461,7 +1461,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                   <span className="text-[9px] font-semibold text-rose-500">Gửi thất bại</span>
                   <button
                     onClick={() => handleRetrySend(p)}
-                    className="cursor-pointer text-[9px] font-bold text-indigo-600 hover:underline"
+                    className="cursor-pointer text-[9px] font-bold text-emerald-600 hover:underline"
                   >
                     Thử lại
                   </button>
@@ -1563,7 +1563,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                 value={gifSearch}
                 onChange={(e) => setGifSearch(e.target.value)}
                 placeholder="Tìm kiếm GIF theo từ khóa..."
-                className="w-full rounded-xl border border-transparent bg-slate-100 py-1.5 pr-3 pl-8 text-xs focus:border-purple-300 focus:bg-white focus:outline-none dark:bg-slate-800 dark:focus:bg-slate-800"
+                className="w-full rounded-xl border border-transparent bg-slate-100 py-1.5 pr-3 pl-8 text-xs focus:border-emerald-300 focus:bg-white focus:outline-none dark:bg-slate-800 dark:focus:bg-slate-800"
               />
             </div>
 
@@ -1581,7 +1581,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                   onClick={() => setSelectedGifTag(tag.id)}
                   className={`shrink-0 cursor-pointer truncate rounded-xl px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap transition-colors ${
                     selectedGifTag === tag.id
-                      ? "bg-purple-600 text-white"
+                      ? "bg-emerald-600 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                   }`}
                 >
@@ -1604,7 +1604,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                   <button
                     key={`${gif.id}-${idx}`}
                     onClick={() => handleSendGif(gif.url)}
-                    className="group relative h-24 w-full shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition-all hover:ring-2 hover:ring-purple-600 dark:border-slate-700 dark:bg-slate-800"
+                    className="group relative h-24 w-full shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition-all hover:ring-2 hover:ring-emerald-600 dark:border-slate-700 dark:bg-slate-800"
                   >
                     <img
                       src={gif.thumbUrl || gif.url}
@@ -1624,11 +1624,11 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
 
       {/* FLOATING REPLY BANNER ABOVE INPUT */}
       {replyingTo && (
-        <div className="animate-in slide-in-from-bottom-2 z-10 flex items-center justify-between border-t border-indigo-100 bg-indigo-50/95 px-3.5 py-2 text-xs">
+        <div className="animate-in slide-in-from-bottom-2 z-10 flex items-center justify-between border-t border-emerald-100 bg-emerald-50/95 px-3.5 py-2 text-xs">
           <div className="flex min-w-0 items-center gap-2">
-            <Reply className="h-3.5 w-3.5 shrink-0 text-indigo-600" />
+            <Reply className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
             <div className="min-w-0">
-              <span className="block truncate text-[10px] font-bold text-indigo-700">
+              <span className="block truncate text-[10px] font-bold text-emerald-700">
                 Đang trả lời{" "}
                 {replyingTo.senderId === currentUser.id
                   ? "chính bạn"
@@ -1648,7 +1648,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
           <button
             type="button"
             onClick={() => setReplyingTo(null)}
-            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-indigo-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-indigo-500/20 dark:hover:text-slate-300"
+            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-emerald-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-emerald-500/20 dark:hover:text-slate-300"
             title="Hủy trả lời"
           >
             <X className="h-3.5 w-3.5" />
@@ -1698,7 +1698,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               const el = listRef.current;
               if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
             }}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-indigo-600 shadow-xl transition-all hover:bg-indigo-50 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-emerald-600 shadow-xl transition-all hover:bg-emerald-50 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
             title={searchMode ? "Về tin nhắn mới nhất" : "Xuống cuối"}
           >
             <ArrowDown className="h-4 w-4" />
@@ -1708,16 +1708,16 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
 
       {/* PENDING SHARED MOMENT CHIP (?momentId=) ABOVE THE INPUT */}
       {pendingMoment && !conversation.isBlocked && !editingMessage && (
-        <div className="animate-in slide-in-from-bottom-2 z-10 flex items-center justify-between gap-2 border-t border-indigo-100 bg-indigo-50/95 px-3.5 py-2">
+        <div className="animate-in slide-in-from-bottom-2 z-10 flex items-center justify-between gap-2 border-t border-emerald-100 bg-emerald-50/95 px-3.5 py-2">
           <div className="flex min-w-0 items-center gap-2.5">
             <img
               src={pendingMoment.imageUrl}
               alt={pendingMoment.caption}
               referrerPolicy="no-referrer"
-              className="h-10 w-10 rounded-lg border border-indigo-200 object-cover shadow-xs"
+              className="h-10 w-10 rounded-lg border border-emerald-200 object-cover shadow-xs"
             />
             <div className="min-w-0">
-              <span className="block text-[10px] font-bold text-indigo-700">
+              <span className="block text-[10px] font-bold text-emerald-700">
                 Khoảnh khắc đính kèm
               </span>
               <span className="block truncate text-[11px] text-slate-600 dark:text-slate-400">
@@ -1728,7 +1728,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
           <button
             type="button"
             onClick={() => setPendingMoment(null)}
-            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-indigo-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-indigo-500/20 dark:hover:text-slate-300"
+            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-emerald-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-emerald-500/20 dark:hover:text-slate-300"
             title="Bỏ đính kèm khoảnh khắc"
           >
             <X className="h-3.5 w-3.5" />
@@ -1760,7 +1760,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             <button
               onClick={handleUnblock}
               disabled={!partnerUser}
-              className="shrink-0 cursor-pointer rounded-xl bg-indigo-600 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-40"
+              className="shrink-0 cursor-pointer rounded-xl bg-emerald-600 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-40"
             >
               Bỏ chặn
             </button>
@@ -1796,8 +1796,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               onClick={() => setIsToolsExpanded(!isToolsExpanded)}
               className={`cursor-pointer rounded-xl p-2 transition-all ${
                 isToolsExpanded
-                  ? "rotate-45 bg-indigo-600 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+                  ? "rotate-45 bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-emerald-300"
               }`}
               title={
                 isToolsExpanded ? "Thu gọn công cụ" : "Mở rộng công cụ (Ảnh, Video, Vị trí, GIF)"
@@ -1813,7 +1813,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                 <button
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
-                  className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/20 dark:hover:text-indigo-300"
+                  className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:text-slate-400 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300"
                   title="Gửi ảnh từ thiết bị"
                 >
                   <ImageIcon className="h-4 w-4" />
@@ -1823,7 +1823,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                 <button
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
-                  className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:text-slate-400 dark:hover:bg-purple-500/20 dark:hover:text-purple-300"
+                  className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:text-slate-400 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300"
                   title="Gửi video từ thiết bị"
                 >
                   <Video className="h-4 w-4" />
@@ -1835,8 +1835,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                   onClick={() => setActiveDrawer(activeDrawer === "gif" ? null : "gif")}
                   className={`cursor-pointer rounded-xl px-2 py-1 text-[10px] font-black tracking-wider transition-all ${
                     activeDrawer === "gif"
-                      ? "bg-purple-600 text-white shadow-xs"
-                      : "bg-slate-100 text-slate-700 hover:bg-purple-50 hover:text-purple-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-purple-500/20 dark:hover:text-purple-300"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300"
                   }`}
                   title="Tìm kiếm ảnh GIF"
                 >
@@ -1859,7 +1859,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                   ? "Nhập câu trả lời..."
                   : "Nhập tin nhắn..."
             }
-            className="min-w-[80px] flex-1 rounded-2xl border border-transparent bg-slate-100 px-3.5 py-2 text-xs text-slate-800 transition-all placeholder:text-slate-400 hover:bg-slate-200/50 focus:border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:hover:bg-slate-700/50 dark:focus:border-slate-600 dark:focus:bg-slate-800"
+            className="min-w-[80px] flex-1 rounded-2xl border border-transparent bg-slate-100 px-3.5 py-2 text-xs text-slate-800 transition-all placeholder:text-slate-400 hover:bg-slate-200/50 focus:border-slate-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:hover:bg-slate-700/50 dark:focus:border-slate-600 dark:focus:bg-slate-800"
           />
 
           {/* Send / Update Button */}
@@ -1869,7 +1869,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-white shadow-md transition-all active:scale-95 disabled:opacity-30 ${
               editingMessage
                 ? "bg-amber-500 shadow-amber-500/20 hover:bg-amber-600"
-                : "bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700"
+                : "bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700"
             }`}
             title={editingMessage ? "Lưu thay đổi" : "Gửi tin nhắn"}
           >

@@ -59,7 +59,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
       <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer whitespace-nowrap truncate"
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer whitespace-nowrap truncate"
         >
           <ArrowLeft className="w-4 h-4 shrink-0" />
           <span className="whitespace-nowrap truncate">Quay lại</span>
@@ -68,7 +68,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
         <div className="flex items-center gap-1">
           <button
             onClick={handleShare}
-            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
+            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
             title="Chia sẻ hành trình"
           >
             <Share2 className="w-4 h-4" />
@@ -107,7 +107,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
 
             <div className="flex items-center justify-between pt-2 border-t border-white/20 text-[11px] text-white/90">
               <div className="flex items-center gap-1.5 whitespace-nowrap truncate">
-                <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span className="whitespace-nowrap truncate">{timeline.startDate} – {timeline.endDate}</span>
               </div>
 
@@ -135,15 +135,15 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
         {/* JOURNEY ROUTE VISUALIZATION */}
         <div className="relative pl-6 pr-2 py-4">
           {/* Vertical dashed timeline connector line */}
-          <div className="absolute left-[31px] top-6 bottom-6 w-0.5 border-l-2 border-dashed border-indigo-300" />
+          <div className="absolute left-[31px] top-6 bottom-6 w-0.5 border-l-2 border-dashed border-emerald-300" />
 
           {/* START MARKER */}
           <div className="relative flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/30 z-10 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30 z-10 shrink-0">
               <PlaneTakeoff className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider whitespace-nowrap truncate">Khởi hành</div>
+              <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider whitespace-nowrap truncate">Khởi hành</div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">{timeline.startDate}</div>
             </div>
           </div>
@@ -165,7 +165,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
             {timeline.moments.map((m, index) => (
               <div key={m.id} className="relative flex items-start gap-3">
                 {/* Stop node badge */}
-                <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shadow-xs z-10 shrink-0 mt-2">
+                <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-emerald-600 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shadow-xs z-10 shrink-0 mt-2">
                   {index + 1}
                 </div>
 
@@ -197,7 +197,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                   </div>
 
                   <div className="flex items-center justify-between mb-1 gap-2">
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.title}</h3>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{m.title}</h3>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap truncate shrink-0">{m.time}</span>
                   </div>
 

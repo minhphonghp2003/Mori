@@ -119,7 +119,7 @@ export const MomentsView: React.FC = () => {
           </p>
           <button
             onClick={() => void refreshMoments()}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-pink-500 rounded-full text-xs font-bold text-white shadow-lg cursor-pointer whitespace-nowrap truncate flex items-center gap-1.5"
+            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-700 rounded-full text-xs font-bold text-white shadow-lg cursor-pointer whitespace-nowrap truncate flex items-center gap-1.5"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Thử lại</span>
@@ -144,7 +144,7 @@ export const MomentsView: React.FC = () => {
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-pink-500 rounded-full text-xs font-bold text-white shadow-lg cursor-pointer whitespace-nowrap truncate flex items-center gap-1.5"
+            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-700 rounded-full text-xs font-bold text-white shadow-lg cursor-pointer whitespace-nowrap truncate flex items-center gap-1.5"
           >
             <Camera className="w-4 h-4" />
             <span>Tạo khoảnh khắc ngay</span>
@@ -174,7 +174,7 @@ export const MomentsView: React.FC = () => {
               {processingMomentIds.includes(moment.id) && (
                 <div className="absolute top-16 inset-x-0 z-40 flex justify-center pointer-events-none">
                   <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white text-xs font-semibold shadow-lg">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                     <span>Đang xử lý ảnh/video...</span>
                   </div>
                 </div>

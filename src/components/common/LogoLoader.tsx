@@ -32,7 +32,7 @@ export const LogoLoader: React.FC<LogoLoaderProps> = ({
           aria-hidden
         />
         <span
-          className="absolute inset-0 rounded-full bg-indigo-500/15 animate-ping"
+          className="absolute inset-0 rounded-full bg-emerald-500/15 animate-ping"
           style={{ animationDelay: "0.6s" }}
           aria-hidden
         />
@@ -61,7 +61,7 @@ export const LogoLoader: React.FC<LogoLoaderProps> = ({
           </div>
           {/* Shimmer progress bar */}
           <div className="w-28 h-1 rounded-full bg-slate-200 overflow-hidden">
-            <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-teal-400 via-indigo-500 to-teal-400 animate-pulse" />
+            <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-teal-400 via-emerald-500 to-teal-400 animate-pulse" />
           </div>
         </div>
       )}

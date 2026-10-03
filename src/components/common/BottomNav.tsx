@@ -44,14 +44,14 @@ export const BottomNav: React.FC = () => {
           href={TAB_HREF.home}
           onClick={handleTabClick('home')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'home' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+            activeTab === 'home' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">
             <Users className={`w-5 h-5 transition-transform ${activeTab === 'home' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Gần bạn</span>
-          {activeTab === 'home' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
+          {activeTab === 'home' && <span className="w-1 h-1 bg-emerald-600 rounded-full mt-0.5" />}
         </Link>
 
         {/* 2. MOMENT */}
@@ -59,14 +59,14 @@ export const BottomNav: React.FC = () => {
           href={TAB_HREF.moments}
           onClick={handleTabClick('moments')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'moments' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+            activeTab === 'moments' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">
             <Camera className={`w-5 h-5 transition-transform ${activeTab === 'moments' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Khoảnh khắc</span>
-          {activeTab === 'moments' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
+          {activeTab === 'moments' && <span className="w-1 h-1 bg-emerald-600 rounded-full mt-0.5" />}
         </Link>
 
         {/* 3. MAP (BIG ICON - CENTER FLOATING ACTION BUTTON) */}
@@ -74,8 +74,8 @@ export const BottomNav: React.FC = () => {
           <Link
             href={TAB_HREF.map}
             onClick={handleTabClick('map')}
-            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.38)] ring-4 ring-white dark:ring-[#09090b] flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
-              activeTab === 'map' ? 'scale-108 ring-indigo-100 shadow-[0_10px_25px_rgba(79,70,229,0.5)]' : 'hover:scale-105'
+            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-green-700 text-white shadow-[0_8px_20px_rgba(16,185,129,0.38)] ring-4 ring-white dark:ring-[#09090b] flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
+              activeTab === 'map' ? 'scale-108 ring-emerald-100 shadow-[0_10px_25px_rgba(16,185,129,0.5)]' : 'hover:scale-105'
             }`}
             title="Bản đồ"
           >
@@ -88,7 +88,7 @@ export const BottomNav: React.FC = () => {
           href={TAB_HREF.chat}
           onClick={handleTabClick('chat')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'chat' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+            activeTab === 'chat' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">
@@ -100,7 +100,7 @@ export const BottomNav: React.FC = () => {
             )}
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Tin nhắn</span>
-          {activeTab === 'chat' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
+          {activeTab === 'chat' && <span className="w-1 h-1 bg-emerald-600 rounded-full mt-0.5" />}
         </Link>
 
         {/* 5. SETTING */}
@@ -108,14 +108,14 @@ export const BottomNav: React.FC = () => {
           href={TAB_HREF.setting}
           onClick={handleTabClick('setting')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-            activeTab === 'setting' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
+            activeTab === 'setting' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
         >
           <div className="relative p-1">
             <Settings className={`w-5 h-5 transition-transform ${activeTab === 'setting' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
           </div>
           <span className="text-[10px] tracking-tight mt-0.5">Cài đặt</span>
-          {activeTab === 'setting' && <span className="w-1 h-1 bg-indigo-600 rounded-full mt-0.5" />}
+          {activeTab === 'setting' && <span className="w-1 h-1 bg-emerald-600 rounded-full mt-0.5" />}
         </Link>
 
       </div>

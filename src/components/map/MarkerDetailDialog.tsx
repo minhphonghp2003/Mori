@@ -147,10 +147,10 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
   );
 
   const getRelationshipBadge = () => {
-  if (isSelf) return { label: 'Tài khoản của bạn', color: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30' };
+  if (isSelf) return { label: 'Tài khoản của bạn', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
   if (friendStatus === 'blocked') return { label: 'Đã chặn', color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
   if (friendStatus === 'pending_received') return { label: 'Chờ bạn đồng ý', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
-  if (friendStatus === 'pending_sent') return { label: 'Đã gửi lời mời', color: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30' };
+  if (friendStatus === 'pending_sent') return { label: 'Đã gửi lời mời', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
   if (friendStatus === 'none') return { label: 'Người qua đường', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
   if (currentType === 'lover') return { label: 'Người yêu', color: 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' };
   if (currentType === 'best_friend') return { label: 'Bạn thân', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
@@ -198,7 +198,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
         </button>
 
         {/* Fixed user-info header (sticks at top) */}
-        <div className="relative shrink-0 bg-gradient-to-b from-indigo-50/70 dark:from-indigo-500/10 via-slate-50/40 dark:via-slate-800/40 to-white dark:to-slate-900 px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="relative shrink-0 bg-gradient-to-b from-emerald-50/70 dark:from-emerald-500/10 via-slate-50/40 dark:via-slate-800/40 to-white dark:to-slate-900 px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
           {/* Drag handle for mobile */}
           <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3 sm:hidden" />
 
@@ -208,7 +208,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               <Avatar
                 src={liveUser.avatar}
                 name={liveUser.name}
-                className="w-15 h-15 rounded-2xl object-cover ring-3 ring-indigo-500/20 shadow-md"
+                className="w-15 h-15 rounded-2xl object-cover ring-3 ring-emerald-500/20 shadow-md"
                 textClassName="text-xl"
               />
             </div>
@@ -230,7 +230,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               {/* Bio bubble - strictly 1 line with overflow ellipsis, hidden when empty */}
               {displayUser.bio?.trim() ? (
                 <div
-                  className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-500/15 px-2.5 py-0.5 rounded-lg inline-block max-w-full "
+                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-500/15 px-2.5 py-0.5 rounded-lg inline-block max-w-full "
                   title={displayUser.bio}
                 >
                  {displayUser.bio}
@@ -244,7 +244,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                 </span>
                 {!isSelf && !!liveUser.distanceM && (
                   <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-0.5 whitespace-nowrap truncate">
-                    <MapPin className="w-3 h-3 text-indigo-500 shrink-0" />
+                    <MapPin className="w-3 h-3 text-emerald-500 shrink-0" />
                     <span>Cách {formatDistance(liveUser.distanceM)}</span>
                   </span>
                 )}
@@ -264,7 +264,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                     onClick={() => {
                       void startGreetingChat(liveUser);
                     }}
-                    className="flex-[2] py-2.5 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer"
+                    className="flex-[2] py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4 shrink-0" />
                     <span>Nhắn tin</span>
@@ -272,7 +272,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
 
                   <button
                     onClick={() => sendFriendRequest(liveUser.id)}
-                    className="flex-1 py-2.5 px-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-2xl flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap truncate"
+                    className="flex-1 py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-2xl flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap truncate"
                   >
                     <UserPlus className="w-3.5 h-3.5 shrink-0" />
                     <span>Kết bạn</span>
@@ -283,7 +283,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                   onClick={() => {
                     void startGreetingChat(liveUser);
                   }}
-                  className="w-full py-2.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4 shrink-0" />
                   <span>Nhắn tin trò chuyện</span>
@@ -295,7 +295,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                 <div>
                   <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                     <span>Chọn nhóm quan hệ bạn bè:</span>
-                    <span className="text-[10px] text-indigo-600 font-semibold">Chạm để đổi</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Chạm để đổi</span>
                   </div>
 
                   {/* 3-Column Segmented Relationship Picker */}
@@ -328,7 +328,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                   <div className="flex gap-1.5 shrink-0">
                     <button
                       onClick={() => respondFriendRequest(liveUser.id, true)}
-                      className="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-xl cursor-pointer whitespace-nowrap truncate"
+                      className="px-2.5 py-1 bg-emerald-600 text-white text-xs font-bold rounded-xl cursor-pointer whitespace-nowrap truncate"
                     >
                       Đồng ý
                     </button>
@@ -341,8 +341,8 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                   </div>
                 </div>
               ) : friendStatus === 'pending_sent' ? (
-                <div className="flex items-center justify-between p-2 bg-indigo-50 rounded-2xl border border-indigo-100">
-                  <span className="text-xs text-indigo-800 font-medium whitespace-nowrap truncate">
+                <div className="flex items-center justify-between p-2 bg-emerald-50 rounded-2xl border border-emerald-100">
+                  <span className="text-xs text-emerald-800 font-medium whitespace-nowrap truncate">
                     Đã gửi lời mời kết bạn
                   </span>
                   <button
@@ -405,7 +405,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               onClick={() => setActiveProfileTab('moments')}
               className={`flex-1 py-3 text-xs font-bold text-center border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap truncate ${
                 activeTab === 'moments'
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-emerald-600 text-emerald-600'
                   : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
             >
@@ -417,7 +417,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               onClick={() => setActiveProfileTab('timelines')}
               className={`flex-1 py-3 text-xs font-bold text-center border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap truncate ${
                 activeTab === 'timelines'
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-emerald-600 text-emerald-600'
                   : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
             >
@@ -572,7 +572,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                               <span>Xóa</span>
                             </button>
                           )}
-                          <div className="flex items-center text-indigo-600 font-bold gap-0.5 whitespace-nowrap truncate">
+                          <div className="flex items-center text-emerald-600 font-bold gap-0.5 whitespace-nowrap truncate">
                             <span>Chi tiết</span>
                             <ChevronRight className="w-3 h-3" />
                           </div>

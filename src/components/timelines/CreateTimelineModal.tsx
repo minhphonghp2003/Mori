@@ -123,7 +123,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
       >
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-indigo-600" />
+            <Compass className="w-5 h-5 text-emerald-600" />
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Tạo hành trình mới</h3>
           </div>
           <button
@@ -145,7 +145,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
               placeholder="VD: Chuyến đi Đà Lạt mùa sương 🌲, Săn mây Tà Xùa..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
             />
           </div>
 
@@ -181,7 +181,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
           {/* Tag Co-Travelers */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-indigo-500" />
+              <Users className="w-3.5 h-3.5 text-emerald-500" />
               <span>Bạn đồng hành ({selectedPartnerIds.length} người)</span>
             </label>
             {acceptedFriends.length === 0 ? (
@@ -199,7 +199,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                       onClick={() => togglePartner(friend.id)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-emerald-600 text-white shadow-xs'
                           : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                       }`}
                     >
@@ -220,7 +220,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
           {/* Select moments (yours, in range, not on another timeline) */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-              <Camera className="w-3.5 h-3.5 text-indigo-500" />
+              <Camera className="w-3.5 h-3.5 text-emerald-500" />
               <span>Gắn khoảnh khắc vào hành trình ({selectedMomentIds.length} ảnh)</span>
             </label>
             {isLoadingAvailable ? (
@@ -240,7 +240,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                       key={m.id}
                       onClick={() => toggleMoment(m.id)}
                       className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
-                        isSelected ? 'border-indigo-600 scale-95 shadow-md' : 'border-transparent opacity-80'
+                        isSelected ? 'border-emerald-600 scale-95 shadow-md' : 'border-transparent opacity-80'
                       }`}
                     >
                       <img
@@ -250,7 +250,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                         className="w-full h-full object-cover"
                       />
                       {isSelected && (
-                        <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                        <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center">
                           <Check className="w-3 h-3 stroke-[3]" />
                         </div>
                       )}
@@ -272,7 +272,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>{isSubmitting ? 'Đang lưu...' : 'Lưu hành trình'}</span>

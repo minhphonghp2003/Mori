@@ -70,7 +70,7 @@ export default function TimelineDetailPage() {
         <p className="text-xs text-slate-400 mt-1">Hành trình này có thể đã bị xóa.</p>
         <button
           onClick={() => router.replace("/settings")}
-          className="mt-4 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-md cursor-pointer"
+          className="mt-4 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-md cursor-pointer"
         >
           Về cài đặt
         </button>

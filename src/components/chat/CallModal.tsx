@@ -116,7 +116,7 @@ export const CallModal: React.FC = () => {
         <div className="relative z-10 text-center pt-8">
           <div className="relative w-28 h-28 mx-auto mb-4">
             {(isIncoming || isOutgoing) && (
-              <span className="absolute -inset-4 bg-indigo-500/20 rounded-full animate-ping" />
+              <span className="absolute -inset-4 bg-emerald-500/20 rounded-full animate-ping" />
             )}
             {peer.imageUrl ? (
               <img
@@ -126,7 +126,7 @@ export const CallModal: React.FC = () => {
                 className="w-full h-full rounded-full object-cover ring-4 ring-white/20 shadow-2xl"
               />
             ) : (
-              <div className="w-full h-full rounded-full bg-indigo-600 text-white flex items-center justify-center text-4xl font-bold ring-4 ring-white/20 shadow-2xl">
+              <div className="w-full h-full rounded-full bg-emerald-600 text-white flex items-center justify-center text-4xl font-bold ring-4 ring-white/20 shadow-2xl">
                 {(peer.name || '?').charAt(0).toUpperCase()}
               </div>
             )}
@@ -137,7 +137,7 @@ export const CallModal: React.FC = () => {
           </h2>
           <div className="text-xs text-slate-300 font-medium mt-1">
             {(isIncoming || isOutgoing) ? (
-              <span className="text-indigo-400 font-semibold animate-pulse">
+              <span className="text-emerald-400 font-semibold animate-pulse">
                 {statusLine}
               </span>
             ) : isReconnecting ? (
@@ -158,7 +158,7 @@ export const CallModal: React.FC = () => {
             {[40, 70, 100, 60, 90, 50, 80, 45].map((height, idx) => (
               <span
                 key={idx}
-                className="w-1.5 bg-indigo-500 rounded-full animate-pulse"
+                className="w-1.5 bg-emerald-500 rounded-full animate-pulse"
                 style={{
                   height: `${height}%`,
                   animationDelay: `${idx * 150}ms`

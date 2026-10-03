@@ -4,10 +4,10 @@ import { ArrowLeft } from "lucide-react";
 import type { AxiosError } from "axios";
 import { handleApiError } from "@/lib/axios";
 
-/** Shared form building blocks for the auth screens (indigo/slate design). */
+/** Shared form building blocks for the auth screens (emerald/slate design). */
 
 const inputClasses =
-  "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition disabled:opacity-60";
+  "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 transition disabled:opacity-60";
 
 export const AuthLabel = ({ children }: { children: ReactNode }) => (
   <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">{children}</span>
@@ -32,7 +32,7 @@ export const AuthSubmitButton = ({
   <button
     type="submit"
     disabled={loading}
-    className={`w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-600/25 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:pointer-events-none ${className ?? ""}`}
+    className={`w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-600/25 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:pointer-events-none ${className ?? ""}`}
     {...props}
   >
     {loading ? loadingText : children}

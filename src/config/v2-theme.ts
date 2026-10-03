@@ -4,10 +4,10 @@ export const v2Theme = {
   colors: {
     // Primary colors
     primary: {
-      light: '#667eea',
-      DEFAULT: '#667eea',
-      dark: '#764ba2',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      light: '#22c55e',
+      DEFAULT: '#22c55e',
+      dark: '#15803d',
+      gradient: 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
     },
     
     // Background colors

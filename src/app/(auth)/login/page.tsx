@@ -69,7 +69,7 @@ export default function LoginPage() {
               <AuthLabel>Mật khẩu</AuthLabel>
               <Link
                 href="/forgot-password"
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition"
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition"
               >
                 Quên mật khẩu?
               </Link>
@@ -95,7 +95,7 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
             Chưa có tài khoản?{" "}
-            <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-700">
+            <Link href="/register" className="font-bold text-emerald-600 hover:text-emerald-700">
               Tạo tài khoản
             </Link>
           </p>

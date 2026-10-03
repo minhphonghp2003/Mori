@@ -614,7 +614,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             {/* Location badge */}
             {moment.locationName && (
               <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[11px] text-white/90 whitespace-nowrap truncate max-w-[170px]">
-                <MapPin className="w-3 h-3 text-indigo-400 shrink-0" />
+                <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
                 <span className="truncate whitespace-nowrap overflow-hidden text-ellipsis">{moment.locationName}</span>
               </div>
             )}
@@ -627,10 +627,10 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
                   e.stopPropagation();
                   setShowTimelineModal(momentTimeline);
                 }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-600/80 to-purple-600/80 hover:from-indigo-600 hover:to-purple-600 backdrop-blur-md border border-indigo-300/30 text-[11px] text-white font-semibold whitespace-nowrap truncate max-w-[180px] shadow-sm cursor-pointer transition-all active:scale-95"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-600/80 to-emerald-600/80 hover:from-emerald-600 hover:to-emerald-600 backdrop-blur-md border border-emerald-300/30 text-[11px] text-white font-semibold whitespace-nowrap truncate max-w-[180px] shadow-sm cursor-pointer transition-all active:scale-95"
                 title={`Xem chi tiết hành trình: ${momentTimeline.title}`}
               >
-                <Compass className="w-3 h-3 text-indigo-200 shrink-0" />
+                <Compass className="w-3 h-3 text-emerald-200 shrink-0" />
                 <span className="truncate whitespace-nowrap overflow-hidden text-ellipsis">{momentTimeline.title}</span>
               </button>
             )}
@@ -778,7 +778,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
                     }}
                     className={`px-3 py-1.5 rounded-xl text-left text-[11px] font-semibold transition-colors cursor-pointer ${
                       opt.value === moment.visibility
-                        ? 'bg-indigo-600/80 text-white'
+                        ? 'bg-emerald-600/80 text-white'
                         : 'text-white/80 hover:bg-white/10'
                     }`}
                   >
@@ -856,7 +856,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           <button
             type="button"
             onClick={handleTogglePlayPause}
-            className="text-white hover:text-indigo-400 active:scale-90 transition-all cursor-pointer p-0.5 shrink-0"
+            className="text-white hover:text-emerald-400 active:scale-90 transition-all cursor-pointer p-0.5 shrink-0"
             title={isPlaying ? 'Dừng video' : 'Phát video'}
           >
             {isPlaying ? <Pause className="w-3.5 h-3.5 fill-white" /> : <Play className="w-3.5 h-3.5 fill-white" />}
@@ -873,7 +873,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             step={0.1}
             value={videoCurrentTime}
             onChange={handleVideoSeek}
-            className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer accent-indigo-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:bg-white"
+            className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer accent-emerald-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:bg-white"
           />
 
           <span className="text-[10px] font-mono text-white/60 shrink-0 font-medium select-none">
@@ -921,7 +921,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-3xl p-5 text-center text-white shadow-2xl">
-            <div className="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-3">
               <EyeOff className="w-6 h-6" />
             </div>
             <h4 className="text-sm font-bold whitespace-nowrap truncate">Ẩn khoảnh khắc này?</h4>
@@ -937,7 +937,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
               </button>
               <button
                 onClick={handleHide}
-                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white shadow-md transition-colors cursor-pointer whitespace-nowrap truncate"
+                className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-md transition-colors cursor-pointer whitespace-nowrap truncate"
               >
                 Ẩn ngay
               </button>

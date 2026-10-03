@@ -53,7 +53,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
       >
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-600" />
+            <Users className="w-5 h-5 text-emerald-600" />
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Tạo nhóm trò chuyện</h3>
           </div>
           <button
@@ -74,7 +74,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="VD: Hội bạn thân, Team phượt..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
             />
           </div>
 
@@ -95,7 +95,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
                     key={friend.id}
                     onClick={() => toggleSelectFriend(friend.id)}
                     className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${
-                      isChecked ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-900 dark:text-indigo-200' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                      isChecked ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-200' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
@@ -112,7 +112,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
                     </div>
 
                     <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
-                      isChecked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                      isChecked ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
                     }`}>
                       {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                     </div>
@@ -125,7 +125,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
           {/* Private Group Toggle */}
           <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
             <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-indigo-500" />
+              <Lock className="w-4 h-4 text-emerald-500" />
               <div>
                 <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Nhóm riêng tư</div>
                 <div className="text-[10px] text-slate-400 dark:text-slate-500">Chỉ thành viên được mời mới có thể tham gia</div>
@@ -135,7 +135,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
               type="checkbox"
               checked={isPrivate}
               onChange={(e) => setIsPrivate(e.target.checked)}
-              className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+              className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
             />
           </div>
 
@@ -150,7 +150,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
             <button
               type="submit"
               disabled={isCreating}
-              className="flex-1 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 transition-all disabled:opacity-60 disabled:cursor-wait"
+              className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 cursor-pointer active:scale-95 transition-all disabled:opacity-60 disabled:cursor-wait"
             >
               {isCreating ? 'Đang tạo...' : 'Tạo nhóm'}
             </button>

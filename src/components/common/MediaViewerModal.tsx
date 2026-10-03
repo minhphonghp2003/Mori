@@ -104,7 +104,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 ${
               downloadSuccess 
                 ? 'bg-emerald-600 text-white' 
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
             }`}
             title="Tải xuống tệp"
           >

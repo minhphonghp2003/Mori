@@ -126,8 +126,8 @@ export const LocationView: React.FC = () => {
           label: 'Bạn bè',
           shortLabel: 'Bạn bè',
           desc: 'Chỉ bạn bè trong danh bạ mới nhìn thấy',
-          badgeClass: 'border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 bg-indigo-50/90 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20',
-          dotClass: 'bg-indigo-500',
+          badgeClass: 'border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20',
+          dotClass: 'bg-emerald-500',
           Icon: Users
         };
       case 2:
@@ -244,7 +244,7 @@ export const LocationView: React.FC = () => {
             onClick={() => setMapFilter('all')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               mapFilter === 'all'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -254,7 +254,7 @@ export const LocationView: React.FC = () => {
             onClick={() => setMapFilter('friends')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               mapFilter === 'friends'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -317,7 +317,7 @@ export const LocationView: React.FC = () => {
                     </div>
 
                   {/* Avatar */}
-                  <div className="relative w-11 h-11 rounded-full ring-3 ring-indigo-600 shadow-xl overflow-hidden bg-white">
+                  <div className="relative w-11 h-11 rounded-full ring-3 ring-emerald-600 shadow-xl overflow-hidden bg-white">
                     {currentUser.avatar ? (
                       <img
                         src={currentUser.avatar}
@@ -326,7 +326,7 @@ export const LocationView: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-indigo-600 text-white text-lg font-bold">
+                      <div className="w-full h-full flex items-center justify-center bg-emerald-600 text-white text-lg font-bold">
                         {(currentUser.name || '?').charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -341,7 +341,7 @@ export const LocationView: React.FC = () => {
                     className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md border border-slate-200 cursor-pointer hover:scale-110 transition-transform"
                     title={`Quyền riêng tư: ${currentVisibilityInfo.label}`}
                   >
-                    <currentVisibilityInfo.Icon className="w-2.5 h-2.5 text-indigo-600" />
+                    <currentVisibilityInfo.Icon className="w-2.5 h-2.5 text-emerald-600" />
                   </span>
                 </div>
               </Marker>
@@ -354,7 +354,7 @@ export const LocationView: React.FC = () => {
               const isBestFriend = user.relationship?.type === 'best_friend' && isFriend;
               const isStranger = !isFriend;
 
-              let ringColor = 'ring-indigo-500';
+              let ringColor = 'ring-emerald-500';
               if (isLover) ringColor = 'ring-rose-500';
               else if (isBestFriend) ringColor = 'ring-amber-500';
               else if (isStranger) ringColor = 'ring-emerald-500';
@@ -425,7 +425,7 @@ export const LocationView: React.FC = () => {
             </div>
             <button
               onClick={requestLocationPermission}
-              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shrink-0 active:scale-95 transition-all cursor-pointer"
+              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 active:scale-95 transition-all cursor-pointer"
             >
               Bật quyền
             </button>
@@ -438,16 +438,16 @@ export const LocationView: React.FC = () => {
           <button
             onClick={centerOnUser}
             disabled={!hasMyPosition}
-            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
             title="Định vị của tôi"
           >
-            <Navigation className="w-5 h-5 fill-indigo-600 text-indigo-600" />
+            <Navigation className="w-5 h-5 fill-emerald-600 text-emerald-600" />
           </button>
 
           {/* Zoom In */}
           <button
             onClick={() => zoomBy(1)}
-            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all cursor-pointer active:scale-95"
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer active:scale-95"
             title="Phóng to"
           >
             <Plus className="w-5 h-5" />
@@ -456,7 +456,7 @@ export const LocationView: React.FC = () => {
           {/* Zoom Out */}
           <button
             onClick={() => zoomBy(-1)}
-            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all cursor-pointer active:scale-95"
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer active:scale-95"
             title="Thu nhỏ"
           >
             <Minus className="w-5 h-5" />
@@ -471,7 +471,7 @@ export const LocationView: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
@@ -509,26 +509,26 @@ export const LocationView: React.FC = () => {
                     }}
                     className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer ${
                       isChecked
-                        ? 'bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30 text-indigo-900 dark:text-indigo-200 font-bold shadow-xs'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200 font-bold shadow-xs'
                         : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent text-slate-700 dark:text-slate-300 font-medium'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        isChecked ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                        isChecked ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                       }`}>
                         <IconComponent className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs leading-tight">{opt.label}</div>
-                        <div className={`text-[10px] truncate ${isChecked ? 'text-indigo-600/80 dark:text-indigo-300/80 font-normal' : 'text-slate-400 dark:text-slate-500 font-normal'}`}>
+                        <div className={`text-[10px] truncate ${isChecked ? 'text-emerald-600/80 dark:text-emerald-300/80 font-normal' : 'text-slate-400 dark:text-slate-500 font-normal'}`}>
                           {opt.desc}
                         </div>
                       </div>
                     </div>
 
                     {isChecked && (
-                      <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 ml-2">
+                      <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 ml-2">
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
                     )}
@@ -563,7 +563,7 @@ export const LocationView: React.FC = () => {
                 onChange={(e) => setNewStatusInput(e.target.value)}
                 maxLength={45}
                 placeholder="VD: Đang cafe, Học bài..."
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <div className="text-[10px] text-slate-400 dark:text-slate-500 text-right mt-1">
                 {newStatusInput.length}/45 ký tự
@@ -603,7 +603,7 @@ export const LocationView: React.FC = () => {
                   }
                   setIsEditingStatus(false);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 cursor-pointer"
               >
                 Lưu trạng thái
               </button>

@@ -15,7 +15,7 @@ import {
 } from "@/components/auth/auth-form";
 
 const selectClasses =
-  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-base text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition cursor-pointer appearance-none";
+  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-base text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 transition cursor-pointer appearance-none";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -163,7 +163,7 @@ export default function RegisterPage() {
 
           <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
             Đã có tài khoản?{" "}
-            <Link href="/login" className="font-bold text-indigo-600 hover:text-indigo-700">
+            <Link href="/login" className="font-bold text-emerald-600 hover:text-emerald-700">
               Đăng nhập
             </Link>
           </p>
