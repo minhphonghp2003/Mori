@@ -39,7 +39,7 @@ export const CallModal: React.FC = () => {
       el.muted = true;
       el.play().catch(() => {});
     }
-  }, [remoteStream, status]);
+  }, [remoteStream, remoteCameraOff, status]);
 
   useEffect(() => {
     const el = remoteAudioRef.current;
@@ -59,7 +59,7 @@ export const CallModal: React.FC = () => {
       el.srcObject = localStream;
       el.play().catch(() => {});
     }
-  }, [localStream, status]);
+  }, [localStream, cameraOff, status]);
 
   if (status === 'idle' || !peer) return null;
 
@@ -98,24 +98,6 @@ export const CallModal: React.FC = () => {
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40 pointer-events-none" />
-            {/* Self PiP */}
-            <div className="absolute top-4 right-4 z-20 w-24 h-32 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl bg-slate-800">
-              {localStream && !cameraOff ? (
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ transform: 'scaleX(-1)' }}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-white/50 text-[10px] font-bold">
-                  <VideoOff className="w-4 h-4" />
-                  <span>Camera tắt</span>
-                </div>
-              )}
-            </div>
           </div>
         ) : null}
 
@@ -152,6 +134,26 @@ export const CallModal: React.FC = () => {
                 {isReconnecting ? 'Đang kết nối lại...' : formatDuration(callDuration)}
               </div>
             </div>
+          </div>
+        )}
+
+        {isInCall && peer.hasVideo && (
+          <div className="pointer-events-none absolute right-4 top-4 z-20 h-32 w-24 overflow-hidden rounded-2xl border-2 border-white/40 bg-slate-800 shadow-xl">
+            {localStream && !cameraOff ? (
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{ transform: 'scaleX(-1)' }}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-[10px] font-bold text-white/50">
+                <VideoOff className="h-4 w-4" />
+                <span>Camera tắt</span>
+              </div>
+            )}
           </div>
         )}
 
