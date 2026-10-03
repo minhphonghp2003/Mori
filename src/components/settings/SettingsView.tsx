@@ -9,6 +9,7 @@ import { FriendshipType, VisibilityTier, User as UserType, Timeline, Moment } fr
 import { LogoLoader } from '../common/LogoLoader';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { Avatar } from '../common/Avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VISIBILITY_OPTIONS } from '../../constants/visibility';
 import { CreateTimelineModal } from '../timelines/CreateTimelineModal';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
@@ -764,15 +765,22 @@ export const SettingsView: React.FC = () => {
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {/* Friendship type selector */}
-                            <select
+                            <Select
                               value={type}
-                              onChange={(e) => changeFriendshipType(friend.id, e.target.value as FriendshipType)}
-                              className="text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-1 px-2 rounded-xl border-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                              onValueChange={(value) => changeFriendshipType(friend.id, value as FriendshipType)}
                             >
-                              <option value="friend">Bạn bè</option>
-                              <option value="best_friend">Bạn thân</option>
-                              <option value="lover">Người yêu</option>
-                            </select>
+                              <SelectTrigger
+                                aria-label={`Loại quan hệ với ${friend.name}`}
+                                className="h-7 w-[100px] border-0 bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-none focus:ring-1 focus:ring-emerald-500 dark:bg-slate-800 dark:text-slate-300"
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent align="end">
+                                <SelectItem value="friend">Bạn bè</SelectItem>
+                                <SelectItem value="best_friend">Bạn thân</SelectItem>
+                                <SelectItem value="lover">Người yêu</SelectItem>
+                              </SelectContent>
+                            </Select>
 
                             {/* Chat button */}
                             <button
@@ -995,16 +1003,20 @@ export const SettingsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Giới tính</label>
-                  <select
+                  <label htmlFor="profile-gender" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Giới tính</label>
+                  <Select
                     value={profileForm.gender}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, gender: e.target.value as 'Nam' | 'Nữ' | 'Khác' }))}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    onValueChange={(value) => setProfileForm(prev => ({ ...prev, gender: value as 'Nam' | 'Nữ' | 'Khác' }))}
                   >
-                    <option value="Nam">Nam</option>
-                    <option value="Nữ">Nữ</option>
-                    <option value="Khác">Khác</option>
-                  </select>
+                    <SelectTrigger id="profile-gender" className="h-auto w-full bg-slate-50 px-3 py-2 text-xs font-medium dark:bg-slate-800">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Nam">Nam</SelectItem>
+                      <SelectItem value="Nữ">Nữ</SelectItem>
+                      <SelectItem value="Khác">Khác</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

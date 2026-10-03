@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../common/Avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VisibilityTier } from '../../types';
 import { VISIBILITY_OPTIONS } from '@/constants/visibility';
 import { 
@@ -656,14 +657,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                     className="w-full h-full object-cover"
                   />
 
-                  {/* Pause Overlay Icon */}
-                  {!isVideoPlaying && (
-                    <div className="absolute inset-0 bg-black/35 flex items-center justify-center pointer-events-none animate-in fade-in duration-150">
-                      <div className="w-16 h-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-xl">
-                        <Play className="w-8 h-8 fill-white translate-x-0.5" />
-                      </div>
-                    </div>
-                  )}
+              
                 </div>
               )}
 
@@ -786,67 +780,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
               isImmersive ? 'opacity-0 translate-y-6 pointer-events-none' : 'opacity-100 translate-y-0'
             }`}>
               {/* VIDEO CONTROLLER COMPONENT (When editing a video moment) */}
-              {mediaType === 'video' && (
-                <div 
-                  className="bg-black/70 backdrop-blur-md border border-white/20 rounded-2xl p-3 space-y-2 shadow-xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Scrubber Progress Bar */}
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[10px] font-mono text-white/80 shrink-0 w-8 text-right">
-                      {formatVideoTime(videoCurrentTime)}
-                    </span>
-
-                    <input
-                      type="range"
-                      min={0}
-                      max={videoDuration || 15}
-                      step={0.1}
-                      value={videoCurrentTime}
-                      onChange={handleVideoSeek}
-                      className="flex-1 h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                    />
-
-                    <span className="text-[10px] font-mono text-white/60 shrink-0 w-8">
-                      {formatVideoTime(videoDuration)}
-                    </span>
-                  </div>
-
-                  {/* Play/Pause & Mute/Unmute Controls Row */}
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      type="button"
-                      onClick={handleTogglePlayVideo}
-                      className="flex items-center gap-1.5 px-3 py-1 bg-white/15 hover:bg-white/25 rounded-xl text-white text-xs font-semibold cursor-pointer transition-colors"
-                    >
-                      {isVideoPlaying ? (
-                        <>
-                          <Pause className="w-3.5 h-3.5 fill-white" />
-                          <span>Tạm dừng</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3.5 h-3.5 fill-white" />
-                          <span>Phát tiếp</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleToggleMuteVideo}
-                      className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
-                        isVideoMuted 
-                          ? 'bg-rose-950/80 border-rose-400/50 text-rose-300' 
-                          : 'bg-white/15 border-white/20 text-white hover:bg-white/25'
-                      }`}
-                      title={isVideoMuted ? 'Bật âm thanh' : 'Tắt tiếng'}
-                    >
-                      {isVideoMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              )}
+           
 
               {/* Caption Input Form Sheet */}
               <form onSubmit={handlePublish} className="space-y-3" onClick={(e) => e.stopPropagation()}>
@@ -941,17 +875,21 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                       <span>Quyền xem:</span>
                     </div>
 
-                    <select
-                      value={visibility}
-                      onChange={(e) => setVisibility(Number(e.target.value) as VisibilityTier)}
-                      className="bg-white/15 border border-white/20 rounded-lg px-2.5 py-1 text-[11px] text-white font-semibold focus:outline-none cursor-pointer"
+                    <Select
+                      value={String(visibility)}
+                      onValueChange={(value) => setVisibility(Number(value) as VisibilityTier)}
                     >
-                      {VISIBILITY_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value} className="bg-slate-900 text-white">
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-auto w-auto gap-1.5 border-white/20 bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white shadow-none focus:ring-emerald-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="border-slate-700 bg-slate-900 text-white">
+                        {VISIBILITY_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={String(opt.value)}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Horizontal Compact Friend Allowance Badges */}

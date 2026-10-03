@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRegister } from "@/hooks/auth";
 import { syncFcmTokenAfterAuth } from "@/lib/fcm";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AuthBackLink,
   AuthError,
@@ -13,9 +14,6 @@ import {
   AuthSubmitButton,
   authErrorText,
 } from "@/components/auth/auth-form";
-
-const selectClasses =
-  "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-base text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 transition cursor-pointer appearance-none";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -112,16 +110,20 @@ export default function RegisterPage() {
 
             <div>
               <AuthLabel>Giới tính</AuthLabel>
-              <select
-                className={selectClasses}
+              <Select
                 value={form.genderId}
-                onChange={(e) => setForm((x) => ({ ...x, genderId: e.target.value }))}
+                onValueChange={(genderId) => setForm((x) => ({ ...x, genderId }))}
               >
-                <option value="1">Nam</option>
-                <option value="2">Nữ</option>
-                <option value="3">Gay</option>
-                <option value="4">Les</option>
-              </select>
+                <SelectTrigger aria-label="Giới tính" className="h-auto w-full rounded-2xl bg-slate-50 px-4 py-3 text-base font-medium dark:bg-slate-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Nam</SelectItem>
+                  <SelectItem value="2">Nữ</SelectItem>
+                  <SelectItem value="3">Gay</SelectItem>
+                  <SelectItem value="4">Les</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
