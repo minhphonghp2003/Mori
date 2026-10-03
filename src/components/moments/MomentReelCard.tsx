@@ -72,8 +72,10 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     sendGreeting
   } = useFirstMessage();
 
+  // Start muted so the native autoplay never blares on first paint (the
+  // effect unmutes only when allowed: scroll-into-view, tap, or play press).
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   // Center floating emoji shown when reacting (tap heart / picker emoji).
@@ -173,36 +175,45 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     return () => obs.disconnect();
   }, []);
 
-  // Auto-enable audio: browsers block unmuted autoplay until the user has
-  // interacted with the page, so try with sound first and fall back to
-  // muted autoplay when the play() promise rejects.
-  const tryAutoplay = useCallback(async () => {
+  // Sound policy: the first activation happens on mount (navigation) and
+  // always starts muted — no surprise audio. Later activations come from
+  // scrolling to the video and attempt with sound (muted fallback when the
+  // browser blocks it). A tap enables sound for that video going forward.
+  const soundOnRef = useRef(false);
+  const skipSoundOnceRef = useRef(true);
+  const tryAutoplay = useCallback(async (withSound: boolean) => {
     const v = videoRef.current;
     if (!isVideo || !v) return;
     const gen = ++playGenRef.current;
-    try {
-      v.muted = false;
-      await v.play();
-      if (playGenRef.current !== gen) {
-        v.pause();
-        return;
-      }
-      setIsMuted(false);
-      setIsPlaying(true);
-    } catch {
-      if (playGenRef.current !== gen) return;
+    if (withSound) {
       try {
-        v.muted = true;
+        v.muted = false;
         await v.play();
         if (playGenRef.current !== gen) {
           v.pause();
           return;
         }
-        setIsMuted(true);
+        setIsMuted(false);
         setIsPlaying(true);
+        return;
       } catch {
-        // Leave it paused — the user can hit play in the controller.
+        if (playGenRef.current !== gen) return;
+        // Fall through to muted autoplay below.
       }
+    } else if (playGenRef.current !== gen) {
+      return;
+    }
+    try {
+      v.muted = true;
+      await v.play();
+      if (playGenRef.current !== gen) {
+        v.pause();
+        return;
+      }
+      setIsMuted(true);
+      setIsPlaying(true);
+    } catch {
+      setIsPlaying(false);
     }
   }, [isVideo]);
 
@@ -220,7 +231,11 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
       }
       return;
     }
-    void tryAutoplay();
+    // First activation = mount/navigation → muted. Scrolling into view
+    // later attempts video+audio (falls back to muted when blocked).
+    const first = skipSoundOnceRef.current;
+    skipSoundOnceRef.current = false;
+    void tryAutoplay(!first || soundOnRef.current);
   }, [isVideo, moment.videoUrl, isActive, autoPlayVideo, tryAutoplay]);
 
   // Browser tab hidden → pause (audio must not survive a tab switch);
@@ -235,7 +250,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
         v.pause();
         setIsPlaying(false);
       } else if (activeRef.current && autoPlayVideo !== false) {
-        void tryAutoplay();
+        void tryAutoplay(soundOnRef.current);
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -299,17 +314,17 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
 
   const handleTogglePlayPause = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (!videoRef.current) return;
+    const v = videoRef.current;
+    if (!v) return;
     // Manual intent wins over any in-flight autoplay attempt.
     playGenRef.current++;
-    if (videoRef.current.paused) {
-      videoRef.current.play().catch(() => {
-        // Unmuted resume blocked — stay paused, user can retry.
-        setIsPlaying(false);
-      });
+    if (v.paused) {
+      // Play press is a user gesture — resume with sound.
+      soundOnRef.current = true;
       setIsPlaying(true);
+      void tryAutoplay(true);
     } else {
-      videoRef.current.pause();
+      v.pause();
       setIsPlaying(false);
     }
   };
@@ -328,6 +343,14 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     if (showReactionPicker) {
       setShowReactionPicker(false);
       return;
+    }
+
+    // A tap is a user gesture — enable sound on a playing muted video.
+    // Fresh mounts always start muted so navigation never blasts audio.
+    if (isVideo && videoRef.current && !videoRef.current.paused && videoRef.current.muted) {
+      soundOnRef.current = true;
+      videoRef.current.muted = false;
+      setIsMuted(false);
     }
 
     // Single tap toggles the moment info overlays (video controller lives

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../common/Avatar';
 import { emptyUser } from '@/lib/chat/mappers';
@@ -164,6 +165,16 @@ export const HomeView: React.FC = () => {
   // Server order (userId desc) — no client sort/filter beyond gender.
   const visibleUsers = nearbyUsers;
 
+  // Windowing: pages come from the API (take=50 + cursor), but only rows
+  // near the viewport are mounted — the rest is a sized spacer.
+  const rowVirtualizer = useVirtualizer({
+    count: visibleUsers.length,
+    getScrollElement: () => scrollRef.current,
+    // Measured per row below; this is just the first-paint guess.
+    estimateSize: () => 72,
+    overscan: 6,
+  });
+
   const renderGenderIcon = (gender?: string) => {
     const g = (gender || '').toLowerCase();
     if (g.includes('nam') || g === 'male') {
@@ -219,8 +230,8 @@ export const HomeView: React.FC = () => {
         </div>
       </div>
 
-      {/* Compact Nearby Users List */}
-      <div className="p-3 space-y-2 max-w-lg mx-auto w-full pb-16">
+      {/* Compact Nearby Users List (virtualized — only viewport rows mount) */}
+      <div className="p-3 max-w-lg mx-auto w-full pb-16">
         {visibleUsers.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
             {isLoadingRoster ? (
@@ -238,10 +249,23 @@ export const HomeView: React.FC = () => {
             )}
           </div>
         ) : (
-          visibleUsers.map((user) => {
-            return (
+          <div
+            className="relative w-full"
+            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const user = visibleUsers[virtualRow.index];
+              if (!user) return null;
+              return (
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement}
+                  className="absolute top-0 left-0 w-full"
+                  style={{ transform: `translateY(${virtualRow.start}px)` }}
+                >
+                  <div className="pb-2">
               <div
-                key={user.id}
                 onClick={() => setSelectedUser(user)}
                 className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 border border-slate-100/90 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer group flex items-center justify-between gap-2.5"
               >
@@ -304,8 +328,11 @@ export const HomeView: React.FC = () => {
                   </button>
                 </div>
               </div>
-            );
-          })
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
         {isLoadingMore && (
           <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 animate-pulse pb-2">
