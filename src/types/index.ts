@@ -72,11 +72,14 @@ export interface MessageReaction {
   emoji: string;
 }
 
+import type { ChatMessageRenderType } from "./chat";
+
 export interface Message {
   id: string;
   senderId: string;
   senderName?: string;
   senderAvatar?: string;
+  renderType?: ChatMessageRenderType;
   text?: string;
   imageUrl?: string;
   videoUrl?: string;

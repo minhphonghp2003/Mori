@@ -73,6 +73,7 @@ export const mapMessage = (dto: MessageDto, opts: MapMessageOptions = {}): Messa
     senderId: String(dto.senderId),
     senderName: dto.senderName || undefined,
     senderAvatar: dto.senderAvatar?.thumbUrl || undefined,
+    renderType,
     text,
     imageUrl,
     videoUrl,

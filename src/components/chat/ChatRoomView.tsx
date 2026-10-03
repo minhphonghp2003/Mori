@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useApp } from '../../context/AppContext';
 import { MediaViewerModal } from '../common/MediaViewerModal';
 import { LogoLoader } from '../common/LogoLoader';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 import { Avatar } from '../common/Avatar';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { GroupSettingsModal } from './GroupSettingsModal';
@@ -552,12 +553,19 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       replyTo: replyData,
       momentId: pendingMoment?.id,
     };
-    setPendingSends(prev => [...prev, pending]);
+    // Pure text renders once via the hub echo — no optimistic bubble and no
+    // "sending" status (media/location/moment keep theirs below).
+    const showPending = pending.momentId != null;
+    if (showPending) setPendingSends(prev => [...prev, pending]);
     setReplyingTo(null);
     setInputText('');
     setActiveDrawer(null);
     stopTypingSignal();
     const ok = await runSend(pending);
+    if (!ok && !showPending) {
+      // sendMessage already toasted — give the text back so it isn't lost.
+      setInputText(pending.text ?? '');
+    }
     if (ok && pending.momentId) setPendingMoment(null);
   };
 
@@ -594,32 +602,6 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     void runSend(pending).then((ok) => {
       if (ok) showToast('Đã gửi video thành công 🎥', 'success');
     });
-  };
-
-  const handleSendLocation = () => {
-    if (!navigator.geolocation) {
-      showToast('Thiết bị không hỗ trợ định vị GPS.', 'error');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const pending: PendingSend = {
-          clientId: crypto.randomUUID(),
-          status: 'sending',
-          locationPin: {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            name: 'Vị trí hiện tại',
-          },
-        };
-        setPendingSends(prev => [...prev, pending]);
-        void runSend(pending).then((ok) => {
-          if (ok) showToast('Đã gửi vị trí hiện tại 📍', 'success');
-        });
-      },
-      () => showToast('Không thể lấy vị trí GPS. Hãy cho phép quyền định vị.', 'error'),
-      { enableHighAccuracy: true, timeout: 8000 },
-    );
   };
 
   // Local Photo Upload (File goes straight to the presigned uploader)
@@ -945,6 +927,22 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             ? moments.find(m => m.id === msg.momentId) ?? extraMoments.find(m => m.id === msg.momentId)
             : null;
 
+          // System messages render as a centered neutral pill — no avatar,
+          // bubble, or actions.
+          if (msg.renderType === 'System') {
+            return (
+              <div
+                key={msg.id}
+                data-msg-id={msg.id}
+                className="flex justify-center"
+              >
+                <div className="px-3 py-1.5 rounded-full bg-slate-200/70 dark:bg-slate-800 text-[11px] font-medium text-slate-500 dark:text-slate-400 text-center leading-relaxed max-w-[85%]">
+                  {msg.text || 'Thông báo hệ thống'}
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={msg.id}
@@ -1258,9 +1256,6 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
               {/* Timestamp, Edited badge & Status */}
               <div className={`flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                {msg.isEdited && (
-                  <span className="italic text-slate-400 dark:text-slate-500">(đã chỉnh sửa)</span>
-                )}
                 <span>{msg.timestamp}</span>
                 {isMe && (
                   <span>
@@ -1277,23 +1272,30 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
         })}
 
         {/* OPTIMISTIC PENDING / FAILED SENDS (retry reuses idempotencyKey) */}
-        {pendingSends.map((p) => (
+        {pendingSends.map((p) => {
+          // Media being processed shows a loading overlay on the preview
+          // itself — never a "Đang gửi..." text row.
+          const isMediaPreview = !!(p.previewUrl && (p.image || p.video));
+          return (
           <div key={p.clientId} className="flex flex-col items-end">
             {p.previewUrl && p.video && (
-              <video src={p.previewUrl} playsInline className="rounded-2xl max-h-40 mb-1 border border-slate-200" />
+              <div className="relative mb-1">
+                <video src={p.previewUrl} playsInline className="rounded-2xl max-h-40 border border-slate-200" />
+                {p.status === 'sending' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl">
+                    <LoadingSpinner size="md" light />
+                  </div>
+                )}
+              </div>
             )}
             {p.previewUrl && p.image && (
-              <img src={p.previewUrl} alt="Đang gửi" className="rounded-2xl max-h-40 object-cover mb-1 border border-slate-200" />
-            )}
-            {p.locationPin && (
-              <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-1 flex items-start gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500">Vị trí chia sẻ</div>
-                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{p.locationPin.name}</div>
-                </div>
+              <div className="relative mb-1">
+                <img src={p.previewUrl} alt="Đang gửi" className="rounded-2xl max-h-40 object-cover border border-slate-200" />
+                {p.status === 'sending' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl">
+                    <LoadingSpinner size="md" light />
+                  </div>
+                )}
               </div>
             )}
             {p.text && (
@@ -1302,9 +1304,12 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
               </div>
             )}
             {p.status === 'sending' ? (
-              <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 px-1 animate-pulse">
-                Đang gửi...
-              </span>
+              // Media shows the overlay above instead of this text row.
+              isMediaPreview ? null : (
+                <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 px-1 animate-pulse">
+                  Đang gửi...
+                </span>
+              )
             ) : (
               <div className="flex items-center gap-1.5 mt-0.5 px-1">
                 <AlertCircle className="w-3 h-3 text-rose-500" />
@@ -1324,7 +1329,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
         <div ref={messagesEndRef} />
       </div>
@@ -1414,7 +1420,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar grid grid-cols-3 gap-2">
+          <div className="flex-1 overflow-y-auto no-scrollbar grid grid-cols-3 gap-2 content-start">
             {isLoadingGifs ? (
               <div className="col-span-3 text-center py-6 text-[11px] text-slate-400 dark:text-slate-500 animate-pulse">
                 Đang tìm GIF...
@@ -1424,17 +1430,18 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                 Không tìm thấy GIF phù hợp
               </div>
             ) : (
-              gifItems.map(gif => (
+              gifItems.map((gif, idx) => (
                 <button
-                  key={gif.id}
+                  key={`${gif.id}-${idx}`}
                   onClick={() => handleSendGif(gif.url)}
-                  className="rounded-xl overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-600 transition-all cursor-pointer relative group"
+                  className="w-full rounded-xl overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-600 transition-all cursor-pointer relative group"
                 >
-                  <img 
-                    src={gif.thumbUrl || gif.url} 
-                    alt="GIF" 
+                  <img
+                    src={gif.thumbUrl || gif.url}
+                    alt="GIF"
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                    draggable={false}
+                    className="block w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                 </button>
               ))
@@ -1637,16 +1644,6 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                 title="Gửi video từ thiết bị"
               >
                 <Video className="w-4 h-4" />
-              </button>
-
-              {/* Location Share */}
-              <button
-                type="button"
-                onClick={handleSendLocation}
-                className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-colors cursor-pointer"
-                title="Gửi vị trí GPS hiện tại"
-              >
-                <MapPin className="w-4 h-4" />
               </button>
 
               {/* GIF Search */}
