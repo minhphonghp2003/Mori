@@ -954,7 +954,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                   <Avatar
                     src={sender.avatar}
                     name={sender.name}
-                    className="w-5 h-5 rounded-full object-cover ring-1 ring-slate-200 group-hover/sender:ring-indigo-600 transition-all"
+                    className="w-5 h-5 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/10 group-hover/sender:ring-indigo-600 transition-all"
                     textClassName="text-[8px]"
                   />
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 group-hover/sender:text-indigo-600 dark:group-hover/sender:text-indigo-400 transition-colors">

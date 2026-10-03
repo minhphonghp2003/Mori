@@ -20,6 +20,7 @@ export interface User {
   email: string;
   age: number;
   genderId: number;
+  bio?: string | null;
   friendship?: FriendshipStatusDto | null;
 }
 
@@ -35,6 +36,7 @@ export interface UpdateUserInput {
   name?: string;
   age?: number;
   genderId?: number;
+  bio?: string | null;
 }
 
 /**
@@ -52,6 +54,7 @@ export interface UserListItemDto {
   speed: number | null;
   battery: number | null;
   status: string | null;
+  bio: string | null;
   updatedAt: string | null;
   distance: number | null;
   isOnline: boolean;

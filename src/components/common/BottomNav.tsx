@@ -62,7 +62,7 @@ export const BottomNav: React.FC = () => {
         <div className="flex flex-col items-center justify-center relative -top-3">
           <Link
             href={TAB_HREF.map}
-            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.38)] ring-4 ring-white dark:ring-slate-900 flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
+            className={`w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.38)] ring-4 ring-white dark:ring-[#09090b] flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
               activeTab === 'map' ? 'scale-108 ring-indigo-100 shadow-[0_10px_25px_rgba(79,70,229,0.5)]' : 'hover:scale-105'
             }`}
             title="Bản đồ"
@@ -81,7 +81,7 @@ export const BottomNav: React.FC = () => {
           <div className="relative p-1">
             <MessageCircle className={`w-5 h-5 transition-transform ${activeTab === 'chat' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
             {totalUnread > 0 && (
-              <span className="absolute -top-1 -right-1.5 min-w-[17px] h-[17px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-xs border-2 border-white dark:border-slate-900 ring-1 ring-rose-500/20">
+              <span className="absolute -top-1 -right-1.5 min-w-[17px] h-[17px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-xs border-2 border-white dark:border-[#09090b] ring-1 ring-rose-500/20">
                 {totalUnread > 99 ? '99+' : totalUnread}
               </span>
             )}

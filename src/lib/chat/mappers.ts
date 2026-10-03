@@ -192,6 +192,7 @@ export const mapMeToUser = (u: ApiUser): User => ({
   ),
   age: u.age ?? 0,
   gender: u.genderId === 1 ? "Nam" : u.genderId === 2 ? "Nữ" : "Khác",
+  bio: u.bio ?? "",
 });
 
 const EXT_CONTENT_TYPES: Record<string, string> = {

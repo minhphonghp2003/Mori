@@ -11,6 +11,11 @@
   }
   .dark {
     color-scheme: dark;
+    /* Shift the slate surfaces used across dark: variants toward black. */
+    --color-slate-950: #09090b;
+    --color-slate-900: #121214;
+    --color-slate-800: #1b1b20;
+    --color-slate-700: #26262c;
   }
   body {
     font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', system-ui, -apple-system,
@@ -22,8 +27,17 @@
     color: #0f172a;
   }
   .dark body {
-    background-color: #020617;
+    background-color: #09090b;
     color: #f1f5f9;
+  }
+  /* Solid white outlines (presence dots, avatar rings, FAB ring) look harsh
+     on near-black — remap to the page bg. Translucent variants like
+     border-white/20 or ring-white/20 (overlays on photos) are untouched. */
+  .dark .border-white {
+    border-color: #09090b;
+  }
+  .dark .ring-white {
+    --tw-ring-color: #09090b;
   }
 }
 

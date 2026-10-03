@@ -51,7 +51,7 @@ export const HomeView: React.FC = () => {
 
       const runOnce = async (freshCursor: boolean) => {
         const res = await getAllUsers({
-          take: 10,
+          take: 50,
           genderId: gender === 'Nam' ? 1 : gender === 'Nữ' ? 2 : undefined,
           seed: freshCursor ? undefined : (pagingRef.current.seed ?? undefined),
           prevId: freshCursor ? undefined : (pagingRef.current.prevId ?? undefined),
@@ -136,7 +136,8 @@ export const HomeView: React.FC = () => {
           ...emptyUser(String(u.userId), u.name, u.image ?? ''),
           age: 0,
           gender: u.genderId === 1 ? 'Nam' : u.genderId === 2 ? 'Nữ' : 'Khác',
-          status: u.status ?? '',
+          status: '',
+          bio: u.bio ?? '',
           battery: u.battery ?? 0,
           location: { lat: u.latitude ?? 0, lng: u.longitude ?? 0, address: '', city: '' },
           relationship: friend?.relationship,
@@ -236,7 +237,7 @@ export const HomeView: React.FC = () => {
                   <Avatar
                     src={user.avatar}
                     name={user.name}
-                    className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-100 group-hover:ring-indigo-500 transition-all"
+                    className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-100 dark:ring-white/10 group-hover:ring-indigo-500 transition-all"
                   />
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-white rounded-full ${
@@ -272,12 +273,10 @@ export const HomeView: React.FC = () => {
                     ) : null}
                   </div>
 
-                  {/* Status — his current status only, nothing when empty */}
-                  {user.status?.trim() ? (
-                    <div className="text-[11px] text-slate-600 dark:text-slate-400 truncate font-medium">
-                      {user.status}
-                    </div>
-                  ) : null}
+                  {/* Bio — single line with overflow ellipsis, fallback when empty */}
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400 truncate font-medium max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                    {user.bio?.trim() || 'Cốc cốc cốc mở cửa cho anh đê'}
+                  </div>
                 </div>
 
                 {/* Right: Only Send Message Button */}

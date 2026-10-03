@@ -395,12 +395,7 @@ export const LocationView: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Online / Stranger Indicator badge */}
-                    {isStranger && (
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center shadow-xs" title="Người lạ online">
-                        <span className="w-1.5 h-1.5 bg-white rounded-full" />
-                      </span>
-                    )}
+                  
                   </div>
                 </Marker>
               );

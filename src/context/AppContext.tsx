@@ -1109,9 +1109,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   /**
    * Profile save: avatar (if a new data-URL was picked) goes through the
-   * presigned Profile bucket → POST /User/me/avatar; name/age/gender through
-   * PUT /User/me. `bio` stays local-only (no API field yet). Axios errors are
-   * toasted by the interceptor; thrown so the modal stays open on failure.
+   * presigned Profile bucket → POST /User/me/avatar; name/age/gender/bio
+   * through PUT /User/me. Axios errors are toasted by the interceptor; thrown
+   * so the modal stays open on failure.
    */
   const updateProfile = async (
     profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>,
@@ -1139,6 +1139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         name: (profileData.name ?? currentUser.name).trim(),
         age: Number(profileData.age ?? currentUser.age) || currentUser.age || 20,
         ...(genderId ? { genderId } : {}),
+        ...(profileData.bio !== undefined ? { bio: profileData.bio.trim() } : {}),
       });
       const mapped = mapMeToUser(dto);
       setCurrentUser((prev) => ({
@@ -1149,7 +1150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Server avatar wins (fresh just-uploaded URL); the picked
         // data-URL only survives when the profile has no server image yet.
         avatar: mapped.avatar || avatar,
-        bio: profileData.bio !== undefined ? profileData.bio : prev.bio,
+        bio: mapped.bio ?? (profileData.bio !== undefined ? profileData.bio : prev.bio),
         lastUpdated: 'Vừa xong',
       }));
       showToast('Đã lưu thông tin cá nhân thành công ✨', 'success');

@@ -368,7 +368,7 @@ export const ChatListView: React.FC = () => {
                         <Avatar
                           src={grp.avatar}
                           name={grp.name}
-                          className="w-12 h-12 rounded-2xl object-cover shrink-0 ring-2 ring-slate-100"
+                          className="w-12 h-12 rounded-2xl object-cover shrink-0 ring-2 ring-slate-100 dark:ring-white/10"
                         />
 
                         <div className="min-w-0 flex-1">
@@ -558,7 +558,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         <Avatar
           src={displayAvatar}
           name={displayName}
-          className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100"
+          className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100 dark:ring-white/10"
         />
         {!conv.isGroup && conv.isOnline && (
           <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />

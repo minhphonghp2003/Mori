@@ -62,8 +62,7 @@ export const SettingsView: React.FC = () => {
     blockFriend,
     unblockFriend,
     updateProfile,
-    updateVisibility, 
-    updateStatus, 
+    updateVisibility,
     deleteTimeline,
     openChatWithUser,
     showToast 
@@ -79,12 +78,11 @@ export const SettingsView: React.FC = () => {
   const [timelineToDelete, setTimelineToDelete] = useState<Timeline | null>(null);
   const [viewingMoment, setViewingMoment] = useState<Moment | null>(null);
 
-  // Single Unified Edit Profile Modal (Handles Name, Avatar, Status, Age, Gender, Bio)
+  // Single Unified Edit Profile Modal (Handles Name, Avatar, Age, Gender, Bio)
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: currentUser.name,
     avatar: currentUser.avatar,
-    status: currentUser.status,
     age: currentUser.age,
     gender: currentUser.gender,
     bio: currentUser.bio || ''
@@ -207,7 +205,6 @@ export const SettingsView: React.FC = () => {
     setProfileForm({
       name: currentUser.name,
       avatar: currentUser.avatar,
-      status: currentUser.status,
       age: currentUser.age,
       gender: currentUser.gender,
       bio: currentUser.bio || ''
@@ -244,11 +241,6 @@ export const SettingsView: React.FC = () => {
         gender: profileForm.gender as 'Nam' | 'Nữ' | 'Khác',
         bio: profileForm.bio.trim()
       });
-
-      // Save status
-      if (profileForm.status.trim() && profileForm.status.trim() !== currentUser.status) {
-        updateStatus(profileForm.status.trim());
-      }
 
       setShowEditProfileModal(false);
     } catch {
@@ -349,8 +341,8 @@ export const SettingsView: React.FC = () => {
 
         {/* Bio section (replaces the location row) */}
         {currentUser.bio?.trim() ? (
-          <p className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic line-clamp-3">
-            "{currentUser.bio.trim()}"
+          <p className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">
+            {currentUser.bio.trim()}
           </p>
         ) : null}
       </div>
@@ -738,7 +730,7 @@ export const SettingsView: React.FC = () => {
                               <Avatar
                                 src={friend.avatar}
                                 name={friend.name}
-                                className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200"
+                                className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/10"
                               />
                               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                             </div>
@@ -966,19 +958,6 @@ export const SettingsView: React.FC = () => {
                   onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
                   required
                   maxLength={40}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              {/* Status Mood */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Trạng thái tâm trạng</label>
-                <input
-                  type="text"
-                  value={profileForm.status}
-                  onChange={(e) => setProfileForm(prev => ({ ...prev, status: e.target.value }))}
-                  placeholder="Ví dụ: Đang cafe ☕, Đi dạo bờ hồ 🛵..."
-                  maxLength={45}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
