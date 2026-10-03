@@ -69,6 +69,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   const offerWaiterRef = useRef<((offer: RTCSessionDescriptionInit | null) => void) | null>(null);
   const offerWaitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
 
   useEffect(() => {
@@ -84,8 +85,22 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       pcRef.current?.close();
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       if (callTimerRef.current) clearInterval(callTimerRef.current);
+      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
       callAudio.stop();
     };
+  }, []);
+
+  useEffect(() => {
+    const handlePageHide = () => {
+      const currentPeer = peerRef.current;
+      if (!currentPeer || statusRef.current === "idle") return;
+      void appHub
+        .sendCallSignal({ targetUserId: currentPeer.userId, type: "end" })
+        .catch((err) => console.error("[Call] page-hide end signal failed:", err));
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
   }, []);
 
   const resolveOfferWaiter = useCallback((offer: RTCSessionDescriptionInit | null) => {
@@ -139,6 +154,10 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     if (callTimerRef.current) {
       clearInterval(callTimerRef.current);
       callTimerRef.current = null;
+    }
+    if (disconnectTimerRef.current) {
+      clearTimeout(disconnectTimerRef.current);
+      disconnectTimerRef.current = null;
     }
     if (pcRef.current) {
       pcRef.current.close();
@@ -228,12 +247,25 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       if (state === "connected") {
+        if (disconnectTimerRef.current) {
+          clearTimeout(disconnectTimerRef.current);
+          disconnectTimerRef.current = null;
+        }
         reconnectAttemptsRef.current = 0;
         if (statusRef.current === "reconnecting") setStatus("active");
       } else if (state === "disconnected") {
-        if (statusRef.current !== "active") return;
+        if (statusRef.current !== "active" && statusRef.current !== "reconnecting") return;
         setStatus("reconnecting");
         emitToast("Đang kết nối lại...", "info");
+        if (!disconnectTimerRef.current) {
+          disconnectTimerRef.current = setTimeout(() => {
+            disconnectTimerRef.current = null;
+            if (pcRef.current === pc && pc.connectionState !== "connected") {
+              cleanup();
+              emitToast("Cuộc gọi đã kết thúc do mất kết nối.", "info");
+            }
+          }, 12_000);
+        }
         void (async () => {
           reconnectAttemptsRef.current += 1;
           const attempt = reconnectAttemptsRef.current;
@@ -253,15 +285,15 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         })();
       } else if (state === "failed") {
         if (statusRef.current === "active" || statusRef.current === "reconnecting") {
-          setStatus("reconnecting");
-          emitToast("Kết nối bị gián đoạn. Đang chờ khôi phục cuộc gọi.", "info");
+          cleanup();
+          emitToast("Cuộc gọi đã kết thúc do kết nối bị gián đoạn.", "info");
         }
       }
     };
 
     pcRef.current = pc;
     return pc;
-  }, [configureControlChannel, sendSignal]);
+  }, [cleanup, configureControlChannel, sendSignal]);
 
   const getLocalMedia = useCallback(async (hasVideo: boolean): Promise<MediaStream> => {
     try {
@@ -532,7 +564,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
           break;
 
         case "end":
-          if (statusRef.current === "active" || statusRef.current === "reconnecting") {
+          if (statusRef.current !== "idle") {
             cleanup();
             emitToast("Cuộc gọi đã kết thúc", "info");
           }
