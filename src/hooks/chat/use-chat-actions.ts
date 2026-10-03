@@ -209,9 +209,9 @@ export function useChatActions({
       try {
         const detail = await chatService.getConversation(convId);
         if (detail.data) {
-          dispatch(
-            updateConversationState({ conversationId: convId, patch: detail.data }),
-          );
+          // Upsert, not patch-only: a freshly created conversation has no
+          // row yet, and the room renders "not found" until one appears.
+          dispatch(addConversation(detail.data));
         }
       } catch (err) {
         console.error("[chat] enterConversation detail failed:", err);

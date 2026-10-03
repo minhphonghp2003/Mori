@@ -4,23 +4,36 @@ import { Avatar } from '../common/Avatar';
 import { emptyUser } from '@/lib/chat/mappers';
 import { formatDistance } from '@/lib/location/geo';
 import { getAllUsers } from '@/services/user';
+import { useFirstMessage } from '@/hooks/chat/use-first-message';
+import { FirstMessageModal } from '../chat/FirstMessageModal';
 import type { UserListItemDto } from '@/types/user';
 import type { User } from '../../types';
-import { 
+import {
   MapPin,
-  MessageCircle, 
+  MessageCircle,
   Users
 } from 'lucide-react';
 
 export const HomeView: React.FC = () => {
-  const { 
+  const {
     currentUser,
-    friends, 
-    openChatWithUser, 
-    setSelectedUser 
+    friends,
+    setSelectedUser
   } = useApp();
+  const {
+    greetingTarget,
+    greetingText,
+    setGreetingText,
+    isSendingGreeting,
+    startGreetingChat,
+    closeGreeting,
+    sendGreeting
+  } = useFirstMessage();
 
   const [genderFilter, setGenderFilter] = useState<'all' | 'Nam' | 'Nữ'>('all');
+
+  // First-message flow is shared (see useFirstMessage) — also used by
+  // the location profile dialog.
 
   // Full roster (GET /api/user — online + offline, no visibility gate),
   // filtered server-side by genderId following the API input.
@@ -282,7 +295,7 @@ export const HomeView: React.FC = () => {
                 {/* Right: Only Send Message Button */}
                 <div className="shrink-0 pl-1" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => openChatWithUser(user)}
+                    onClick={() => startGreetingChat(user)}
                     className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
                     title={`Nhắn tin cho ${user.name}`}
                   >
@@ -300,6 +313,16 @@ export const HomeView: React.FC = () => {
           </p>
         )}
       </div>
+
+      {/* First-message modal (new 1:1 only) */}
+      <FirstMessageModal
+        target={greetingTarget}
+        text={greetingText}
+        onTextChange={setGreetingText}
+        isSending={isSendingGreeting}
+        onClose={closeGreeting}
+        onSubmit={sendGreeting}
+      />
     </div>
   );
 };

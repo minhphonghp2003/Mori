@@ -3,6 +3,8 @@ import { useRouter } from 'next/navigation';
 import { User, FriendshipType, Timeline, Moment } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { getUserById } from '@/services/user';
+import { useFirstMessage } from '@/hooks/chat/use-first-message';
+import { FirstMessageModal } from '../chat/FirstMessageModal';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { Avatar } from '../common/Avatar';
 import { formatDistance } from '@/lib/location/geo';
@@ -41,7 +43,6 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
     ensureUserMoments,
     timelines,
     ensureUserTimelines,
-    openChatWithUser, 
     changeFriendshipType,
     respondFriendRequest,
     sendFriendRequest,
@@ -54,6 +55,18 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
   const router = useRouter();
 
   const [activeTab, setActiveProfileTab] = useState<'moments' | 'timelines'>('moments');
+  // First-message flow is shared with /home (see useFirstMessage). The
+  // profile dialog stays open underneath the modal; a successful send
+  // opens the room (which clears the selected user, closing this dialog).
+  const {
+    greetingTarget,
+    greetingText,
+    setGreetingText,
+    isSendingGreeting,
+    startGreetingChat,
+    closeGreeting,
+    sendGreeting
+  } = useFirstMessage();
   const [timelineToDelete, setTimelineToDelete] = useState<Timeline | null>(null);
   const [viewingMoment, setViewingMoment] = useState<Moment | null>(null);
   // Age/gender/bio come from the public profile endpoint (location events
@@ -248,8 +261,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
           {/* Quick Action Button (Chat only - call is exclusive to chat screen) */}
               <button
                 onClick={() => {
-                  onClose();
-                  openChatWithUser(liveUser);
+                  void startGreetingChat(liveUser);
                 }}
                 className="w-full py-2.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer"
               >
@@ -569,6 +581,15 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
           </div>
         </div>
 
+        {/* FIRST-MESSAGE MODAL (new 1:1 only — overlays this dialog) */}
+        <FirstMessageModal
+          target={greetingTarget}
+          text={greetingText}
+          onTextChange={setGreetingText}
+          isSending={isSendingGreeting}
+          onClose={closeGreeting}
+          onSubmit={sendGreeting}
+        />
         {/* DELETE TIMELINE CONFIRMATION MODAL */}
         {timelineToDelete && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">

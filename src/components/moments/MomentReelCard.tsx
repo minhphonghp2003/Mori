@@ -4,6 +4,8 @@ import { useApp } from '../../context/AppContext';
 import { TimelineDetailView } from '../timelines/TimelineDetailView';
 import { Avatar } from '../common/Avatar';
 import { emptyUser } from '@/lib/chat/mappers';
+import { useFirstMessage } from '@/hooks/chat/use-first-message';
+import { FirstMessageModal } from '../chat/FirstMessageModal';
 import { VISIBILITY_OPTIONS } from '@/constants/visibility';
 import { 
   Heart, 
@@ -52,14 +54,25 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     friends, 
     timelines,
     ensureTimelineById,
-    reactToMoment, 
+    reactToMoment,
     deleteMoment,
     hideMoment,
     changeMomentVisibility,
-    openChatWithUser, 
     setSelectedUser,
-    showToast 
+    showToast
   } = useApp();
+  // First-message flow shared with /home + location (see useFirstMessage).
+  // The moment still attaches via ?momentId= for the share flow.
+  const {
+    greetingTarget,
+    greetingText,
+    setGreetingText,
+    greetingMoment,
+    isSendingGreeting,
+    startGreetingChat,
+    closeGreeting,
+    sendGreeting
+  } = useFirstMessage();
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
@@ -552,7 +565,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              openChatWithUser(author, moment.id);
+              void startGreetingChat(author, { id: moment.id, previewImage: moment.imageUrl });
             }}
             className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
             title="Nhắn tin"
@@ -803,14 +816,14 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
 
       {/* TIMELINE DETAIL FULL MODAL */}
       {showTimelineModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
           onClick={(e) => {
             e.stopPropagation();
             setShowTimelineModal(null);
           }}
         >
-          <div 
+          <div
             className="w-full h-full sm:max-w-md bg-white dark:bg-slate-900 sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-6 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -821,6 +834,17 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           </div>
         </div>
       )}
+
+      {/* FIRST-MESSAGE MODAL (new 1:1 only) */}
+      <FirstMessageModal
+        target={greetingTarget}
+        text={greetingText}
+        onTextChange={setGreetingText}
+        isSending={isSendingGreeting}
+        onClose={closeGreeting}
+        onSubmit={sendGreeting}
+        previewImage={greetingMoment?.previewImage ?? null}
+      />
     </div>
   );
 };
