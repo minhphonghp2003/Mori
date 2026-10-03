@@ -258,16 +258,37 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
         <div className="flex-1 overflow-y-auto no-scrollbar bg-white dark:bg-slate-900">
           {!isSelf && (
             <div className="px-5 py-3 space-y-3 border-b border-slate-100 dark:border-slate-800">
-          {/* Quick Action Button (Chat only - call is exclusive to chat screen) */}
-              <button
-                onClick={() => {
-                  void startGreetingChat(liveUser);
-                }}
-                className="w-full py-2.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4 shrink-0" />
-                <span>Nhắn tin trò chuyện</span>
-              </button>
+              {friendStatus === 'none' ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      void startGreetingChat(liveUser);
+                    }}
+                    className="flex-[2] py-2.5 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4 shrink-0" />
+                    <span>Nhắn tin</span>
+                  </button>
+
+                  <button
+                    onClick={() => sendFriendRequest(liveUser.id)}
+                    className="flex-1 py-2.5 px-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-2xl flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap truncate"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                    <span>Kết bạn</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    void startGreetingChat(liveUser);
+                  }}
+                  className="w-full py-2.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 shrink-0" />
+                  <span>Nhắn tin trò chuyện</span>
+                </button>
+              )}
 
           {/* FIXED RELATIONSHIP SELECTION LIST */}
               {friendStatus === 'accepted' ? (
@@ -329,21 +350,6 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                     className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl cursor-pointer whitespace-nowrap truncate shrink-0 transition-colors"
                   >
                     Thu hồi
-                  </button>
-                </div>
-              ) : friendStatus === 'none' ? (
-                <div className="flex items-center justify-between p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
-                  <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                    <span className="text-xs text-emerald-800 dark:text-emerald-300 font-medium whitespace-nowrap truncate">
-                      Người lạ gần bạn
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => sendFriendRequest(liveUser.id)}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap truncate shrink-0"
-                  >
-                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
-                    <span>Kết bạn</span>
                   </button>
                 </div>
               ) : friendStatus === 'blocked' ? (
