@@ -83,6 +83,7 @@ export interface Message {
   text?: string;
   imageUrl?: string;
   videoUrl?: string;
+  mediaType?: "text" | "image" | "video" | "gif" | "location" | "moment";
   momentId?: string;
   locationPin?: {
     lat: number;
@@ -97,6 +98,8 @@ export interface Message {
     senderName: string;
     text?: string;
     imageUrl?: string;
+    videoUrl?: string;
+    mediaType?: "text" | "image" | "video" | "gif" | "location" | "moment";
   };
   isEdited?: boolean;
   isDeleted?: boolean;

@@ -4,7 +4,11 @@ import type {
   DiscoverableGroupDto,
   MessageDto,
 } from "@/types/chat";
-import { isVideoUrl, toChatMessageRenderType } from "@/types/chat";
+import {
+  isVideoUrl,
+  MessageType,
+  toChatMessageRenderType,
+} from "@/types/chat";
 import type {
   Conversation,
   DiscoverableGroup,
@@ -68,6 +72,28 @@ export const mapMessage = (dto: MessageDto, opts: MapMessageOptions = {}): Messa
     text = undefined;
   }
 
+  const repliedAttachment = dto.repliedMessage?.attachments?.[0];
+  const repliedMediaType = dto.repliedMessage
+    ? dto.repliedMessage.type === MessageType.Gif || dto.repliedMessage.type === MessageType.Sticker
+      ? "gif"
+      : repliedAttachment && isVideoUrl(repliedAttachment.originalUrl)
+        ? "video"
+        : repliedAttachment
+          ? "image"
+          : "text"
+    : undefined;
+
+  const mediaType: Message["mediaType"] =
+    renderType === "Gif" || renderType === "Sticker"
+      ? "gif"
+      : videoUrl
+        ? "video"
+        : imageUrl
+          ? "image"
+          : text
+            ? "text"
+            : undefined;
+
   return {
     id: String(dto.id),
     senderId: String(dto.senderId),
@@ -77,6 +103,7 @@ export const mapMessage = (dto: MessageDto, opts: MapMessageOptions = {}): Messa
     text,
     imageUrl,
     videoUrl,
+    mediaType,
     momentId: dto.momentId != null ? String(dto.momentId) : undefined,
     timestamp: formatTime(dto.createdAt),
     status: dto.status === 1 ? "read" : "delivered",
@@ -88,7 +115,9 @@ export const mapMessage = (dto: MessageDto, opts: MapMessageOptions = {}): Messa
           id: String(dto.repliedMessage.messageId),
           senderName: dto.repliedMessage.senderName || "Bạn bè",
           text: dto.repliedMessage.content || undefined,
-          imageUrl: dto.repliedMessage.attachments?.[0]?.thumbUrl || undefined,
+          imageUrl: repliedAttachment?.thumbUrl || undefined,
+          videoUrl: repliedMediaType === "video" ? repliedAttachment?.originalUrl : undefined,
+          mediaType: repliedMediaType,
         }
       : undefined,
     isEdited: opts.editedIds?.has(dto.id) ? true : undefined,

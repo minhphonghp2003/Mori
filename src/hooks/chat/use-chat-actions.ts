@@ -37,7 +37,14 @@ export type SendMessageArgs = [
   image?: string | File,
   locationPin?: { lat: number; lng: number; name: string },
   video?: string | File,
-  replyTo?: { id: string; senderName: string; text?: string; imageUrl?: string },
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text?: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    mediaType?: "text" | "image" | "video" | "gif" | "location" | "moment";
+  },
   momentId?: string,
   idempotencyKey?: string,
 ];
@@ -260,6 +267,8 @@ export function useChatActions({
         senderName: string;
         text?: string;
         imageUrl?: string;
+        videoUrl?: string;
+        mediaType?: "text" | "image" | "video" | "gif" | "location" | "moment";
       },
       momentId?: string,
       idempotencyKey?: string,

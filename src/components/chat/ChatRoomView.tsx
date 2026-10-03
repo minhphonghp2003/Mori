@@ -124,7 +124,14 @@ interface PendingSend {
   image?: string | File;
   video?: string | File;
   locationPin?: { lat: number; lng: number; name: string };
-  replyTo?: { id: string; senderName: string; text?: string; imageUrl?: string };
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text?: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    mediaType?: "text" | "image" | "video" | "gif" | "location" | "moment";
+  };
   momentId?: string;
   previewUrl?: string;
 }
@@ -616,6 +623,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             (replyingTo.senderId === currentUser.id ? currentUser.name : partner.name),
           text: replyingTo.text,
           imageUrl: replyingTo.imageUrl,
+          videoUrl: replyingTo.videoUrl,
+          mediaType: replyingTo.mediaType,
         }
       : undefined;
 
@@ -1104,9 +1113,17 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                       </div>
 
                       <p className="mt-0.5 min-w-0 text-[10px] [overflow-wrap:anywhere] whitespace-pre-wrap opacity-90">
-                        {msg.replyTo.imageUrl
+                        {msg.replyTo.mediaType === "gif"
                           ? "[GIF]"
-                          : msg.replyTo.text || "[Hình ảnh/Phương tiện]"}
+                          : msg.replyTo.mediaType === "video"
+                            ? "[Video]"
+                            : msg.replyTo.mediaType === "image"
+                              ? "[Hình ảnh]"
+                              : msg.replyTo.mediaType === "moment"
+                                ? "[Khoảnh khắc]"
+                                : msg.replyTo.mediaType === "location"
+                                  ? "[Vị trí]"
+                                  : msg.replyTo.text || "[Tin nhắn]"}
                       </p>
                     </div>
                   )}
@@ -1598,12 +1615,13 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                   : replyingTo.senderName || partner.name}
               </span>
               <span className="block truncate text-[11px] text-slate-600 dark:text-slate-400">
-                {replyingTo.text ||
-                  (replyingTo.imageUrl
-                    ? "📷 [Hình ảnh]"
-                    : replyingTo.videoUrl
-                      ? "🎥 [Video]"
-                      : "[Tệp đính kèm]")}
+                {replyingTo.mediaType === "gif"
+                  ? "[GIF]"
+                  : replyingTo.mediaType === "video"
+                    ? "[Video]"
+                    : replyingTo.mediaType === "image"
+                      ? "[Hình ảnh]"
+                      : replyingTo.text || "[Tin nhắn]"}
               </span>
             </div>
           </div>

@@ -602,12 +602,16 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate whitespace-nowrap leading-relaxed flex-1">
             {conv.lastMessage.isDeleted
               ? 'Tin nhắn đã bị thu hồi'
-              : conv.lastMessage.imageUrl
-              ? '📷 [Hình ảnh]'
-              : conv.lastMessage.videoUrl
-              ? '🎥 [Video]'
+              : conv.lastMessage.mediaType === 'gif'
+              ? '[GIF]'
+              : conv.lastMessage.mediaType === 'video'
+              ? '[Video]'
+              : conv.lastMessage.mediaType === 'image'
+              ? '[Hình ảnh]'
+              : conv.lastMessage.renderType === 'Sticker'
+              ? '[Sticker]'
               : conv.lastMessage.momentId
-              ? '📸 [Khoảnh khắc]'
+              ? '[Khoảnh khắc]'
               : conv.lastMessage.text || 'Chưa có tin nhắn'}
           </p>
 
