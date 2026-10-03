@@ -121,6 +121,7 @@ interface AppContextType {
   refreshMoments: () => Promise<void>;
   loadMoreMoments: () => Promise<void>;
   ensureUserMoments: (userId: string) => Promise<void>;
+  refreshFriendships: () => Promise<void>;
   refreshTimelines: () => Promise<void>;
   ensureUserTimelines: (userId: string) => Promise<void>;
   ensureTimelineById: (timelineId: string) => Promise<void>;
@@ -1244,6 +1245,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshMoments,
         loadMoreMoments,
         ensureUserMoments,
+        refreshFriendships,
         refreshTimelines,
         ensureUserTimelines,
         ensureTimelineById,

@@ -67,6 +67,8 @@ export const SettingsView: React.FC = () => {
     updateVisibility,
     deleteTimeline,
     openChatWithUser,
+    refreshFriendships,
+    refreshTimelines,
     showToast 
   } = useApp();
   const router = useRouter();
@@ -205,6 +207,18 @@ export const SettingsView: React.FC = () => {
   useEffect(() => {
     void ensureUserMoments(currentUser.id);
   }, [currentUser.id, ensureUserMoments]);
+
+  useEffect(() => {
+    if (activeSubTab === 'friends') {
+      void refreshFriendships();
+    }
+    if (activeSubTab === 'timelines') {
+      void refreshTimelines();
+    }
+    if (activeSubTab === 'profile') {
+      void ensureUserMoments(currentUser.id);
+    }
+  }, [activeSubTab, currentUser.id, ensureUserMoments, refreshFriendships, refreshTimelines]);
 
   const handleOpenEditProfile = () => {
     setProfileForm({
@@ -417,8 +431,8 @@ export const SettingsView: React.FC = () => {
             </div>
             )}
 
-            {/* Notification Setting - Single Clean Toggle */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
+            {/* Notification Setting - temporarily disabled */}
+            {/* <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 flex items-center justify-center">
@@ -442,7 +456,7 @@ export const SettingsView: React.FC = () => {
                   <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600" />
                 </label>
               </div>
-            </div>
+            </div> */}
 
             {/* Dark Mode Toggle */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
@@ -728,13 +742,12 @@ export const SettingsView: React.FC = () => {
                             className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 pr-2"
                             onClick={() => setSelectedUser(friend)}
                           >
-                            <div className="relative shrink-0">
+                            <div className="shrink-0">
                               <Avatar
                                 src={friend.avatar}
                                 name={friend.name}
                                 className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/10"
                               />
-                              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                             </div>
                             <div className="truncate">
                               <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
