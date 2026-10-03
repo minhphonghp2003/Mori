@@ -473,6 +473,12 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     });
   };
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
   // Quote tap: jump when visible, otherwise fetch the context window first.
   const onTapReply = async (messageId: string) => {
     const numericId = Number(messageId);
@@ -484,13 +490,24 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     await runSearchWindow({ messageId: numericId });
   };
 
-  // Auto scroll to latest message (only when parked at the bottom —
-  // never while a search window is open).
+  // Auto scroll to the live tail when the detail opens or the thread changes,
+  // but never while a search window is pinned to a different hit.
+  useEffect(() => {
+    if (searchQuery || searchMode || !convReady) return;
+    if (!stickToBottomRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      scrollToBottom("auto");
+    }, 60);
+
+    return () => window.clearTimeout(timer);
+  }, [convReady, conversationId, messages.length, pendingSends.length, searchQuery, searchMode, scrollToBottom]);
+
   useEffect(() => {
     if (searchQuery || searchMode) return;
     if (messages.length > 0 && !stickToBottomRef.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, activeDrawer, replyingTo, editingMessage, searchQuery, searchMode]);
+  }, [messages.length, pendingSends.length, activeDrawer, replyingTo, editingMessage, searchQuery, searchMode]);
 
   // Revoke object-URL previews for optimistic file bubbles.
   useEffect(
@@ -648,7 +665,10 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
       // sendMessage already toasted — give the text back so it isn't lost.
       setInputText(pending.text ?? "");
     }
-    if (ok && pending.momentId) setPendingMoment(null);
+    if (ok) {
+      requestAnimationFrame(() => scrollToBottom("smooth"));
+      if (pending.momentId) setPendingMoment(null);
+    }
   };
 
   const handleSendGif = (gifUrl: string) => {
