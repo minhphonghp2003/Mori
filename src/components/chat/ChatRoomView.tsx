@@ -1089,25 +1089,27 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                         e.stopPropagation();
                         void onTapReply(msg.replyTo!.id);
                       }}
-                      className={`mb-1 max-w-full cursor-pointer rounded-xl border-l-3 px-2.5 py-1.5 text-[11px] transition-all hover:opacity-80 active:scale-98 ${
+                      className={`mb-1 max-w-full min-w-0 cursor-pointer rounded-xl border-l-3 px-2.5 py-1.5 text-[11px] transition-all hover:opacity-80 active:scale-98 ${
                         isMe
                           ? "border-indigo-300 bg-indigo-700/30 text-indigo-50"
                           : "border-indigo-500 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300"
                       }`}
                       title="Chạm để xem tin nhắn gốc"
                     >
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-400">
-                        <Reply className="h-2.5 w-2.5" />
-                        <span>{msg.replyTo.senderName}</span>
+                      <div className="flex min-w-0 items-center gap-1 text-[10px] font-bold text-indigo-400">
+                        <Reply className="h-2.5 w-2.5 shrink-0" />
+                        <span className="min-w-0 [overflow-wrap:anywhere]">
+                          {msg.replyTo.senderName}
+                        </span>
                       </div>
-                      <p className="mt-0.5 truncate text-[10px] opacity-90">
+
+                      <p className="mt-0.5 min-w-0 text-[10px] [overflow-wrap:anywhere] whitespace-pre-wrap opacity-90">
                         {msg.replyTo.imageUrl
                           ? "[GIF]"
                           : msg.replyTo.text || "[Hình ảnh/Phương tiện]"}
                       </p>
                     </div>
                   )}
-
                   {/* 1. PHOTO / GIF MESSAGE - Tap to open MediaViewerModal with Download */}
                   {msg.imageUrl && (
                     <div
