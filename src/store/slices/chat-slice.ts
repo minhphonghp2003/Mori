@@ -9,7 +9,8 @@ interface ChatState {
   messageHasMore: Record<number, boolean>;
   messagePrevIds: Record<number, number | null>;
   editedMessageIds: number[];
-  totalUnreadCount: number;
+  /** Last ReceiveUnreadCount payload; null until the first push arrives. */
+  totalUnreadCount: number | null;
 }
 
 const initialState: ChatState = {
@@ -20,7 +21,7 @@ const initialState: ChatState = {
   messageHasMore: {},
   messagePrevIds: {},
   editedMessageIds: [],
-  totalUnreadCount: 0,
+  totalUnreadCount: null,
 };
 
 /** Folder token of a storage path/URL (strip query, then filename):

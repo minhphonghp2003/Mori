@@ -13,7 +13,6 @@ import {
   prependMessages,
   removeConversation,
   removeMessageReaction,
-  resetUnreadCount,
   setActiveConversation,
   setConversationBlocked,
   setConversationUnblocked,
@@ -202,7 +201,9 @@ export function useChatActions({
       }
 
       dispatch(setActiveConversation(convId));
-      dispatch(resetUnreadCount(convId));
+      // Unread accounting is server-driven now: JoinConversation resets the
+      // room and re-pushes the authoritative total via ReceiveUnreadCount,
+      // so nothing is cleared locally — the badge follows the payload.
       partnerCacheRef.current.delete(conversationId);
 
       await loadMessages(conversationId);
@@ -223,9 +224,10 @@ export function useChatActions({
         // hub — start() is idempotent/serialized, so make sure the socket is
         // up before joining, otherwise the ReceiveMessage echo never lands.
         await appHub.start();
+        // JoinConversation resolves, then the server re-pushes the fresh
+        // global total via ReceiveUnreadCount — the badge updates itself.
         await appHub.joinConversation(convId);
         joinedConvRef.current = convId;
-        dispatch(resetUnreadCount(convId));
       } catch (err) {
         console.error("[chat] joinConversation failed:", err);
       }
