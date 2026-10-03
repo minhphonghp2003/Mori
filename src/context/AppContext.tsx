@@ -1221,7 +1221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         conversationsHasMore: chatState.conversationsHasMore,
         isLoadingConversations,
         isLoadingMoreConversations: chatActions.isLoadingMore,
-        totalUnreadCount: chatState.totalUnreadCount,
+        totalUnreadCount: chatState.totalUnreadCount ?? 0,
         timelines,
         isLoadingTimelines,
         activeConversationId,

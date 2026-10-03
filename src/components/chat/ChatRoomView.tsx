@@ -1024,7 +1024,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                         <span>{msg.replyTo.senderName}</span>
                       </div>
                       <p className="truncate text-[10px] opacity-90 mt-0.5">
-                        {msg.replyTo.text || '[Hình ảnh/Phương tiện]'}
+                        {msg.replyTo.imageUrl ? '[GIF]' : msg.replyTo.text || '[Hình ảnh/Phương tiện]'}
                       </p>
                     </div>
                   )}
