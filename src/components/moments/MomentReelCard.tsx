@@ -79,7 +79,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [showVideoControls, setShowVideoControls] = useState(false);
-  const [showHeartAnim, setShowHeartAnim] = useState(false);
+  // Center floating emoji shown when reacting (tap heart / picker emoji).
+  const [floatingEmoji, setFloatingEmoji] = useState<{ emoji: string; key: number } | null>(null);
+  const floatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showHideConfirm, setShowHideConfirm] = useState(false);
   const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
@@ -109,9 +111,15 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   const currentVisibilityLabel =
     VISIBILITY_OPTIONS.find(o => o.value === moment.visibility)?.label ?? 'Quyền xem';
 
-  // Find user's current reaction on this moment
-  const userReaction = moment.reactions.find(r => r.userId === currentUser.id);
-  const isLiked = !!userReaction;
+  // User's latest reaction on this moment (reactions are add-only
+  // server-side, so there can be several — `find` would stick to the oldest).
+  const userReaction = (() => {
+    for (let i = moment.reactions.length - 1; i >= 0; i--) {
+      const r = moment.reactions[i];
+      if (r.userId === currentUser.id) return r;
+    }
+    return undefined;
+  })();
 
   // Find associated timeline if any (fetch on demand when the moment
   // belongs to a timeline that isn't in the list yet).
@@ -141,10 +149,22 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
     return () => window.removeEventListener('click', handleWindowClick);
   }, [showReactionPicker, showVisibilityPicker]);
 
+  const showFloatingEmoji = (emoji: string) => {
+    if (floatTimerRef.current) clearTimeout(floatTimerRef.current);
+    setFloatingEmoji({ emoji, key: Date.now() });
+    floatTimerRef.current = setTimeout(() => setFloatingEmoji(null), 900);
+  };
+
+  // Clear the float timer if the card unmounts mid-animation.
+  useEffect(() => () => {
+    if (floatTimerRef.current) clearTimeout(floatTimerRef.current);
+  }, []);
+
   const handleSelectEmojiReaction = (emoji: ReactionEmoji, e: React.MouseEvent) => {
     e.stopPropagation();
     reactToMoment(moment.id, emoji);
     setShowReactionPicker(false);
+    showFloatingEmoji(emoji);
   };
 
   const handleHeartPointerDown = (e: React.PointerEvent | React.TouchEvent) => {
@@ -164,10 +184,14 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
       holdTimerRef.current = null;
     }
 
-    // If it was not a hold, perform regular tap reaction
+    // If it was not a hold, react with the shown emoji (❤️ when
+    // unreacted, otherwise your last emoji) and float that same one.
+    // Re-sending your own emoji is a server-side no-op (add-only).
     if (!isHoldingRef.current && !showReactionPicker) {
       e.stopPropagation();
-      reactToMoment(moment.id, '❤️');
+      const emoji = userReaction?.emoji ?? '❤️';
+      reactToMoment(moment.id, emoji);
+      showFloatingEmoji(emoji);
     }
     isHoldingRef.current = false;
   };
@@ -192,11 +216,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
 
   const handleMediaClick = (e: React.MouseEvent) => {
     const now = Date.now();
-    // Handle double tap to love
+    // Double tap no longer reacts — swallow it so it doesn't double-toggle
+    // the tap action below.
     if (now - lastTapRef.current < 300) {
-      reactToMoment(moment.id, '❤️');
-      setShowHeartAnim(true);
-      setTimeout(() => setShowHeartAnim(false), 800);
       lastTapRef.current = 0;
       return;
     }
@@ -382,10 +404,15 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
         </div>
       )}
 
-      {/* Double tap big floating heart animation */}
-      {showHeartAnim && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-in zoom-in-50 duration-200">
-          <Heart className="w-24 h-24 fill-rose-500 text-rose-500 drop-shadow-2xl animate-pulse" />
+      {/* Floating emoji animation on react (tap heart / picker emoji) */}
+      {floatingEmoji && (
+        <div
+          key={floatingEmoji.key}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
+        >
+          <span className="text-7xl leading-none drop-shadow-2xl animate-float-emoji">
+            {floatingEmoji.emoji}
+          </span>
         </div>
       )}
 
@@ -542,17 +569,15 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
             title="Nhấn để thả tim, giữ lâu để chọn cảm xúc (Haha, Phẫn nộ...)"
           >
-            <div className={`w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-md border transition-all ${
-              isLiked 
-                ? 'bg-rose-500/90 border-rose-400 text-white shadow-lg shadow-rose-500/30' 
-                : 'bg-black/50 border-white/20 text-white hover:bg-black/70'
-            }`}>
-              {userReaction && userReaction.emoji !== '❤️' ? (
-                <span className="text-xl leading-none">{userReaction.emoji}</span>
-              ) : (
-                <Heart className={`w-5 h-5 ${isLiked ? 'fill-white stroke-white' : 'stroke-white'}`} />
-              )}
-            </div>
+            {userReaction ? (
+              <span className="text-4xl leading-none drop-shadow-lg active:scale-90 transition-transform">
+                {userReaction.emoji}
+              </span>
+            ) : (
+              <div className="w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 bg-black/50 text-white hover:bg-black/70 transition-all">
+                <Heart className="w-5 h-5 stroke-white" />
+              </div>
+            )}
             <span className="text-[11px] font-bold text-white/95 drop-shadow-sm whitespace-nowrap truncate">
               {moment.reactions.length}
             </span>
