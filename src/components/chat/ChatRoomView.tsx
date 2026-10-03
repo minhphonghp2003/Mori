@@ -1,26 +1,26 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useApp } from '../../context/AppContext';
-import { MediaViewerModal } from '../common/MediaViewerModal';
-import { LogoLoader } from '../common/LogoLoader';
-import { LoadingSpinner } from '../common/LoadingSpinner';
-import { Avatar } from '../common/Avatar';
-import { MomentViewerModal } from '../moments/MomentViewerModal';
-import { GroupSettingsModal } from './GroupSettingsModal';
-import { Message, Moment, User } from '../../types';
-import { ConversationMemberRole, type ConversationMemberDto } from '../../types/chat';
-import { appHub } from '@/lib/signalr/app-hub';
-import { searchGiphy, type GiphyItem } from '@/services/giphy';
-import { getMomentById } from '@/services/moment';
-import { emptyUser } from '@/lib/chat/mappers';
-import { mapMoment } from '@/lib/moment/mappers';
-import { 
-  ArrowLeft, 
-  Video, 
-  Phone, 
-  Send, 
-  Image as ImageIcon, 
-  Smile, 
-  MapPin, 
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useApp } from "../../context/AppContext";
+import { MediaViewerModal } from "../common/MediaViewerModal";
+import { LogoLoader } from "../common/LogoLoader";
+import { LoadingSpinner } from "../common/LoadingSpinner";
+import { Avatar } from "../common/Avatar";
+import { MomentViewerModal } from "../moments/MomentViewerModal";
+import { GroupSettingsModal } from "./GroupSettingsModal";
+import { Message, Moment, User } from "../../types";
+import { ConversationMemberRole, type ConversationMemberDto } from "../../types/chat";
+import { appHub } from "@/lib/signalr/app-hub";
+import { searchGiphy, type GiphyItem } from "@/services/giphy";
+import { getMomentById } from "@/services/moment";
+import { emptyUser } from "@/lib/chat/mappers";
+import { mapMoment } from "@/lib/moment/mappers";
+import {
+  ArrowLeft,
+  Video,
+  Phone,
+  Send,
+  Image as ImageIcon,
+  Smile,
+  MapPin,
   CheckCheck,
   Check,
   X,
@@ -39,8 +39,8 @@ import {
   Loader2,
   ArrowDown,
   ShieldCheck,
-  Users
-} from 'lucide-react';
+  Users,
+} from "lucide-react";
 
 interface ChatRoomViewProps {
   conversationId: string;
@@ -51,37 +51,75 @@ interface ChatRoomViewProps {
 
 const EMOJI_CATEGORIES = [
   {
-    title: 'Phổ biến',
-    emojis: ['❤️', '🔥', '😂', '🥰', '👍', '🎉', '✨', '🙌', '🥺', '😍', '👏', '💯']
+    title: "Phổ biến",
+    emojis: ["❤️", "🔥", "😂", "🥰", "👍", "🎉", "✨", "🙌", "🥺", "😍", "👏", "💯"],
   },
   {
-    title: 'Biểu cảm',
-    emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '🙂', '😉', '😊', '😇', '😎', '🥳', '😏', '🤔', '😴', '😭', '🤯']
+    title: "Biểu cảm",
+    emojis: [
+      "😀",
+      "😃",
+      "😄",
+      "😁",
+      "😆",
+      "😅",
+      "🤣",
+      "🙂",
+      "😉",
+      "😊",
+      "😇",
+      "😎",
+      "🥳",
+      "😏",
+      "🤔",
+      "😴",
+      "😭",
+      "🤯",
+    ],
   },
   {
-    title: 'Cử chỉ & Tình cảm',
-    emojis: ['💖', '💕', '💓', '💗', '💘', '💌', '💋', '🤝', '✌️', '🤞', '🤟', '🤘', '👌', '🤏', '💪', '🙏', '👋', '👀']
-  }
+    title: "Cử chỉ & Tình cảm",
+    emojis: [
+      "💖",
+      "💕",
+      "💓",
+      "💗",
+      "💘",
+      "💌",
+      "💋",
+      "🤝",
+      "✌️",
+      "🤞",
+      "🤟",
+      "🤘",
+      "👌",
+      "🤏",
+      "💪",
+      "🙏",
+      "👋",
+      "👀",
+    ],
+  },
 ];
 
 const GIF_TAG_QUERIES: Record<string, string> = {
-  all: 'funny',
-  party: 'party',
-  happy: 'happy',
-  love: 'love',
-  haha: 'laugh',
-  wow: 'wow',
+  all: "funny",
+  party: "party",
+  happy: "happy",
+  love: "love",
+  haha: "laugh",
+  wow: "wow",
 };
 
-const QUICK_REACTION_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+const QUICK_REACTION_EMOJIS = ["❤️", "👍", "😂", "😮", "😢", "🔥"];
 
-type DrawerType = 'emoji' | 'gif' | null;
+type DrawerType = "emoji" | "gif" | null;
 
 /** Local optimistic send (API doc §19: pending set keyed by idempotencyKey —
  *  a retry reuses the same clientId so the server can dedupe). */
 interface PendingSend {
   clientId: string;
-  status: 'sending' | 'failed';
+  status: "sending" | "failed";
   text?: string;
   image?: string | File;
   video?: string | File;
@@ -91,17 +129,21 @@ interface PendingSend {
   previewUrl?: string;
 }
 
-export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBack, pendingMomentId }) => {
-  const { 
-    conversations, 
-    messagesMap, 
-    currentUser, 
+export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
+  conversationId,
+  onBack,
+  pendingMomentId,
+}) => {
+  const {
+    conversations,
+    messagesMap,
+    currentUser,
     moments,
-    sendMessage, 
+    sendMessage,
     editMessage,
     deleteMessage,
-    reactToMessage, 
-    startCall, 
+    reactToMessage,
+    startCall,
     blockChat,
     unblockChat,
     setSelectedUser,
@@ -111,27 +153,27 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     loadOlderMessages,
     loadMessages,
     hasMoreMessages,
-    openSearchWindow
+    openSearchWindow,
   } = useApp();
 
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [activeDrawer, setActiveDrawer] = useState<DrawerType>(null);
   const [isToolsExpanded, setIsToolsExpanded] = useState(false);
-  const [gifSearch, setGifSearch] = useState('');
-  const [selectedGifTag, setSelectedGifTag] = useState<string>('all');
-  
+  const [gifSearch, setGifSearch] = useState("");
+  const [selectedGifTag, setSelectedGifTag] = useState<string>("all");
+
   // In-chat server search (window replace + jump, old-FE flow)
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
-  const [highlightQuery, setHighlightQuery] = useState('');
+  const [highlightQuery, setHighlightQuery] = useState("");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   // Media Viewer state (image / video)
   const [activeMedia, setActiveMedia] = useState<{
     url: string;
-    type: 'image' | 'video';
+    type: "image" | "video";
     caption?: string;
     senderName?: string;
     timestamp?: string;
@@ -162,17 +204,16 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const conversation = conversations.find(c => c.id === conversationId);
-  const messages = useMemo(
-    () => messagesMap[conversationId] || [],
-    [messagesMap, conversationId],
-  );
+  const conversation = conversations.find((c) => c.id === conversationId);
+  const messages = useMemo(() => messagesMap[conversationId] || [], [messagesMap, conversationId]);
 
   // ---- API-backed chat state (design mocks removed) ---------------------
   const [partnerUser, setPartnerUser] = useState<User | null>(null);
   const [memberDtos, setMemberDtos] = useState<ConversationMemberDto[]>([]);
   const [pendingSends, setPendingSends] = useState<PendingSend[]>([]);
-  const [typingUsers, setTypingUsers] = useState<Record<number, { name: string; expires: number }>>({});
+  const [typingUsers, setTypingUsers] = useState<Record<number, { name: string; expires: number }>>(
+    {},
+  );
   const [gifItems, setGifItems] = useState<GiphyItem[]>([]);
   const [isLoadingGifs, setIsLoadingGifs] = useState(false);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
@@ -204,12 +245,14 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       try {
         const res = await getMomentById(Number(pendingMomentId));
         if (alive && res.data) setPendingMoment(mapMoment(res.data));
-        else if (alive) showToast('Khoảnh khắc không khả dụng hoặc đã hết hạn.', 'error');
+        else if (alive) showToast("Khoảnh khắc không khả dụng hoặc đã hết hạn.", "error");
       } catch {
-        if (alive) showToast('Không tải được khoảnh khắc để đính kèm.', 'error');
+        if (alive) showToast("Không tải được khoảnh khắc để đính kèm.", "error");
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [pendingMomentId, showToast]);
 
   // On-demand fetch for moments in the thread that aren't in the feed page.
@@ -217,18 +260,23 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     for (const m of messages) {
       if (!m.momentId) continue;
       if (
-        moments.some(x => x.id === m.momentId) ||
-        extraMoments.some(x => x.id === m.momentId) ||
+        moments.some((x) => x.id === m.momentId) ||
+        extraMoments.some((x) => x.id === m.momentId) ||
         fetchingMomentIdsRef.current.has(m.momentId)
-      ) continue;
+      )
+        continue;
       fetchingMomentIdsRef.current.add(m.momentId);
       const id = m.momentId;
       getMomentById(Number(id))
         .then((res) => {
-          if (res.data) setExtraMoments(prev => [...prev, mapMoment(res.data!)]);
+          if (res.data) setExtraMoments((prev) => [...prev, mapMoment(res.data!)]);
         })
-        .catch(() => { /* moment not visible — card falls back to placeholder */ })
-        .finally(() => { fetchingMomentIdsRef.current.delete(id); });
+        .catch(() => {
+          /* moment not visible — card falls back to placeholder */
+        })
+        .finally(() => {
+          fetchingMomentIdsRef.current.delete(id);
+        });
     }
   }, [messages, moments, extraMoments]);
 
@@ -247,11 +295,14 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     [memberDtos],
   );
 
-  const typingNames = Object.values(typingUsers).map(t => t.name);
+  const typingNames = Object.values(typingUsers).map((t) => t.name);
   const isPartnerTyping = !convIsGroup && typingNames.length > 0;
-  const groupTypingText = convIsGroup && typingNames.length > 0
-    ? (typingNames.length === 1 ? `${typingNames[0]} đang soạn tin...` : `${typingNames.length} người đang soạn tin...`)
-    : null;
+  const groupTypingText =
+    convIsGroup && typingNames.length > 0
+      ? typingNames.length === 1
+        ? `${typingNames[0]} đang soạn tin...`
+        : `${typingNames.length} người đang soạn tin...`
+      : null;
 
   // Resolve the direct-chat partner (profile / calls / chat-block target).
   useEffect(() => {
@@ -265,7 +316,9 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     void resolvePartnerUser(conversationId).then((u) => {
       if (alive) setPartnerUser(u);
     });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [conversationId, convReady, convIsGroup, resolvePartnerUser]);
 
   // Group members (admin badge + member count fallback).
@@ -278,7 +331,9 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     void loadMembers(conversationId).then((d) => {
       if (alive) setMemberDtos(d);
     });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [conversationId, convReady, convIsGroup, loadMembers]);
 
   // Typing: global ReceiveTyping filtered to this room (4s auto-hide).
@@ -310,16 +365,23 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
   // GIPHY: fetch on drawer open and on tag/search change (debounced).
   useEffect(() => {
-    if (activeDrawer !== 'gif') return;
-    const query = gifSearch.trim() || GIF_TAG_QUERIES[selectedGifTag] || 'funny';
+    if (activeDrawer !== "gif") return;
+    const query = gifSearch.trim() || GIF_TAG_QUERIES[selectedGifTag] || "funny";
     let alive = true;
     setIsLoadingGifs(true);
-    const timer = setTimeout(() => {
-      void searchGiphy(query, 'gif')
-        .then((items) => { if (alive) setGifItems(items); })
-        .catch((err) => console.error('[ChatRoom] searchGiphy failed:', err))
-        .finally(() => { if (alive) setIsLoadingGifs(false); });
-    }, gifSearch ? 400 : 0);
+    const timer = setTimeout(
+      () => {
+        void searchGiphy(query, "gif")
+          .then((items) => {
+            if (alive) setGifItems(items);
+          })
+          .catch((err) => console.error("[ChatRoom] searchGiphy failed:", err))
+          .finally(() => {
+            if (alive) setIsLoadingGifs(false);
+          });
+      },
+      gifSearch ? 400 : 0,
+    );
     return () => {
       alive = false;
       clearTimeout(timer);
@@ -340,7 +402,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     const id = String(messageId);
     const el = listRef.current?.querySelector(`[data-msg-id="${id}"]`);
     if (el instanceof HTMLElement) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
     setHighlightedId(id);
     if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
@@ -350,23 +412,23 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   }, []);
 
   /** Fetch the server context window, swap the list, jump to the hit. */
-  const runSearchWindow = useCallback(async (
-    params: { messageId?: number; content?: string },
-    queryText?: string,
-  ) => {
-    const found = await openSearchWindow(conversationId, params);
-    if (!found) {
-      showToast(
-        params.messageId ? 'Không tìm thấy tin nhắn' : 'Không tìm thấy tin nhắn phù hợp',
-        'error',
-      );
-      return;
-    }
-    setSearchMode(true);
-    stickToBottomRef.current = false;
-    if (queryText !== undefined) setHighlightQuery(queryText);
-    setTimeout(() => scrollToAndHighlight(found.targetId), 60);
-  }, [conversationId, openSearchWindow, showToast, scrollToAndHighlight]);
+  const runSearchWindow = useCallback(
+    async (params: { messageId?: number; content?: string }, queryText?: string) => {
+      const found = await openSearchWindow(conversationId, params);
+      if (!found) {
+        showToast(
+          params.messageId ? "Không tìm thấy tin nhắn" : "Không tìm thấy tin nhắn phù hợp",
+          "error",
+        );
+        return;
+      }
+      setSearchMode(true);
+      stickToBottomRef.current = false;
+      if (queryText !== undefined) setHighlightQuery(queryText);
+      setTimeout(() => scrollToAndHighlight(found.targetId), 60);
+    },
+    [conversationId, openSearchWindow, showToast, scrollToAndHighlight],
+  );
 
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -382,8 +444,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
   const closeSearch = () => {
     setIsSearchOpen(false);
-    setSearchQuery('');
-    setHighlightQuery('');
+    setSearchQuery("");
+    setHighlightQuery("");
     setHighlightedId(null);
     setSearchMode(false);
     stickToBottomRef.current = true;
@@ -393,14 +455,14 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   // Back to the live tail (floating button + closing search from a window).
   const reloadToLatest = () => {
     setIsSearchOpen(false);
-    setSearchQuery('');
-    setHighlightQuery('');
+    setSearchQuery("");
+    setHighlightQuery("");
     setHighlightedId(null);
     setSearchMode(false);
     stickToBottomRef.current = true;
     void loadMessages(conversationId).finally(() => {
       const el = listRef.current;
-      if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
   };
 
@@ -420,15 +482,18 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   useEffect(() => {
     if (searchQuery || searchMode) return;
     if (messages.length > 0 && !stickToBottomRef.current) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, activeDrawer, replyingTo, editingMessage, searchQuery, searchMode]);
 
   // Revoke object-URL previews for optimistic file bubbles.
-  useEffect(() => () => {
-    pendingUrlsRef.current.forEach((p) => {
-      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
-    });
-  }, []);
+  useEffect(
+    () => () => {
+      pendingUrlsRef.current.forEach((p) => {
+        if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+      });
+    },
+    [],
+  );
 
   // The row may arrive async (deep-link → enterConversation fetches detail).
   // Only surface "not found" if it never shows up.
@@ -460,7 +525,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     longPressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
       setActiveActionMenuMsgId(msgId);
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate(40);
       }
     }, 450);
@@ -506,7 +571,9 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   /** Runs one optimistic send. The clientId doubles as the idempotencyKey,
    *  so a retry after a failed send is deduped server-side. */
   const runSend = async (p: PendingSend): Promise<boolean> => {
-    setPendingSends(prev => prev.map(x => x.clientId === p.clientId ? { ...x, status: 'sending' } : x));
+    setPendingSends((prev) =>
+      prev.map((x) => (x.clientId === p.clientId ? { ...x, status: "sending" } : x)),
+    );
     const ok = await sendMessage(
       conversationId,
       p.text,
@@ -517,12 +584,12 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       p.momentId,
       p.clientId,
     );
-    setPendingSends(prev => {
+    setPendingSends((prev) => {
       if (ok) {
         if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
-        return prev.filter(x => x.clientId !== p.clientId);
+        return prev.filter((x) => x.clientId !== p.clientId);
       }
-      return prev.map(x => x.clientId === p.clientId ? { ...x, status: 'failed' } : x);
+      return prev.map((x) => (x.clientId === p.clientId ? { ...x, status: "failed" } : x));
     });
     return ok;
   };
@@ -535,22 +602,26 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       const ok = await editMessage(conversationId, editingMessage.id, inputText.trim());
       if (ok) {
         setEditingMessage(null);
-        setInputText('');
+        setInputText("");
       }
       // On failure keep the text in the box so the user can retry.
       return;
     }
 
-    const replyData = replyingTo ? {
-      id: replyingTo.id,
-      senderName: replyingTo.senderName || (replyingTo.senderId === currentUser.id ? currentUser.name : partner.name),
-      text: replyingTo.text,
-      imageUrl: replyingTo.imageUrl
-    } : undefined;
+    const replyData = replyingTo
+      ? {
+          id: replyingTo.id,
+          senderName:
+            replyingTo.senderName ||
+            (replyingTo.senderId === currentUser.id ? currentUser.name : partner.name),
+          text: replyingTo.text,
+          imageUrl: replyingTo.imageUrl,
+        }
+      : undefined;
 
     const pending: PendingSend = {
       clientId: crypto.randomUUID(),
-      status: 'sending',
+      status: "sending",
       text: inputText.trim() || undefined,
       replyTo: replyData,
       momentId: pendingMoment?.id,
@@ -558,65 +629,69 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     // Pure text renders once via the hub echo — no optimistic bubble and no
     // "sending" status (media/location/moment keep theirs below).
     const showPending = pending.momentId != null;
-    if (showPending) setPendingSends(prev => [...prev, pending]);
+    if (showPending) setPendingSends((prev) => [...prev, pending]);
     setReplyingTo(null);
-    setInputText('');
+    setInputText("");
     setActiveDrawer(null);
     stopTypingSignal();
     const ok = await runSend(pending);
     if (!ok && !showPending) {
       // sendMessage already toasted — give the text back so it isn't lost.
-      setInputText(pending.text ?? '');
+      setInputText(pending.text ?? "");
     }
     if (ok && pending.momentId) setPendingMoment(null);
   };
 
   const handleSendGif = (gifUrl: string) => {
     setActiveDrawer(null);
-    const pending: PendingSend = { clientId: crypto.randomUUID(), status: 'sending', image: gifUrl };
-    setPendingSends(prev => [...prev, pending]);
+    const pending: PendingSend = {
+      clientId: crypto.randomUUID(),
+      status: "sending",
+      image: gifUrl,
+    };
+    setPendingSends((prev) => [...prev, pending]);
     void runSend(pending).then((ok) => {
-      if (ok) showToast('Đã gửi GIF từ Giphy ✨', 'success');
+      if (ok) showToast("Đã gửi GIF từ Giphy ✨", "success");
     });
   };
 
   const handleSendPhotoFile = (file: File) => {
     const pending: PendingSend = {
       clientId: crypto.randomUUID(),
-      status: 'sending',
+      status: "sending",
       image: file,
       previewUrl: URL.createObjectURL(file),
     };
-    setPendingSends(prev => [...prev, pending]);
+    setPendingSends((prev) => [...prev, pending]);
     void runSend(pending).then((ok) => {
-      if (ok) showToast('Đã gửi ảnh thành công 📷', 'success');
+      if (ok) showToast("Đã gửi ảnh thành công 📷", "success");
     });
   };
 
   const handleSendVideoFile = (file: File) => {
     const pending: PendingSend = {
       clientId: crypto.randomUUID(),
-      status: 'sending',
+      status: "sending",
       video: file,
       previewUrl: URL.createObjectURL(file),
     };
-    setPendingSends(prev => [...prev, pending]);
+    setPendingSends((prev) => [...prev, pending]);
     void runSend(pending).then((ok) => {
-      if (ok) showToast('Đã gửi video thành công 🎥', 'success');
+      if (ok) showToast("Đã gửi video thành công 🎥", "success");
     });
   };
 
   // Local Photo Upload (File goes straight to the presigned uploader)
   const handlePhotoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
+    e.target.value = "";
     if (file) handleSendPhotoFile(file);
   };
 
   // Local Video Upload
   const handleVideoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
+    e.target.value = "";
     if (file) handleSendVideoFile(file);
   };
 
@@ -626,7 +701,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
   const handleDiscardSend = (p: PendingSend) => {
     if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
-    setPendingSends(prev => prev.filter(x => x.clientId !== p.clientId));
+    setPendingSends((prev) => prev.filter((x) => x.clientId !== p.clientId));
   };
 
   // Infinite history paging: fetch the previous window and keep the
@@ -674,16 +749,16 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   const handleStartEdit = (msg: Message) => {
     setEditingMessage(msg);
     setReplyingTo(null);
-    setInputText(msg.text || '');
+    setInputText(msg.text || "");
     setActiveActionMenuMsgId(null);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const handleCopyMessage = (msg: Message) => {
-    const textToCopy = msg.text || msg.imageUrl || msg.videoUrl || '';
+    const textToCopy = msg.text || msg.imageUrl || msg.videoUrl || "";
     if (textToCopy) {
       navigator.clipboard.writeText(textToCopy);
-      showToast('Đã sao chép nội dung tin nhắn 📋', 'success');
+      showToast("Đã sao chép nội dung tin nhắn 📋", "success");
     }
     setActiveActionMenuMsgId(null);
   };
@@ -699,7 +774,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
     const ok = await blockChat(conversationId, partnerUser.id);
     setShowBlockConfirm(false);
     if (ok) {
-      showToast(`Đã chặn ${partnerUser.name} 🚫`, 'info');
+      showToast(`Đã chặn ${partnerUser.name} 🚫`, "info");
       onBack();
     }
   };
@@ -712,101 +787,100 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
   // Highlight the submitted search term inside message text.
   const renderHighlightedText = (text: string, query: string) => {
     if (!query.trim()) return text;
-    const escaped = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    const escaped = query.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const parts = text.split(new RegExp(`(${escaped})`, "gi"));
     return (
       <>
-        {parts.map((part, index) => 
+        {parts.map((part, index) =>
           part.toLowerCase() === query.trim().toLowerCase() ? (
-            <mark key={index} className="bg-amber-300 text-slate-900 rounded-xs px-0.5 font-bold">
+            <mark key={index} className="rounded-xs bg-amber-300 px-0.5 font-bold text-slate-900">
               {part}
             </mark>
           ) : (
             part
-          )
+          ),
         )}
       </>
     );
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden select-none">
-      
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-slate-50 select-none dark:bg-slate-950">
       {/* Hidden file inputs for photo and video attachment */}
-      <input 
+      <input
         ref={photoInputRef}
-        type="file" 
-        accept="image/*" 
+        type="file"
+        accept="image/*"
         onChange={handlePhotoFileUpload}
-        className="hidden" 
+        className="hidden"
       />
-      <input 
+      <input
         ref={videoInputRef}
-        type="file" 
-        accept="video/*" 
+        type="file"
+        accept="video/*"
         onChange={handleVideoFileUpload}
-        className="hidden" 
+        className="hidden"
       />
 
       {/* TOP HEADER */}
-      <div className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-3.5 py-2.5 flex items-center justify-between shadow-xs z-10">
-        
+      <div className="z-10 flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-3.5 py-2.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         {/* Left: Back + Avatar + Name (Tapping avatar/name opens Profile) */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex min-w-0 items-center gap-2.5">
           <button
             onClick={onBack}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0"
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             title="Quay lại"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
 
-          <div 
+          <div
             onClick={() => {
               if (!conversation.isGroup && partnerUser) {
                 setSelectedUser(partnerUser);
               }
             }}
-            className={`relative shrink-0 ${!conversation.isGroup && partnerUser ? 'cursor-pointer group' : ''}`}
+            className={`relative shrink-0 ${!conversation.isGroup && partnerUser ? "group cursor-pointer" : ""}`}
             title={!conversation.isGroup && partnerUser ? `Xem hồ sơ ${partner.name}` : undefined}
           >
             <Avatar
               src={conversation.isGroup ? conversation.avatar : partner.avatar}
               name={conversation.name || partner.name}
-              className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-500/20 group-hover:ring-indigo-600 transition-all"
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-indigo-500/20 transition-all group-hover:ring-indigo-600"
             />
             {!conversation.isGroup && conversation.isOnline && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+              <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
             )}
             {conversation.isGroup && (
               <span
                 title="Nhóm trò chuyện"
-                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-indigo-600 text-white border-2 border-white dark:border-slate-900 flex items-center justify-center shadow-xs"
+                className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-indigo-600 text-white shadow-xs dark:border-slate-900"
               >
-                <Users className="w-2.5 h-2.5" />
+                <Users className="h-2.5 w-2.5" />
               </span>
             )}
           </div>
 
-          <div 
+          <div
             onClick={() => {
               if (!conversation.isGroup && partnerUser) {
                 setSelectedUser(partnerUser);
               }
             }}
-            className={`min-w-0 ${!conversation.isGroup && partnerUser ? 'cursor-pointer group' : ''}`}
+            className={`min-w-0 ${!conversation.isGroup && partnerUser ? "group cursor-pointer" : ""}`}
           >
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight truncate whitespace-nowrap transition-colors">
+            <div className="truncate text-xs leading-tight font-bold whitespace-nowrap text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400">
               {conversation.isGroup ? conversation.name : partner.name}
             </div>
-            <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate whitespace-nowrap">
+            <div className="mt-0.5 truncate text-[10px] whitespace-nowrap text-slate-400 dark:text-slate-500">
               {conversation.isGroup
-                ? groupTypingText || `${conversation.memberCount || memberDtos.length || '?'} thành viên`
+                ? groupTypingText ||
+                  `${conversation.memberCount || memberDtos.length || "?"} thành viên`
                 : isPartnerTyping
-                ? 'Đang soạn tin...'
-                : convIsGroup === false && conversation.isOnline
-                ? 'Đang hoạt động'
-                : 'Không hoạt động'}
+                  ? "Đang soạn tin..."
+                  : convIsGroup === false && conversation.isOnline
+                    ? "Đang hoạt động"
+                    : "Không hoạt động"}
             </div>
           </div>
         </div>
@@ -814,63 +888,67 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
         {/* Right Header Actions: Distinct for Direct vs Group */}
         {conversation.isGroup ? (
           /* GROUP CHAT ACTIONS: SEARCH MSG & GROUP SETTINGS */
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
             <button
               onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
-                isSearchOpen ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl transition-colors ${
+                isSearchOpen
+                  ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
               title="Tìm kiếm tin nhắn trong nhóm"
             >
-              <Search className="w-4 h-4" />
+              <Search className="h-4 w-4" />
             </button>
 
             <button
               onClick={() => setShowGroupSettings(true)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
               title="Cài đặt nhóm (Ảnh, Tên, Quyền riêng tư, Thành viên)"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="h-4 w-4" />
             </button>
           </div>
         ) : (
           /* DIRECT MESSAGE ACTIONS: SEARCH MSG, CALLING (VOICE & VIDEO), BLOCK CHAT */
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
             <button
               onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
-                isSearchOpen ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl transition-colors ${
+                isSearchOpen
+                  ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               }`}
               title="Tìm kiếm tin nhắn"
             >
-              <Search className="w-4 h-4" />
+              <Search className="h-4 w-4" />
             </button>
 
             <button
               onClick={() => partnerUser && startCall(partnerUser, false)}
               disabled={!partnerUser}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-indigo-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
               title="Gọi thoại"
             >
-              <Phone className="w-4 h-4" />
+              <Phone className="h-4 w-4" />
             </button>
 
             <button
               onClick={() => partnerUser && startCall(partnerUser, true)}
               disabled={!partnerUser}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-indigo-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
               title="Gọi video"
             >
-              <Video className="w-4 h-4" />
+              <Video className="h-4 w-4" />
             </button>
 
             <button
               onClick={() => setShowBlockConfirm(true)}
               disabled={!partnerUser}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
               title="Chặn cuộc trò chuyện"
             >
-              <Ban className="w-4 h-4" />
+              <Ban className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -880,38 +958,38 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       {isSearchOpen && (
         <form
           onSubmit={handleSearchSubmit}
-          className="shrink-0 bg-white dark:bg-slate-900 border-b border-indigo-100 dark:border-indigo-500/20 px-3.5 py-2 flex items-center gap-2 animate-in slide-in-from-top-2 shadow-xs z-10"
+          className="animate-in slide-in-from-top-2 z-10 flex shrink-0 items-center gap-2 border-b border-indigo-100 bg-white px-3.5 py-2 shadow-xs dark:border-indigo-500/20 dark:bg-slate-900"
         >
-          <Search className="w-4 h-4 text-indigo-600 shrink-0" />
+          <Search className="h-4 w-4 shrink-0 text-indigo-600" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm nội dung tin nhắn..."
-            className="flex-1 text-xs bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-indigo-300 focus:bg-white dark:focus:bg-slate-800 rounded-xl px-3 py-1.5 focus:outline-none"
+            className="flex-1 rounded-xl border border-transparent bg-slate-100 px-3 py-1.5 text-xs focus:border-indigo-300 focus:bg-white focus:outline-none dark:bg-slate-800 dark:focus:bg-slate-800"
           />
           {isSearching ? (
-            <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-indigo-600" />
           ) : searchMode && highlightQuery ? (
-            <span className="text-[11px] font-bold text-indigo-600 truncate max-w-[120px] shrink-0">
+            <span className="max-w-[120px] shrink-0 truncate text-[11px] font-bold text-indigo-600">
               “{highlightQuery}”
             </span>
           ) : null}
           <button
             type="button"
             onClick={closeSearch}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </form>
       )}
 
       {/* MESSAGES STREAM */}
-      <div 
+      <div
         ref={listRef}
-        className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3.5"
+        className="no-scrollbar flex-1 space-y-3.5 overflow-y-auto p-4"
         onScroll={handleListScroll}
         onClick={() => {
           setActiveDrawer(null);
@@ -919,7 +997,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
         }}
       >
         {isLoadingOlder && (
-          <div className="py-2 flex justify-center">
+          <div className="flex justify-center py-2">
             <LogoLoader size="sm" text={null} />
           </div>
         )}
@@ -928,26 +1006,23 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           const sender = isMe
             ? currentUser
             : msg.senderName
-            ? emptyUser(msg.senderId, msg.senderName, msg.senderAvatar || '')
-            : currentUser;
+              ? emptyUser(msg.senderId, msg.senderName, msg.senderAvatar || "")
+              : currentUser;
           const isMenuOpen = activeActionMenuMsgId === msg.id;
 
           // Check if message references a moment (feed page or on-demand cache)
           const momentData = msg.momentId
-            ? moments.find(m => m.id === msg.momentId) ?? extraMoments.find(m => m.id === msg.momentId)
+            ? (moments.find((m) => m.id === msg.momentId) ??
+              extraMoments.find((m) => m.id === msg.momentId))
             : null;
 
           // System messages render as a centered neutral pill — no avatar,
           // bubble, or actions.
-          if (msg.renderType === 'System') {
+          if (msg.renderType === "System") {
             return (
-              <div
-                key={msg.id}
-                data-msg-id={msg.id}
-                className="flex justify-center"
-              >
-                <div className="px-3 py-1.5 rounded-full bg-slate-200/70 dark:bg-slate-800 text-[11px] font-medium text-slate-500 dark:text-slate-400 text-center leading-relaxed max-w-[85%]">
-                  {msg.text || 'Thông báo hệ thống'}
+              <div key={msg.id} data-msg-id={msg.id} className="flex justify-center">
+                <div className="max-w-[85%] rounded-full bg-slate-200/70 px-3 py-1.5 text-center text-[11px] leading-relaxed font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  {msg.text || "Thông báo hệ thống"}
                 </div>
               </div>
             );
@@ -957,41 +1032,44 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             <div
               key={msg.id}
               data-msg-id={msg.id}
-              className={`flex flex-col relative rounded-2xl transition-colors ${isMe ? 'items-end' : 'items-start'} ${
-                highlightedId === msg.id ? 'ring-2 ring-indigo-500 bg-indigo-50/70 -mx-1 px-1 py-0.5' : ''
+              className={`relative flex flex-col rounded-2xl transition-colors ${isMe ? "items-end" : "items-start"} ${
+                highlightedId === msg.id
+                  ? "-mx-1 bg-indigo-50/70 px-1 py-0.5 ring-2 ring-indigo-500"
+                  : ""
               }`}
             >
               {/* SENDER NAME & AVATAR (SHOWS FOR ALL RECEIVED MESSAGES, TAP TO VIEW PROFILE) */}
               {!isMe && (
-                <div 
+                <div
                   onClick={() => setSelectedUser(sender)}
-                  className="flex items-center gap-1.5 mb-1 ml-0.5 cursor-pointer group/sender select-none"
+                  className="group/sender mb-1 ml-0.5 flex cursor-pointer items-center gap-1.5 select-none"
                   title={`Xem hồ sơ của ${sender.name}`}
                 >
                   <Avatar
                     src={sender.avatar}
                     name={sender.name}
-                    className="w-5 h-5 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/10 group-hover/sender:ring-indigo-600 transition-all"
+                    className="h-5 w-5 rounded-full object-cover ring-1 ring-slate-200 transition-all group-hover/sender:ring-indigo-600 dark:ring-white/10"
                     textClassName="text-[8px]"
                   />
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 group-hover/sender:text-indigo-600 dark:group-hover/sender:text-indigo-400 transition-colors">
+                  <span className="text-[11px] font-bold text-slate-700 transition-colors group-hover/sender:text-indigo-600 dark:text-slate-300 dark:group-hover/sender:text-indigo-400">
                     {sender.name}
                   </span>
-                  {conversation.isGroup && adminUserId != null && Number(msg.senderId) === adminUserId && (
-                    <span
-                      title="Quản trị viên"
-                      className="w-3.5 h-3.5 rounded-full bg-amber-500 text-white inline-flex items-center justify-center shrink-0"
-                    >
-                      <ShieldCheck className="w-2.5 h-2.5" />
-                    </span>
-                  )}
+                  {conversation.isGroup &&
+                    adminUserId != null &&
+                    Number(msg.senderId) === adminUserId && (
+                      <span
+                        title="Quản trị viên"
+                        className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white"
+                      >
+                        <ShieldCheck className="h-2.5 w-2.5" />
+                      </span>
+                    )}
                 </div>
               )}
 
-              <div className="flex items-end gap-1.5 max-w-[88%] relative">
-                
+              <div className="relative flex max-w-[88%] items-end gap-1.5">
                 {/* MESSAGE BUBBLE WITH MOBILE HOLD-TO-SHOW POPOVER */}
-                <div 
+                <div
                   className="relative touch-pan-y"
                   onTouchStart={() => handleTouchStart(msg.id)}
                   onTouchEnd={handleTouchEnd}
@@ -1004,56 +1082,57 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                     setActiveActionMenuMsgId(msg.id);
                   }}
                 >
-                  
                   {/* QUOTE / REPLY PREVIEW IN BUBBLE — tap to jump to source */}
                   {msg.replyTo && (
-                    <div 
+                    <div
                       onClick={(e) => {
                         e.stopPropagation();
                         void onTapReply(msg.replyTo!.id);
                       }}
-                      className={`mb-1 px-2.5 py-1.5 rounded-xl text-[11px] border-l-3 max-w-full cursor-pointer hover:opacity-80 active:scale-98 transition-all ${
-                        isMe 
-                          ? 'border-indigo-300 bg-indigo-700/30 text-indigo-50' 
-                          : 'border-indigo-500 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+                      className={`mb-1 max-w-full cursor-pointer rounded-xl border-l-3 px-2.5 py-1.5 text-[11px] transition-all hover:opacity-80 active:scale-98 ${
+                        isMe
+                          ? "border-indigo-300 bg-indigo-700/30 text-indigo-50"
+                          : "border-indigo-500 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300"
                       }`}
                       title="Chạm để xem tin nhắn gốc"
                     >
-                      <div className="font-bold text-[10px] text-indigo-400 flex items-center gap-1">
-                        <Reply className="w-2.5 h-2.5" />
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-400">
+                        <Reply className="h-2.5 w-2.5" />
                         <span>{msg.replyTo.senderName}</span>
                       </div>
-                      <p className="truncate text-[10px] opacity-90 mt-0.5">
-                        {msg.replyTo.imageUrl ? '[GIF]' : msg.replyTo.text || '[Hình ảnh/Phương tiện]'}
+                      <p className="mt-0.5 truncate text-[10px] opacity-90">
+                        {msg.replyTo.imageUrl
+                          ? "[GIF]"
+                          : msg.replyTo.text || "[Hình ảnh/Phương tiện]"}
                       </p>
                     </div>
                   )}
 
                   {/* 1. PHOTO / GIF MESSAGE - Tap to open MediaViewerModal with Download */}
                   {msg.imageUrl && (
-                    <div 
+                    <div
                       onClick={(e) => {
                         if (isLongPressRef.current) return;
                         e.stopPropagation();
                         setActiveMedia({
                           url: msg.imageUrl!,
-                          type: 'image',
+                          type: "image",
                           senderName: sender.name,
                           timestamp: msg.timestamp,
-                          caption: msg.text
+                          caption: msg.text,
                         });
                       }}
-                      className="rounded-2xl overflow-hidden mb-1 border border-slate-200/80 dark:border-slate-700 shadow-xs max-w-[220px] bg-slate-100 cursor-pointer relative group/media"
+                      className="group/media relative mb-1 max-w-[220px] cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-xs dark:border-slate-700"
                     >
                       <img
                         src={msg.imageUrl}
                         alt="Attached media"
                         referrerPolicy="no-referrer"
-                        className="w-full h-auto object-cover max-h-56 hover:opacity-95 transition-opacity"
+                        className="h-auto max-h-56 w-full object-cover transition-opacity hover:opacity-95"
                       />
-                      <div className="absolute inset-0 bg-black/0 group-hover/media:bg-black/25 transition-colors flex items-center justify-center opacity-0 group-hover/media:opacity-100">
-                        <div className="px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1 shadow-md">
-                          <Download className="w-3 h-3" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-colors group-hover/media:bg-black/25 group-hover/media:opacity-100">
+                        <div className="flex items-center gap-1 rounded-full bg-black/75 px-2.5 py-1 text-[10px] font-bold text-white shadow-md backdrop-blur-xs">
+                          <Download className="h-3 w-3" />
                           <span>Xem & Tải</span>
                         </div>
                       </div>
@@ -1062,106 +1141,109 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
                   {/* 2. VIDEO MESSAGE - Tap to open MediaViewerModal with Download */}
                   {msg.videoUrl && (
-                    <div 
+                    <div
                       onClick={(e) => {
                         if (isLongPressRef.current) return;
                         e.stopPropagation();
                         setActiveMedia({
                           url: msg.videoUrl!,
-                          type: 'video',
+                          type: "video",
                           senderName: sender.name,
                           timestamp: msg.timestamp,
-                          caption: msg.text
+                          caption: msg.text,
                         });
                       }}
-                      className="rounded-2xl overflow-hidden mb-1 border border-slate-200/80 dark:border-slate-700 shadow-xs max-w-[240px] bg-black cursor-pointer relative group/video"
+                      className="group/video relative mb-1 max-w-[240px] cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 bg-black shadow-xs dark:border-slate-700"
                     >
                       <video
                         src={msg.videoUrl}
                         playsInline
-                        className="w-full h-auto max-h-56 object-cover rounded-2xl pointer-events-none"
+                        className="pointer-events-none h-auto max-h-56 w-full rounded-2xl object-cover"
                       />
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        <div className="w-11 h-11 rounded-full bg-white/95 text-indigo-600 flex items-center justify-center shadow-lg group-hover/video:scale-110 transition-transform">
-                          <Play className="w-5 h-5 fill-indigo-600 ml-0.5" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-indigo-600 shadow-lg transition-transform group-hover/video:scale-110">
+                          <Play className="ml-0.5 h-5 w-5 fill-indigo-600" />
                         </div>
                       </div>
-                      <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-white text-[9px] font-bold flex items-center gap-1">
-                        <Download className="w-2.5 h-2.5" />
+                      <div className="absolute right-2 bottom-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs">
+                        <Download className="h-2.5 w-2.5" />
                         <span>Xem & Tải</span>
                       </div>
                     </div>
                   )}
 
                   {/* 3. MOMENT CARD: DESC & LOCATION OVERLAP (ON TOP) OF THE MOMENT MEDIA */}
-                  {msg.momentId && (
-                    momentData ? (
+                  {msg.momentId &&
+                    (momentData ? (
                       <div
                         onClick={(e) => {
                           if (isLongPressRef.current) return;
                           e.stopPropagation();
                           setSelectedMoment(momentData);
                         }}
-                        className="relative rounded-2xl overflow-hidden aspect-[4/3] w-64 max-w-[260px] shadow-md border border-slate-200 cursor-pointer group/moment mb-1.5"
+                        className="group/moment relative mb-1.5 aspect-[4/3] w-64 max-w-[260px] cursor-pointer overflow-hidden rounded-2xl border border-slate-200 shadow-md"
                       >
                         {/* Moment Media */}
                         <img
                           src={momentData.imageUrl}
                           alt={momentData.caption}
                           referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover/moment:scale-105 transition-transform duration-300"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover/moment:scale-105"
                         />
 
                         {/* Video Play Overlay Icon if video */}
-                        {momentData.mediaType === 'video' && (
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="w-10 h-10 rounded-full bg-white/90 text-indigo-600 flex items-center justify-center shadow-lg">
-                              <Play className="w-5 h-5 fill-indigo-600 ml-0.5" />
+                        {momentData.mediaType === "video" && (
+                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-indigo-600 shadow-lg">
+                              <Play className="ml-0.5 h-5 w-5 fill-indigo-600" />
                             </div>
                           </div>
                         )}
 
                         {/* Top Badge: Camera + Khoảnh khắc & Time ago */}
-                        <div className="absolute top-2.5 inset-x-2.5 flex items-center justify-between pointer-events-none">
-                          <div className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1">
-                            <Camera className="w-3 h-3 text-indigo-400" />
+                        <div className="pointer-events-none absolute inset-x-2.5 top-2.5 flex items-center justify-between">
+                          <div className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
+                            <Camera className="h-3 w-3 text-indigo-400" />
                             <span>Khoảnh khắc</span>
                           </div>
-                          <div className="px-2 py-0.5 rounded-full bg-black/60 text-white text-[9px] font-medium">
+                          <div className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-medium text-white">
                             {momentData.timeAgo}
                           </div>
                         </div>
 
                         {/* BOTTOM OVERLAY: DESC & LOCATION OVERLAP ON TOP OF MEDIA */}
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-8 text-white flex flex-col justify-end pointer-events-none">
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col justify-end bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-8 text-white">
                           {momentData.caption && (
-                            <p className="text-xs font-semibold text-white leading-snug line-clamp-2 drop-shadow-xs mb-1">
+                            <p className="mb-1 line-clamp-2 text-xs leading-snug font-semibold text-white drop-shadow-xs">
                               {momentData.caption}
                             </p>
                           )}
-                          <div className="flex items-center gap-1 text-[11px] text-white/90 font-medium">
-                            <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <div className="flex items-center gap-1 text-[11px] font-medium text-white/90">
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-rose-400" />
                             <span className="truncate">{momentData.locationName}</span>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-[11px] text-slate-400 dark:text-slate-500 italic mb-1">
+                      <div className="mb-1 rounded-2xl border border-slate-200 bg-slate-100 p-2.5 text-[11px] text-slate-400 italic dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">
                         Khoảnh khắc không khả dụng hoặc đã hết hạn
                       </div>
-                    )
-                  )}
+                    ))}
 
                   {/* 4. LOCATION PIN SHARE */}
                   {msg.locationPin && (
-                    <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-1 flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                        <MapPin className="w-4 h-4" />
+                    <div className="mb-1 flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                        <MapPin className="h-4 w-4" />
                       </div>
                       <div>
-                        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500">Vị trí chia sẻ</div>
-                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{msg.locationPin.name}</div>
-                        <div className="text-[11px] text-emerald-600 font-bold mt-1">
+                        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                          Vị trí chia sẻ
+                        </div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {msg.locationPin.name}
+                        </div>
+                        <div className="mt-1 text-[11px] font-bold text-emerald-600">
                           📍 Đã chia sẻ tọa độ GPS
                         </div>
                       </div>
@@ -1170,7 +1252,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
                   {/* DELETED (TOMBSTONE) MESSAGE */}
                   {msg.isDeleted && (
-                    <div className="px-3.5 py-2.5 rounded-2xl text-[11px] italic bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-[11px] text-slate-400 italic dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">
                       Tin nhắn đã bị xóa
                     </div>
                   )}
@@ -1178,10 +1260,10 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                   {/* 5. TEXT BUBBLE WITH SEARCH-TERM HIGHLIGHT */}
                   {msg.text && (
                     <div
-                      className={`px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-xs relative ${
+                      className={`relative max-w-full rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed break-all shadow-xs ${
                         isMe
-                          ? 'bg-indigo-600 text-white rounded-br-xs'
-                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-bl-xs'
+                          ? "rounded-br-xs bg-indigo-600 text-white"
+                          : "rounded-bl-xs border border-slate-100 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       }`}
                     >
                       {renderHighlightedText(msg.text, highlightQuery)}
@@ -1190,12 +1272,14 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
                   {/* REACTIONS DISPLAY */}
                   {msg.reactions && msg.reactions.length > 0 && (
-                    <div className={`flex items-center gap-0.5 mt-0.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`mt-0.5 flex items-center gap-0.5 ${isMe ? "justify-end" : "justify-start"}`}
+                    >
                       {msg.reactions.map((r, rIdx) => (
                         <button
                           key={rIdx}
                           onClick={() => handleReact(msg.id, r.emoji)}
-                          className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full px-1.5 py-0.2 text-[10px] shadow-xs hover:scale-110 transition-transform cursor-pointer"
+                          className="py-0.2 cursor-pointer rounded-full border border-slate-100 bg-white px-1.5 text-[10px] shadow-xs transition-transform hover:scale-110 dark:border-slate-700 dark:bg-slate-800"
                         >
                           {r.emoji}
                         </button>
@@ -1205,17 +1289,17 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
                   {/* POPOVER ACTION MENU (SHOWN ON HOLD/LONG-PRESS): REACT, REPLY, EDIT, DELETE, COPY */}
                   {isMenuOpen && (
-                    <div 
+                    <div
                       onClick={(e) => e.stopPropagation()}
-                      className={`absolute -top-12 ${isMe ? 'right-0' : 'left-0'} bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 p-1.5 z-30 flex flex-col gap-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-150`}
+                      className={`absolute -top-12 ${isMe ? "right-0" : "left-0"} animate-in fade-in zoom-in-95 z-30 flex min-w-[200px] flex-col gap-1 rounded-2xl border border-slate-100 bg-white p-1.5 shadow-2xl duration-150 dark:border-slate-700 dark:bg-slate-800`}
                     >
                       {/* EMOJI REACTION QUICK BAR */}
-                      <div className="flex items-center justify-between px-1 py-1 border-b border-slate-100 dark:border-slate-800">
-                        {QUICK_REACTION_EMOJIS.map(emoji => (
+                      <div className="flex items-center justify-between border-b border-slate-100 px-1 py-1 dark:border-slate-800">
+                        {QUICK_REACTION_EMOJIS.map((emoji) => (
                           <button
                             key={emoji}
                             onClick={() => handleReact(msg.id, emoji)}
-                            className="w-6 h-6 flex items-center justify-center text-sm hover:scale-130 transition-transform cursor-pointer"
+                            className="flex h-6 w-6 cursor-pointer items-center justify-center text-sm transition-transform hover:scale-130"
                             title={`Thả cảm xúc ${emoji}`}
                           >
                             {emoji}
@@ -1227,26 +1311,26 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                       <div className="flex flex-col py-0.5">
                         <button
                           onClick={() => handleStartReply(msg)}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer transition-colors"
+                          className="flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
-                          <Reply className="w-3.5 h-3.5 text-indigo-600" />
+                          <Reply className="h-3.5 w-3.5 text-indigo-600" />
                           <span>Trả lời</span>
                         </button>
 
                         <button
                           onClick={() => handleCopyMessage(msg)}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer transition-colors"
+                          className="flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
-                          <Copy className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                          <Copy className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
                           <span>Sao chép</span>
                         </button>
 
                         {isMe && msg.text && (
                           <button
                             onClick={() => handleStartEdit(msg)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-amber-50 text-amber-700 text-xs font-semibold cursor-pointer transition-colors"
+                            className="flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50"
                           >
-                            <Edit2 className="w-3.5 h-3.5 text-amber-600" />
+                            <Edit2 className="h-3.5 w-3.5 text-amber-600" />
                             <span>Chỉnh sửa</span>
                           </button>
                         )}
@@ -1254,28 +1338,29 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                         {isMe && (
                           <button
                             onClick={() => setConfirmDeleteId(msg.id)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-rose-50 text-rose-600 text-xs font-semibold cursor-pointer transition-colors"
+                            className="flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                            <Trash2 className="h-3.5 w-3.5 text-rose-500" />
                             <span>Xóa tin nhắn</span>
                           </button>
                         )}
                       </div>
                     </div>
                   )}
-
                 </div>
               </div>
 
               {/* Timestamp, Edited badge & Status */}
-              <div className={`flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <div
+                className={`mt-0.5 flex items-center gap-1 px-1 text-[9px] text-slate-400 dark:text-slate-500 ${isMe ? "justify-end" : "justify-start"}`}
+              >
                 <span>{msg.timestamp}</span>
                 {isMe && (
                   <span>
-                    {msg.status === 'read' ? (
-                      <CheckCheck className="w-3 h-3 text-indigo-500" />
+                    {msg.status === "read" ? (
+                      <CheckCheck className="h-3 w-3 text-indigo-500" />
                     ) : (
-                      <Check className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                      <Check className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                     )}
                   </span>
                 )}
@@ -1290,58 +1375,66 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           // itself — never a "Đang gửi..." text row.
           const isMediaPreview = !!(p.previewUrl && (p.image || p.video));
           return (
-          <div key={p.clientId} className="flex flex-col items-end">
-            {p.previewUrl && p.video && (
-              <div className="relative mb-1">
-                <video src={p.previewUrl} playsInline className="rounded-2xl max-h-40 border border-slate-200" />
-                {p.status === 'sending' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl">
-                    <LoadingSpinner size="md" light />
-                  </div>
-                )}
-              </div>
-            )}
-            {p.previewUrl && p.image && (
-              <div className="relative mb-1">
-                <img src={p.previewUrl} alt="Đang gửi" className="rounded-2xl max-h-40 object-cover border border-slate-200" />
-                {p.status === 'sending' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl">
-                    <LoadingSpinner size="md" light />
-                  </div>
-                )}
-              </div>
-            )}
-            {p.text && (
-              <div className="px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-xs bg-indigo-600 text-white rounded-br-xs max-w-[88%]">
-                {p.text}
-              </div>
-            )}
-            {p.status === 'sending' ? (
-              // Media shows the overlay above instead of this text row.
-              isMediaPreview ? null : (
-                <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 px-1 animate-pulse">
-                  Đang gửi...
-                </span>
-              )
-            ) : (
-              <div className="flex items-center gap-1.5 mt-0.5 px-1">
-                <AlertCircle className="w-3 h-3 text-rose-500" />
-                <span className="text-[9px] text-rose-500 font-semibold">Gửi thất bại</span>
-                <button
-                  onClick={() => handleRetrySend(p)}
-                  className="text-[9px] font-bold text-indigo-600 hover:underline cursor-pointer"
-                >
-                  Thử lại
-                </button>
-                <button
-                  onClick={() => handleDiscardSend(p)}
-                  className="text-[9px] font-bold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
-                >
-                  Xóa
-                </button>
-              </div>
-            )}
-          </div>
+            <div key={p.clientId} className="flex flex-col items-end">
+              {p.previewUrl && p.video && (
+                <div className="relative mb-1">
+                  <video
+                    src={p.previewUrl}
+                    playsInline
+                    className="max-h-40 rounded-2xl border border-slate-200"
+                  />
+                  {p.status === "sending" && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30">
+                      <LoadingSpinner size="md" light />
+                    </div>
+                  )}
+                </div>
+              )}
+              {p.previewUrl && p.image && (
+                <div className="relative mb-1">
+                  <img
+                    src={p.previewUrl}
+                    alt="Đang gửi"
+                    className="max-h-40 rounded-2xl border border-slate-200 object-cover"
+                  />
+                  {p.status === "sending" && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30">
+                      <LoadingSpinner size="md" light />
+                    </div>
+                  )}
+                </div>
+              )}
+              {p.text && (
+                <div className="max-w-[88%] rounded-2xl rounded-br-xs bg-indigo-600 px-3.5 py-2.5 text-xs leading-relaxed text-white shadow-xs">
+                  {p.text}
+                </div>
+              )}
+              {p.status === "sending" ? (
+                // Media shows the overlay above instead of this text row.
+                isMediaPreview ? null : (
+                  <span className="mt-0.5 animate-pulse px-1 text-[9px] text-slate-400 dark:text-slate-500">
+                    Đang gửi...
+                  </span>
+                )
+              ) : (
+                <div className="mt-0.5 flex items-center gap-1.5 px-1">
+                  <AlertCircle className="h-3 w-3 text-rose-500" />
+                  <span className="text-[9px] font-semibold text-rose-500">Gửi thất bại</span>
+                  <button
+                    onClick={() => handleRetrySend(p)}
+                    className="cursor-pointer text-[9px] font-bold text-indigo-600 hover:underline"
+                  >
+                    Thử lại
+                  </button>
+                  <button
+                    onClick={() => handleDiscardSend(p)}
+                    className="cursor-pointer text-[9px] font-bold text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                  >
+                    Xóa
+                  </button>
+                </div>
+              )}
+            </div>
           );
         })}
 
@@ -1349,42 +1442,46 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       </div>
 
       {/* 1. EMOJI BOTTOM SHEET */}
-      {activeDrawer === 'emoji' && (
+      {activeDrawer === "emoji" && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          className="animate-in fade-in fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs duration-150"
           onClick={() => setActiveDrawer(null)}
         >
           <div
-            className="w-full sm:max-w-md mx-auto bg-white dark:bg-slate-900 rounded-t-[32px] border-t border-x border-slate-100 dark:border-slate-800 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[65dvh] flex flex-col animate-in slide-in-from-bottom-8 duration-200"
+            className="animate-in slide-in-from-bottom-8 mx-auto flex max-h-[65dvh] w-full flex-col rounded-t-[32px] border-x border-t border-slate-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl duration-200 sm:max-w-md dark:border-slate-800 dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3 shrink-0" />
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Biểu tượng cảm xúc (Emoji)</span>
+            <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-slate-300 dark:bg-slate-700" />
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Biểu tượng cảm xúc (Emoji)
+              </span>
               <button
                 onClick={() => setActiveDrawer(null)}
-                className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <div className="space-y-3 overflow-y-auto no-scrollbar">
+            <div className="no-scrollbar space-y-3 overflow-y-auto">
               {EMOJI_CATEGORIES.map((cat, catIdx) => (
                 <div key={catIdx}>
-                  <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-wider">{cat.title}</div>
-                <div className="grid grid-cols-7 sm:grid-cols-8 gap-1.5 text-center">
-                  {cat.emojis.map((emoji, eIdx) => (
-                    <button
-                      key={eIdx}
-                      type="button"
-                      onClick={() => setInputText(prev => prev + emoji)}
-                      className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-2xl hover:scale-125 transition-transform cursor-pointer"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
+                  <div className="mb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-slate-500">
+                    {cat.title}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5 text-center sm:grid-cols-8">
+                    {cat.emojis.map((emoji, eIdx) => (
+                      <button
+                        key={eIdx}
+                        type="button"
+                        onClick={() => setInputText((prev) => prev + emoji)}
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-2xl transition-transform hover:scale-125 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1393,130 +1490,142 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
       )}
 
       {/* 2. GIF (GIPHY) BOTTOM SHEET */}
-      {activeDrawer === 'gif' && (
+      {activeDrawer === "gif" && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          className="animate-in fade-in fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs duration-150"
           onClick={() => setActiveDrawer(null)}
         >
-        <div
-          className="w-full sm:max-w-md mx-auto bg-white dark:bg-slate-900 rounded-t-[32px] border-t border-x border-slate-100 dark:border-slate-800 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] shadow-2xl h-[65dvh] flex flex-col animate-in slide-in-from-bottom-8 duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3 shrink-0" />
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-1.5">
-              <span className="px-1.5 py-0.5 rounded bg-black text-white text-[10px] font-black tracking-widest">GIPHY</span>
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Tìm kiếm ảnh động</span>
-            </div>
-            <button 
-              onClick={() => setActiveDrawer(null)}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="relative mb-2">
-            <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={gifSearch}
-              onChange={(e) => setGifSearch(e.target.value)}
-              placeholder="Tìm kiếm GIF theo từ khóa..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-800 border border-transparent focus:border-purple-300 focus:outline-none"
-            />
-          </div>
-
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar mb-2 py-0.5">
-            {[
-              { id: 'all', label: 'Tất cả' },
-              { id: 'party', label: '🎉 Tiệc tùng' },
-              { id: 'happy', label: '😄 Vui vẻ' },
-              { id: 'love', label: '❤️ Thả tim' },
-              { id: 'haha', label: '🤣 Cười bò' },
-              { id: 'wow', label: '😲 Kinh ngạc' }
-            ].map(tag => (
+          <div
+            className="animate-in slide-in-from-bottom-8 mx-auto flex h-[65dvh] w-full flex-col rounded-t-[32px] border-x border-t border-slate-100 bg-white p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] shadow-2xl duration-200 sm:max-w-md dark:border-slate-800 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-slate-300 dark:bg-slate-700" />
+            <div className="mb-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="rounded bg-black px-1.5 py-0.5 text-[10px] font-black tracking-widest text-white">
+                  GIPHY
+                </span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Tìm kiếm ảnh động
+                </span>
+              </div>
               <button
-                key={tag.id}
-                onClick={() => setSelectedGifTag(tag.id)}
-                className={`px-2.5 py-1 rounded-xl text-[10px] font-semibold whitespace-nowrap truncate shrink-0 cursor-pointer transition-colors ${
-                  selectedGifTag === tag.id
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
+                onClick={() => setActiveDrawer(null)}
+                className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
               >
-                {tag.label}
+                <X className="h-3.5 w-3.5" />
               </button>
-            ))}
-          </div>
+            </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar grid grid-cols-3 gap-2 content-start">
-            {isLoadingGifs ? (
-              <div className="col-span-3 text-center py-6 text-[11px] text-slate-400 dark:text-slate-500 animate-pulse">
-                Đang tìm GIF...
-              </div>
-            ) : gifItems.length === 0 ? (
-              <div className="col-span-3 text-center py-6 text-[11px] text-slate-400 dark:text-slate-500">
-                Không tìm thấy GIF phù hợp
-              </div>
-            ) : (
-              gifItems.map((gif, idx) => (
+            <div className="relative mb-2">
+              <Search className="absolute top-2.5 left-3 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              <input
+                type="text"
+                value={gifSearch}
+                onChange={(e) => setGifSearch(e.target.value)}
+                placeholder="Tìm kiếm GIF theo từ khóa..."
+                className="w-full rounded-xl border border-transparent bg-slate-100 py-1.5 pr-3 pl-8 text-xs focus:border-purple-300 focus:bg-white focus:outline-none dark:bg-slate-800 dark:focus:bg-slate-800"
+              />
+            </div>
+
+            <div className="no-scrollbar mb-2 flex items-center gap-1 overflow-x-auto py-0.5">
+              {[
+                { id: "all", label: "Tất cả" },
+                { id: "party", label: "🎉 Tiệc tùng" },
+                { id: "happy", label: "😄 Vui vẻ" },
+                { id: "love", label: "❤️ Thả tim" },
+                { id: "haha", label: "🤣 Cười bò" },
+                { id: "wow", label: "😲 Kinh ngạc" },
+              ].map((tag) => (
                 <button
-                  key={`${gif.id}-${idx}`}
-                  onClick={() => handleSendGif(gif.url)}
-                  className="w-full h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-600 transition-all cursor-pointer relative group shrink-0"
+                  key={tag.id}
+                  onClick={() => setSelectedGifTag(tag.id)}
+                  className={`shrink-0 cursor-pointer truncate rounded-xl px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap transition-colors ${
+                    selectedGifTag === tag.id
+                      ? "bg-purple-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
                 >
-                  <img
-                    src={gif.thumbUrl || gif.url}
-                    alt="GIF"
-                    referrerPolicy="no-referrer"
-                    draggable={false}
-                    loading="lazy"
-                    className="block w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
+                  {tag.label}
                 </button>
-              ))
-            )}
+              ))}
+            </div>
+
+            <div className="no-scrollbar grid flex-1 grid-cols-3 content-start gap-2 overflow-y-auto">
+              {isLoadingGifs ? (
+                <div className="col-span-3 animate-pulse py-6 text-center text-[11px] text-slate-400 dark:text-slate-500">
+                  Đang tìm GIF...
+                </div>
+              ) : gifItems.length === 0 ? (
+                <div className="col-span-3 py-6 text-center text-[11px] text-slate-400 dark:text-slate-500">
+                  Không tìm thấy GIF phù hợp
+                </div>
+              ) : (
+                gifItems.map((gif, idx) => (
+                  <button
+                    key={`${gif.id}-${idx}`}
+                    onClick={() => handleSendGif(gif.url)}
+                    className="group relative h-24 w-full shrink-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition-all hover:ring-2 hover:ring-purple-600 dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <img
+                      src={gif.thumbUrl || gif.url}
+                      alt="GIF"
+                      referrerPolicy="no-referrer"
+                      draggable={false}
+                      loading="lazy"
+                      className="block h-full w-full object-cover transition-transform group-hover:scale-105"
+                    />
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-        </div>
         </div>
       )}
 
       {/* FLOATING REPLY BANNER ABOVE INPUT */}
       {replyingTo && (
-        <div className="px-3.5 py-2 bg-indigo-50/95 border-t border-indigo-100 flex items-center justify-between text-xs animate-in slide-in-from-bottom-2 z-10">
-          <div className="flex items-center gap-2 min-w-0">
-            <Reply className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+        <div className="animate-in slide-in-from-bottom-2 z-10 flex items-center justify-between border-t border-indigo-100 bg-indigo-50/95 px-3.5 py-2 text-xs">
+          <div className="flex min-w-0 items-center gap-2">
+            <Reply className="h-3.5 w-3.5 shrink-0 text-indigo-600" />
             <div className="min-w-0">
-              <span className="text-[10px] font-bold text-indigo-700 block truncate">
-                Đang trả lời {replyingTo.senderId === currentUser.id ? 'chính bạn' : (replyingTo.senderName || partner.name)}
+              <span className="block truncate text-[10px] font-bold text-indigo-700">
+                Đang trả lời{" "}
+                {replyingTo.senderId === currentUser.id
+                  ? "chính bạn"
+                  : replyingTo.senderName || partner.name}
               </span>
-              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block">
-                {replyingTo.text || (replyingTo.imageUrl ? '📷 [Hình ảnh]' : replyingTo.videoUrl ? '🎥 [Video]' : '[Tệp đính kèm]')}
+              <span className="block truncate text-[11px] text-slate-600 dark:text-slate-400">
+                {replyingTo.text ||
+                  (replyingTo.imageUrl
+                    ? "📷 [Hình ảnh]"
+                    : replyingTo.videoUrl
+                      ? "🎥 [Video]"
+                      : "[Tệp đính kèm]")}
               </span>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setReplyingTo(null)}
-            className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 cursor-pointer"
+            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-indigo-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-indigo-500/20 dark:hover:text-slate-300"
             title="Hủy trả lời"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
       {/* FLOATING EDIT BANNER ABOVE INPUT */}
       {editingMessage && (
-        <div className="px-3.5 py-2 bg-amber-50/95 border-t border-amber-100 flex items-center justify-between text-xs animate-in slide-in-from-bottom-2 z-10">
-          <div className="flex items-center gap-2 min-w-0">
-            <Edit2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+        <div className="animate-in slide-in-from-bottom-2 z-10 flex items-center justify-between border-t border-amber-100 bg-amber-50/95 px-3.5 py-2 text-xs">
+          <div className="flex min-w-0 items-center gap-2">
+            <Edit2 className="h-3.5 w-3.5 shrink-0 text-amber-600" />
             <div className="min-w-0">
-              <span className="text-[10px] font-bold text-amber-700 block">
+              <span className="block text-[10px] font-bold text-amber-700">
                 Đang chỉnh sửa tin nhắn
               </span>
-              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block">
+              <span className="block truncate text-[11px] text-slate-600 dark:text-slate-400">
                 {editingMessage.text}
               </span>
             </div>
@@ -1525,19 +1634,19 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             type="button"
             onClick={() => {
               setEditingMessage(null);
-              setInputText('');
+              setInputText("");
             }}
-            className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-amber-100 dark:hover:bg-amber-500/20 cursor-pointer"
+            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-amber-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-amber-500/20 dark:hover:text-slate-300"
             title="Hủy chỉnh sửa"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
       {/* SCROLL TO BOTTOM — icon only; in a search window it reloads live */}
       {(showScrollBottom || searchMode) && (
-        <div className="absolute bottom-24 right-3 z-20 animate-in fade-in zoom-in-95">
+        <div className="animate-in fade-in zoom-in-95 absolute right-3 bottom-24 z-20">
           <button
             onClick={() => {
               if (searchMode) {
@@ -1547,63 +1656,63 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
               stickToBottomRef.current = true;
               setShowScrollBottom(false);
               const el = listRef.current;
-              if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+              if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
             }}
-            className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xl hover:bg-indigo-50 dark:hover:bg-indigo-500/20 active:scale-95 transition-all cursor-pointer"
-            title={searchMode ? 'Về tin nhắn mới nhất' : 'Xuống cuối'}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-indigo-600 shadow-xl transition-all hover:bg-indigo-50 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
+            title={searchMode ? "Về tin nhắn mới nhất" : "Xuống cuối"}
           >
-            <ArrowDown className="w-4 h-4" />
+            <ArrowDown className="h-4 w-4" />
           </button>
         </div>
       )}
 
       {/* PENDING SHARED MOMENT CHIP (?momentId=) ABOVE THE INPUT */}
       {pendingMoment && !conversation.isBlocked && !editingMessage && (
-        <div className="px-3.5 py-2 bg-indigo-50/95 border-t border-indigo-100 flex items-center justify-between gap-2 animate-in slide-in-from-bottom-2 z-10">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="animate-in slide-in-from-bottom-2 z-10 flex items-center justify-between gap-2 border-t border-indigo-100 bg-indigo-50/95 px-3.5 py-2">
+          <div className="flex min-w-0 items-center gap-2.5">
             <img
               src={pendingMoment.imageUrl}
               alt={pendingMoment.caption}
               referrerPolicy="no-referrer"
-              className="w-10 h-10 rounded-lg object-cover border border-indigo-200 shadow-xs"
+              className="h-10 w-10 rounded-lg border border-indigo-200 object-cover shadow-xs"
             />
             <div className="min-w-0">
-              <span className="text-[10px] font-bold text-indigo-700 block">
+              <span className="block text-[10px] font-bold text-indigo-700">
                 Khoảnh khắc đính kèm
               </span>
-              <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block">
-                {pendingMoment.caption || 'Nhấn gửi để chia sẻ khoảnh khắc'}
+              <span className="block truncate text-[11px] text-slate-600 dark:text-slate-400">
+                {pendingMoment.caption || "Nhấn gửi để chia sẻ khoảnh khắc"}
               </span>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setPendingMoment(null)}
-            className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 cursor-pointer shrink-0"
+            className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-indigo-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-indigo-500/20 dark:hover:text-slate-300"
             title="Bỏ đính kèm khoảnh khắc"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
       {/* BLOCKED CONVERSATION BAR — replaces the composer while blocked */}
       {conversation.isBlocked && (
-        <div className="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-4 py-3.5 flex items-center justify-between gap-3 z-10">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-              <Ban className="w-4 h-4" />
+        <div className="z-10 flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-white px-4 py-3.5 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+              <Ban className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+              <div className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">
                 {conversation.blockedById === Number(currentUser.id)
                   ? `Bạn đã chặn ${partner.name}`
-                  : 'Cuộc trò chuyện đã bị chặn'}
+                  : "Cuộc trò chuyện đã bị chặn"}
               </div>
-              <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+              <div className="truncate text-[10px] text-slate-400 dark:text-slate-500">
                 {conversation.blockedById === Number(currentUser.id)
-                  ? 'Bỏ chặn để tiếp tục gửi tin nhắn'
-                  : 'Bạn không thể gửi tin nhắn lúc này'}
+                  ? "Bỏ chặn để tiếp tục gửi tin nhắn"
+                  : "Bạn không thể gửi tin nhắn lúc này"}
               </div>
             </div>
           </div>
@@ -1611,7 +1720,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             <button
               onClick={handleUnblock}
               disabled={!partnerUser}
-              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs cursor-pointer disabled:opacity-40 shrink-0"
+              className="shrink-0 cursor-pointer rounded-xl bg-indigo-600 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-40"
             >
               Bỏ chặn
             </button>
@@ -1621,105 +1730,112 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
       {/* COMPOSER BOTTOM INPUT BAR: INLINE APPEND LIST ON '+' TAP, SHRINKS INPUT BOX */}
       {!conversation.isBlocked && (
-      <form onSubmit={handleSend} className="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex items-center gap-1.5 z-10">
-        
-        {/* LEFT SIDE TOOLS: EMOJI, PLUS (TOGGLES INLINE EXPANSION: PHOTO, VIDEO, LOCATION, GIF) */}
-        <div className="flex items-center gap-1 shrink-0 transition-all duration-200">
-          
-          {/* 1. EMOJI BUTTON */}
-          <button
-            type="button"
-            onClick={() => setActiveDrawer(activeDrawer === 'emoji' ? null : 'emoji')}
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeDrawer === 'emoji'
-                ? 'bg-amber-100 text-amber-700 shadow-xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-            title="Biểu tượng cảm xúc (Emoji)"
-          >
-            <Smile className="w-4 h-4" />
-          </button>
-
-          {/* 2. PLUS BUTTON (EXPANDS INLINE LIST WITHOUT POPOVER) */}
-          <button
-            type="button"
-            onClick={() => setIsToolsExpanded(!isToolsExpanded)}
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              isToolsExpanded
-                ? 'bg-indigo-600 text-white rotate-45 shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-            title={isToolsExpanded ? "Thu gọn công cụ" : "Mở rộng công cụ (Ảnh, Video, Vị trí, GIF)"}
-          >
-            <Plus className="w-4 h-4 transition-transform duration-200" />
-          </button>
-
-          {/* INLINE EXPANDED TOOLS (PHOTO, VIDEO, LOCATION, GIF) */}
-          {isToolsExpanded && (
-            <div className="flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150">
-              
-              {/* Photo Upload */}
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer"
-                title="Gửi ảnh từ thiết bị"
-              >
-                <ImageIcon className="w-4 h-4" />
-              </button>
-
-              {/* Video Upload */}
-              <button
-                type="button"
-                onClick={() => videoInputRef.current?.click()}
-                className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-500/20 transition-colors cursor-pointer"
-                title="Gửi video từ thiết bị"
-              >
-                <Video className="w-4 h-4" />
-              </button>
-
-              {/* GIF Search */}
-              <button
-                type="button"
-                onClick={() => setActiveDrawer(activeDrawer === 'gif' ? null : 'gif')}
-                className={`px-2 py-1 rounded-xl text-[10px] font-black tracking-wider transition-all cursor-pointer ${
-                  activeDrawer === 'gif'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-500/20 text-slate-700 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-300'
-                }`}
-                title="Tìm kiếm ảnh GIF"
-              >
-                GIF
-              </button>
-            </div>
-          )}
-
-        </div>
-
-        {/* Message Input Box (Shrinks smoothly when tools expand) */}
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputText}
-          onChange={(e) => handleInputChange(e.target.value)}
-          placeholder={editingMessage ? "Cập nhật nội dung..." : replyingTo ? "Nhập câu trả lời..." : "Nhập tin nhắn..."}
-          className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 focus:bg-white dark:focus:bg-slate-800 border border-transparent focus:border-slate-200 dark:focus:border-slate-600 rounded-2xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-w-[80px]"
-        />
-
-        {/* Send / Update Button */}
-        <button
-          type="submit"
-          disabled={!inputText.trim() && !pendingMoment}
-          className={`w-9 h-9 rounded-2xl text-white flex items-center justify-center shadow-md disabled:opacity-30 active:scale-95 transition-all cursor-pointer shrink-0 ${
-            editingMessage 
-              ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' 
-              : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'
-          }`}
-          title={editingMessage ? "Lưu thay đổi" : "Gửi tin nhắn"}
+        <form
+          onSubmit={handleSend}
+          className="z-10 flex shrink-0 items-center gap-1.5 border-t border-slate-100 bg-white p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] dark:border-slate-800 dark:bg-slate-900"
         >
-          {editingMessage ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-        </button>
-      </form>
+          {/* LEFT SIDE TOOLS: EMOJI, PLUS (TOGGLES INLINE EXPANSION: PHOTO, VIDEO, LOCATION, GIF) */}
+          <div className="flex shrink-0 items-center gap-1 transition-all duration-200">
+            {/* 1. EMOJI BUTTON */}
+            <button
+              type="button"
+              onClick={() => setActiveDrawer(activeDrawer === "emoji" ? null : "emoji")}
+              className={`cursor-pointer rounded-xl p-2 transition-all ${
+                activeDrawer === "emoji"
+                  ? "bg-amber-100 text-amber-700 shadow-xs"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-amber-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-amber-300"
+              }`}
+              title="Biểu tượng cảm xúc (Emoji)"
+            >
+              <Smile className="h-4 w-4" />
+            </button>
+
+            {/* 2. PLUS BUTTON (EXPANDS INLINE LIST WITHOUT POPOVER) */}
+            <button
+              type="button"
+              onClick={() => setIsToolsExpanded(!isToolsExpanded)}
+              className={`cursor-pointer rounded-xl p-2 transition-all ${
+                isToolsExpanded
+                  ? "rotate-45 bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
+              }`}
+              title={
+                isToolsExpanded ? "Thu gọn công cụ" : "Mở rộng công cụ (Ảnh, Video, Vị trí, GIF)"
+              }
+            >
+              <Plus className="h-4 w-4 transition-transform duration-200" />
+            </button>
+
+            {/* INLINE EXPANDED TOOLS (PHOTO, VIDEO, LOCATION, GIF) */}
+            {isToolsExpanded && (
+              <div className="animate-in fade-in zoom-in-95 flex items-center gap-1 duration-150">
+                {/* Photo Upload */}
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/20 dark:hover:text-indigo-300"
+                  title="Gửi ảnh từ thiết bị"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </button>
+
+                {/* Video Upload */}
+                <button
+                  type="button"
+                  onClick={() => videoInputRef.current?.click()}
+                  className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:text-slate-400 dark:hover:bg-purple-500/20 dark:hover:text-purple-300"
+                  title="Gửi video từ thiết bị"
+                >
+                  <Video className="h-4 w-4" />
+                </button>
+
+                {/* GIF Search */}
+                <button
+                  type="button"
+                  onClick={() => setActiveDrawer(activeDrawer === "gif" ? null : "gif")}
+                  className={`cursor-pointer rounded-xl px-2 py-1 text-[10px] font-black tracking-wider transition-all ${
+                    activeDrawer === "gif"
+                      ? "bg-purple-600 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-700 hover:bg-purple-50 hover:text-purple-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-purple-500/20 dark:hover:text-purple-300"
+                  }`}
+                  title="Tìm kiếm ảnh GIF"
+                >
+                  GIF
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Message Input Box (Shrinks smoothly when tools expand) */}
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputText}
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder={
+              editingMessage
+                ? "Cập nhật nội dung..."
+                : replyingTo
+                  ? "Nhập câu trả lời..."
+                  : "Nhập tin nhắn..."
+            }
+            className="min-w-[80px] flex-1 rounded-2xl border border-transparent bg-slate-100 px-3.5 py-2 text-xs text-slate-800 transition-all placeholder:text-slate-400 hover:bg-slate-200/50 focus:border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:hover:bg-slate-700/50 dark:focus:border-slate-600 dark:focus:bg-slate-800"
+          />
+
+          {/* Send / Update Button */}
+          <button
+            type="submit"
+            disabled={!inputText.trim() && !pendingMoment}
+            className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-white shadow-md transition-all active:scale-95 disabled:opacity-30 ${
+              editingMessage
+                ? "bg-amber-500 shadow-amber-500/20 hover:bg-amber-600"
+                : "bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700"
+            }`}
+            title={editingMessage ? "Lưu thay đổi" : "Gửi tin nhắn"}
+          >
+            {editingMessage ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+          </button>
+        </form>
       )}
 
       {/* FULLSCREEN MEDIA VIEWER MODAL (IMAGE/VIDEO) WITH DOWNLOAD AND CLOSE BUTTON ONLY */}
@@ -1736,10 +1852,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
       {/* MOMENT VIEWER MODAL */}
       {selectedMoment && (
-        <MomentViewerModal
-          moment={selectedMoment}
-          onClose={() => setSelectedMoment(null)}
-        />
+        <MomentViewerModal moment={selectedMoment} onClose={() => setSelectedMoment(null)} />
       )}
 
       {/* GROUP SETTINGS MODAL (AVATAR, NAME, PRIVACY, MEMBERSHIP, LEAVE GROUP) */}
@@ -1756,27 +1869,28 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
       {/* CONFIRM BLOCK FRIEND / CHAT DIALOG */}
       {showBlockConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xs w-full p-5 shadow-2xl animate-in zoom-in-95 text-center">
-            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-3">
-              <Ban className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="animate-in zoom-in-95 w-full max-w-xs rounded-3xl bg-white p-5 text-center shadow-2xl dark:bg-slate-900">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+              <Ban className="h-6 w-6" />
             </div>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1.5">
+            <h4 className="mb-1.5 text-sm font-bold text-slate-900 dark:text-slate-100">
               Chặn {partnerUser?.name || partner.name}?
             </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
-              Bạn sẽ không nhận được tin nhắn từ người này trong cuộc trò chuyện cho đến khi bỏ chặn.
+            <p className="mb-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              Bạn sẽ không nhận được tin nhắn từ người này trong cuộc trò chuyện cho đến khi bỏ
+              chặn.
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowBlockConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                className="flex-1 cursor-pointer rounded-xl bg-slate-100 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
               >
                 Hủy
               </button>
               <button
                 onClick={handleConfirmBlock}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                className="flex-1 cursor-pointer rounded-xl bg-rose-600 py-2.5 text-xs font-bold text-white transition-colors hover:bg-rose-700"
               >
                 Chặn cuộc trò chuyện
               </button>
@@ -1787,25 +1901,27 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
       {/* CONFIRM DELETE MESSAGE DIALOG */}
       {confirmDeleteId && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xs w-full p-4.5 shadow-2xl animate-in zoom-in-95 text-center">
-            <div className="w-11 h-11 rounded-full bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-3">
-              <Trash2 className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="animate-in zoom-in-95 w-full max-w-xs rounded-2xl bg-white p-4.5 text-center shadow-2xl dark:bg-slate-900">
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+              <Trash2 className="h-5 w-5" />
             </div>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">Xóa tin nhắn?</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+            <h4 className="mb-1 text-sm font-bold text-slate-900 dark:text-slate-100">
+              Xóa tin nhắn?
+            </h4>
+            <p className="mb-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
               Tin nhắn này sẽ bị xóa khỏi cuộc trò chuyện.
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setConfirmDeleteId(null)}
-                className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                className="flex-1 cursor-pointer rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
               >
                 Hủy
               </button>
               <button
                 onClick={() => handleDeleteMessage(confirmDeleteId)}
-                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                className="flex-1 cursor-pointer rounded-xl bg-rose-600 py-2 text-xs font-bold text-white transition-colors hover:bg-rose-700"
               >
                 Xóa ngay
               </button>
@@ -1813,7 +1929,6 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
           </div>
         </div>
       )}
-
     </div>
   );
 };
