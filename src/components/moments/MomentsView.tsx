@@ -7,6 +7,7 @@ import { Plus, Camera, Film, Loader2, AlertTriangle, RefreshCw } from 'lucide-re
 import type { Moment } from '../../types';
 import { getMomentById } from '@/services/moment';
 import { mapMoment } from '@/lib/moment/mappers';
+import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 
 export const MomentsView: React.FC = () => {
   const { 
@@ -26,6 +27,8 @@ export const MomentsView: React.FC = () => {
   const [deepLinkMoment, setDeepLinkMoment] = useState<Moment | null>(null);
   const feedContainerRef = useRef<HTMLDivElement | null>(null);
   const lastScrollTopRef = useRef<number>(0);
+  // Tapping the active Khoảnh khắc tab scrolls the feed up.
+  useScrollToTop(feedContainerRef);
 
   // Sync immersive state with global bottom navigation bar visibility
   useEffect(() => {

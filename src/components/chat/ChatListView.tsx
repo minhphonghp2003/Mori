@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../context/AppContext';
+import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { getDiscoverableGroups } from '@/services/chat';
 import { mapDiscoverableGroup } from '@/lib/chat/mappers';
 import { DiscoverableGroup, Conversation } from '../../types';
@@ -57,6 +58,10 @@ export const ChatListView: React.FC = () => {
   // Discoverable groups (API already excludes groups I'm a member of)
   const [discoverGroups, setDiscoverGroups] = useState<DiscoverableGroup[]>([]);
   const [isLoadingDiscover, setIsLoadingDiscover] = useState(false);
+
+  // Tapping the active Tin nhắn tab scrolls this list up.
+  const listScrollRef = useRef<HTMLDivElement | null>(null);
+  useScrollToTop(listScrollRef);
 
   useEffect(() => {
     if (filterTab !== 'discover') return;
@@ -177,7 +182,7 @@ export const ChatListView: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto no-scrollbar bg-white dark:bg-slate-900" onScroll={handleScroll}>
+      <div ref={listScrollRef} className="flex-1 overflow-y-auto no-scrollbar bg-white dark:bg-slate-900" onScroll={handleScroll}>
         
         {/* TAB 1: ALL ACTIVE CONVERSATIONS */}
         {filterTab === 'all' && (

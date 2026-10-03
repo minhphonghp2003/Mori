@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useApp } from '../../context/AppContext';
+import { requestScrollTop } from '@/hooks/use-scroll-to-top';
 import { NavTab } from '../../types';
 import { 
   Users, 
@@ -26,6 +27,14 @@ export const BottomNav: React.FC = () => {
   // rows are stale; the local sum covers rows the hub never touched.
   const totalUnread = Math.max(listUnread, totalUnreadCount || 0);
 
+  // Tapping the active tab doesn't navigate — it scrolls that screen up.
+  const handleTabClick = (tab: NavTab) => (e: React.MouseEvent) => {
+    if (activeTab === tab) {
+      e.preventDefault();
+      requestScrollTop();
+    }
+  };
+
   return (
     <nav className="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] px-2 pt-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] z-30 select-none">
       <div className="grid grid-cols-5 items-center max-w-md mx-auto relative">
@@ -33,6 +42,7 @@ export const BottomNav: React.FC = () => {
         {/* 1. HOME (Nearby Users) */}
         <Link
           href={TAB_HREF.home}
+          onClick={handleTabClick('home')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'home' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
@@ -47,6 +57,7 @@ export const BottomNav: React.FC = () => {
         {/* 2. MOMENT */}
         <Link
           href={TAB_HREF.moments}
+          onClick={handleTabClick('moments')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'moments' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
@@ -62,6 +73,7 @@ export const BottomNav: React.FC = () => {
         <div className="flex flex-col items-center justify-center relative -top-3">
           <Link
             href={TAB_HREF.map}
+            onClick={handleTabClick('map')}
             className={`w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-purple-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.38)] ring-4 ring-white dark:ring-[#09090b] flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
               activeTab === 'map' ? 'scale-108 ring-indigo-100 shadow-[0_10px_25px_rgba(79,70,229,0.5)]' : 'hover:scale-105'
             }`}
@@ -74,6 +86,7 @@ export const BottomNav: React.FC = () => {
         {/* 4. CHAT */}
         <Link
           href={TAB_HREF.chat}
+          onClick={handleTabClick('chat')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'chat' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}
@@ -93,6 +106,7 @@ export const BottomNav: React.FC = () => {
         {/* 5. SETTING */}
         <Link
           href={TAB_HREF.setting}
+          onClick={handleTabClick('setting')}
           className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'setting' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium'
           }`}

@@ -6,6 +6,7 @@ import { useIsPwa } from '../../hooks/use-is-pwa';
 import { useTheme } from '../../providers/theme-provider';
 import { requestNotificationPermission, syncFcmTokenAfterAuth, deleteFcmToken } from '../../lib/fcm';
 import { FriendshipType, VisibilityTier, User as UserType, Timeline, Moment } from '../../types';
+import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { Avatar } from '../common/Avatar';
 import { VISIBILITY_OPTIONS } from '../../constants/visibility';
 import { CreateTimelineModal } from '../timelines/CreateTimelineModal';
@@ -89,6 +90,9 @@ export const SettingsView: React.FC = () => {
   });
 
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
+  // Tapping the active Cài đặt tab scrolls this page up.
+  const pageScrollRef = useRef<HTMLDivElement | null>(null);
+  useScrollToTop(pageScrollRef);
 
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -291,7 +295,7 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none">
+    <div ref={pageScrollRef} className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none">
       {/* Top Profile Header Hero - Clean, minimal, non-messy */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-5 shadow-xs">
         <div className="flex items-start justify-between">

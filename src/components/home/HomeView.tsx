@@ -6,6 +6,7 @@ import { emptyUser } from '@/lib/chat/mappers';
 import { formatDistance } from '@/lib/location/geo';
 import { getAllUsers } from '@/services/user';
 import { useFirstMessage } from '@/hooks/chat/use-first-message';
+import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { FirstMessageModal } from '../chat/FirstMessageModal';
 import type { UserListItemDto } from '@/types/user';
 import type { User } from '../../types';
@@ -54,6 +55,8 @@ export const HomeView: React.FC = () => {
   /** True only after the empty budget is spent. */
   const exhaustedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Tapping the active Gần bạn tab scrolls this list up.
+  useScrollToTop(scrollRef);
 
   const fetchPage = useCallback(
     async (reset: boolean, gender: typeof genderFilter) => {
