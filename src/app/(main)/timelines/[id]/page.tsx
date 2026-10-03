@@ -65,7 +65,7 @@ export default function TimelineDetailPage() {
     }
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 p-6 text-center">
-        <div className="text-4xl mb-3">🧭</div>
+        <div className="text-4xl mb-3" aria-hidden="true">•</div>
         <div className="text-sm font-bold text-slate-700">Không tìm thấy hành trình</div>
         <p className="text-xs text-slate-400 mt-1">Hành trình này có thể đã bị xóa.</p>
         <button

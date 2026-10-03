@@ -660,7 +660,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     };
     setPendingSends((prev) => [...prev, pending]);
     void runSend(pending).then((ok) => {
-      if (ok) showToast("Đã gửi GIF từ Giphy ✨", "success");
+      if (ok) showToast("Đã gửi GIF từ Giphy", "success");
     });
   };
 
@@ -673,7 +673,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     };
     setPendingSends((prev) => [...prev, pending]);
     void runSend(pending).then((ok) => {
-      if (ok) showToast("Đã gửi ảnh thành công 📷", "success");
+      if (ok) showToast("Đã gửi ảnh thành công", "success");
     });
   };
 
@@ -686,7 +686,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     };
     setPendingSends((prev) => [...prev, pending]);
     void runSend(pending).then((ok) => {
-      if (ok) showToast("Đã gửi video thành công 🎥", "success");
+      if (ok) showToast("Đã gửi video thành công", "success");
     });
   };
 
@@ -767,7 +767,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     const textToCopy = msg.text || msg.imageUrl || msg.videoUrl || "";
     if (textToCopy) {
       navigator.clipboard.writeText(textToCopy);
-      showToast("Đã sao chép nội dung tin nhắn 📋", "success");
+      showToast("Đã sao chép nội dung tin nhắn", "success");
     }
     setActiveActionMenuMsgId(null);
   };
@@ -783,7 +783,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     const ok = await blockChat(conversationId, partnerUser.id);
     setShowBlockConfirm(false);
     if (ok) {
-      showToast(`Đã chặn ${partnerUser.name} 🚫`, "info");
+      showToast(`Đã chặn ${partnerUser.name}`, "info");
       onBack();
     }
   };
@@ -1263,7 +1263,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                           {msg.locationPin.name}
                         </div>
                         <div className="mt-1 text-[11px] font-bold text-emerald-600">
-                          📍 Đã chia sẻ tọa độ GPS
+                          Đã chia sẻ tọa độ GPS
                         </div>
                       </div>
                     </div>
@@ -1550,11 +1550,11 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             <div className="no-scrollbar mb-2 flex items-center gap-1 overflow-x-auto py-0.5">
               {[
                 { id: "all", label: "Tất cả" },
-                { id: "party", label: "🎉 Tiệc tùng" },
-                { id: "happy", label: "😄 Vui vẻ" },
-                { id: "love", label: "❤️ Thả tim" },
-                { id: "haha", label: "🤣 Cười bò" },
-                { id: "wow", label: "😲 Kinh ngạc" },
+                { id: "party", label: "Tiệc tùng" },
+                { id: "happy", label: "Vui vẻ" },
+                { id: "love", label: "Thả tim" },
+                { id: "haha", label: "Cười bò" },
+                { id: "wow", label: "Kinh ngạc" },
               ].map((tag) => (
                 <button
                   key={tag.id}

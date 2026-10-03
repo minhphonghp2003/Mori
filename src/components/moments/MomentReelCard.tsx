@@ -586,12 +586,12 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
               </span>
               {isLover && (
                 <span className="text-[10px] font-bold text-rose-300 bg-rose-950/60 backdrop-blur-xs px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap truncate">
-                  ❤️ Người yêu
+                  Người yêu
                 </span>
               )}
               {isBestFriend && (
                 <span className="text-[10px] font-bold text-amber-300 bg-amber-950/60 backdrop-blur-xs px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap truncate">
-                  ⭐ Bạn thân
+                  Bạn thân
                 </span>
               )}
             </div>

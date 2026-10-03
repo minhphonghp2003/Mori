@@ -71,7 +71,7 @@ export const useFirstMessage = () => {
       setGreetingTarget(null);
       setGreetingText("");
       setGreetingMoment(null);
-      showToast("Đã gửi lời chào 👋", "success");
+      showToast("Đã gửi lời chào", "success");
       // 3. Move to that chat conversation screen (moment still attaches
       // via ?momentId= for the share flow).
       await openChatWithUser(target, momentId ?? undefined);

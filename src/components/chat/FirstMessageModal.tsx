@@ -15,10 +15,10 @@ interface FirstMessageModalProps {
 }
 
 const PRESET_GREETINGS = [
-  "Chào bạn! 👋",
-  "Rất vui được làm quen 😊",
-  "Chào cậu, mình kết bạn nhé 🤝",
-  "Hellooo ✨",
+  "Chào bạn!",
+  "Rất vui được làm quen",
+  "Chào cậu, mình kết bạn nhé",
+  "Hellooo",
 ];
 
 /** Greeting composer for a brand-new 1:1 (no conversation yet). */
@@ -100,7 +100,7 @@ export const FirstMessageModal: React.FC<FirstMessageModalProps> = ({
                 className="w-9 h-9 rounded-lg object-cover shrink-0"
               />
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
-                📎 Đính kèm khoảnh khắc này
+                Đính kèm khoảnh khắc này
               </span>
             </div>
           ) : null}
@@ -110,7 +110,7 @@ export const FirstMessageModal: React.FC<FirstMessageModalProps> = ({
             rows={3}
             maxLength={500}
             autoFocus
-            placeholder="Chào bạn! Rất vui được làm quen 👋"
+            placeholder="Chào bạn! Rất vui được làm quen"
             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           />
           <span className="text-[10px] text-slate-400 dark:text-slate-500 text-right block mt-1">

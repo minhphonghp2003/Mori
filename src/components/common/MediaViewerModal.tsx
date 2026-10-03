@@ -52,7 +52,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
       URL.revokeObjectURL(blobUrl);
 
       setDownloadSuccess(true);
-      showToast('Đã tải xuống thành công! 📥', 'success');
+      showToast('Đã tải xuống thành công!', 'success');
       setTimeout(() => setDownloadSuccess(false), 2500);
     } catch {
       // Fallback
@@ -63,7 +63,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      showToast('Đang tải xuống tệp... 📥', 'info');
+      showToast('Đang tải xuống tệp...', 'info');
     } finally {
       setIsDownloading(false);
     }

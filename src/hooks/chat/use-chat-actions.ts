@@ -282,7 +282,7 @@ export function useChatActions({
         let fileIds: string[] | undefined;
 
         if (locationPin && !content) {
-          content = `📍 ${locationPin.name} — https://www.google.com/maps?q=${locationPin.lat},${locationPin.lng}`;
+          content = `${locationPin.name} — https://www.google.com/maps?q=${locationPin.lat},${locationPin.lng}`;
         }
 
         const media = image ?? video;
@@ -363,7 +363,7 @@ export function useChatActions({
             }),
           );
         }
-        toast("Đã chỉnh sửa tin nhắn ✏️", "success");
+        toast("Đã chỉnh sửa tin nhắn", "success");
         return true;
       } catch (err) {
         console.error("[chat] editMessage failed:", err);
@@ -382,7 +382,7 @@ export function useChatActions({
       try {
         await appHub.deleteMessage({ conversationId: convId, messageId: msgId });
         dispatch(removeMessageAction({ conversationId: convId, messageId: msgId }));
-        toast("Đã xóa tin nhắn 🗑️", "info");
+        toast("Đã xóa tin nhắn", "info");
         return true;
       } catch (err) {
         console.error("[chat] deleteMessage failed:", err);
@@ -466,7 +466,7 @@ export function useChatActions({
         } catch (err) {
           console.error("[chat] createGroup detail failed:", err);
         }
-        toast(`Đã tạo nhóm "${name}" 🎉`, "success");
+        toast(`Đã tạo nhóm "${name}"`, "success");
         return String(convId);
       } catch (err) {
         console.error("[chat] createGroup failed:", err);
@@ -483,7 +483,7 @@ export function useChatActions({
       if (group.isPrivate) {
         try {
           await chatService.createJoinRequest(groupId);
-          toast(`Đã gửi yêu cầu tham gia "${group.name}" ✉️`, "info");
+          toast(`Đã gửi yêu cầu tham gia "${group.name}"`, "info");
         } catch (err) {
           console.error("[chat] createJoinRequest failed:", err);
         }
@@ -497,7 +497,7 @@ export function useChatActions({
         } catch (err) {
           console.error("[chat] joinGroup detail failed:", err);
         }
-        toast(`Đã tham gia nhóm "${group.name}" 🎉`, "success");
+        toast(`Đã tham gia nhóm "${group.name}"`, "success");
         revealNav();
         router.push(`/chat/${groupId}`);
       } catch (err) {
@@ -551,8 +551,8 @@ export function useChatActions({
       );
       toast(
         next
-          ? "Đã lưu trữ cuộc trò chuyện 📁"
-          : "Đã bỏ lưu trữ cuộc trò chuyện 📥",
+          ? "Đã lưu trữ cuộc trò chuyện"
+          : "Đã bỏ lưu trữ cuộc trò chuyện",
         "info",
       );
       chatService
@@ -582,8 +582,8 @@ export function useChatActions({
       );
       toast(
         next
-          ? "Đã tắt thông báo cuộc trò chuyện 🔕"
-          : "Đã bật lại thông báo cuộc trò chuyện 🔔",
+          ? "Đã tắt thông báo cuộc trò chuyện"
+          : "Đã bật lại thông báo cuộc trò chuyện",
         "info",
       );
       chatService
@@ -610,7 +610,7 @@ export function useChatActions({
         void leaveConversation();
         router.push("/chat");
       }
-      toast("Đã xóa cuộc trò chuyện 🗑️", "info");
+      toast("Đã xóa cuộc trò chuyện", "info");
       chatService.deleteChat(convId).catch((err) => {
         console.error("[chat] deleteChat failed:", err);
       });

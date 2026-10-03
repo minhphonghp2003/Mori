@@ -148,13 +148,13 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
 
   const getRelationshipBadge = () => {
   if (isSelf) return { label: 'Tài khoản của bạn', color: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30' };
-  if (friendStatus === 'blocked') return { label: 'Đã chặn 🚫', color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
-  if (friendStatus === 'pending_received') return { label: 'Chờ bạn đồng ý 📩', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
-  if (friendStatus === 'pending_sent') return { label: 'Đã gửi lời mời ⏳', color: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30' };
+  if (friendStatus === 'blocked') return { label: 'Đã chặn', color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
+  if (friendStatus === 'pending_received') return { label: 'Chờ bạn đồng ý', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
+  if (friendStatus === 'pending_sent') return { label: 'Đã gửi lời mời', color: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30' };
   if (friendStatus === 'none') return { label: 'Người qua đường', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
-  if (currentType === 'lover') return { label: 'Người yêu ❤️', color: 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' };
-  if (currentType === 'best_friend') return { label: 'Bạn thân ⭐', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
-  return { label: 'Bạn bè 🤝', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
+  if (currentType === 'lover') return { label: 'Người yêu', color: 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' };
+  if (currentType === 'best_friend') return { label: 'Bạn thân', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
+  return { label: 'Bạn bè', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
   };
 
   const relBadge = getRelationshipBadge();
@@ -162,19 +162,19 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
   const RELATIONSHIP_OPTIONS: { type: FriendshipType; label: string; icon: React.ReactNode; activeColor: string }[] = [
     {
       type: 'friend',
-      label: 'Bạn bè 🤝',
+      label: 'Bạn bè',
       icon: <UserCheck className="w-3.5 h-3.5 shrink-0" />,
       activeColor: 'bg-slate-900 text-white shadow-xs'
     },
     {
       type: 'best_friend',
-      label: 'Bạn thân ⭐',
+      label: 'Bạn thân',
       icon: <Star className="w-3.5 h-3.5 fill-current shrink-0" />,
       activeColor: 'bg-amber-500 text-white shadow-xs'
     },
     {
       type: 'lover',
-      label: 'Người yêu ❤️',
+      label: 'Người yêu',
       icon: <Heart className="w-3.5 h-3.5 fill-current shrink-0" />,
       activeColor: 'bg-rose-500 text-white shadow-xs'
     }
@@ -322,7 +322,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               ) : friendStatus === 'pending_sent' ? (
                 <div className="flex items-center justify-between p-2 bg-indigo-50 rounded-2xl border border-indigo-100">
                   <span className="text-xs text-indigo-800 font-medium whitespace-nowrap truncate">
-                    Đã gửi lời mời kết bạn ⏳
+                    Đã gửi lời mời kết bạn
                   </span>
                   <button
                     onClick={() => cancelFriendRequest(liveUser.id)}

@@ -109,7 +109,7 @@ export const SettingsView: React.FC = () => {
       if (event.target?.result) {
         const dataUrl = event.target.result as string;
         setProfileForm(prev => ({ ...prev, avatar: dataUrl }));
-        showToast('Đã tải ảnh đại diện lên từ máy! 📸', 'success');
+        showToast('Đã tải ảnh đại diện lên từ máy!', 'success');
       }
     };
     reader.readAsDataURL(file);
@@ -148,7 +148,7 @@ export const SettingsView: React.FC = () => {
         console.error('[SettingsView] syncFcmTokenAfterAuth failed:', err);
       }
       setNotificationsEnabled(true);
-      showToast('Đã bật thông báo 🔔', 'info');
+      showToast('Đã bật thông báo', 'info');
     } else {
       try {
         await deleteFcmToken();
@@ -219,7 +219,7 @@ export const SettingsView: React.FC = () => {
 
   const handleLogout = async () => {
     setShowLogoutModal(false);
-    showToast('Đã đăng xuất tài khoản thành công! 👋', 'info');
+    showToast('Đã đăng xuất tài khoản thành công!', 'info');
     try {
       await logout();
     } catch (err) {
@@ -739,8 +739,8 @@ export const SettingsView: React.FC = () => {
                             <div className="truncate">
                               <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
                                 <span className="hover:text-indigo-600 truncate">{friend.name}</span>
-                                {type === 'lover' && <span className="text-xs shrink-0">❤️</span>}
-                                {type === 'best_friend' && <span className="text-xs shrink-0">⭐</span>}
+                                {type === 'lover' && <span className="text-xs shrink-0" aria-hidden="true" />}
+                                {type === 'best_friend' && <span className="text-xs shrink-0" aria-hidden="true" />}
                               </div>
                               <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{friend.status}</div>
                             </div>
@@ -754,8 +754,8 @@ export const SettingsView: React.FC = () => {
                               className="text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-1 px-2 rounded-xl border-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                             >
                               <option value="friend">Bạn bè</option>
-                              <option value="best_friend">Bạn thân ⭐</option>
-                              <option value="lover">Người yêu ❤️</option>
+                              <option value="best_friend">Bạn thân</option>
+                              <option value="lover">Người yêu</option>
                             </select>
 
                             {/* Chat button */}
@@ -1134,7 +1134,7 @@ export const SettingsView: React.FC = () => {
             <button
               onClick={() => {
                 setShowDownloadModal(false);
-                showToast('Ứng dụng đã sẵn sàng trên thiết bị của bạn! 🎉', 'success');
+                showToast('Ứng dụng đã sẵn sàng trên thiết bị của bạn!', 'success');
               }}
               className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer"
             >

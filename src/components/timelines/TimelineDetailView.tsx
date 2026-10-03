@@ -46,7 +46,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
     } catch {
       try {
         await navigator.clipboard.writeText(url);
-        showToast('Đã sao chép liên kết hành trình! 🧭', 'success');
+        showToast('Đã sao chép liên kết hành trình!', 'success');
       } catch {
         showToast('Không thể chia sẻ liên kết lúc này', 'error');
       }
@@ -216,7 +216,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
             </div>
             <div>
               <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider whitespace-nowrap truncate">Kết thúc hành trình</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">{timeline.endDate} · Kỷ niệm đọng lại mãi mãi ✨</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">{timeline.endDate} · Kỷ niệm đọng lại mãi mãi</div>
             </div>
           </div>
         </div>

@@ -372,9 +372,9 @@ export const LocationView: React.FC = () => {
                   >
                     {/* Status speech bubble */}
                     <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white px-2 py-0.5 rounded-full shadow-lg border border-slate-200 text-[10px] font-semibold text-slate-800 flex items-center gap-1 group-hover:scale-105 transition-transform">
-                      {isLover && <span className="text-rose-500">❤️</span>}
-                      {isBestFriend && <span className="text-amber-500">⭐</span>}
-                      {isStranger && <span className="text-emerald-500">🌐</span>}
+                      {isLover && <span className="text-rose-500" aria-hidden="true" />}
+                      {isBestFriend && <span className="text-amber-500" aria-hidden="true" />}
+                      {isStranger && <span className="text-emerald-500" aria-hidden="true" />}
                       <span>{user.status?.trim() || 'Trực tuyến'}</span>
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" />
                     </div>
@@ -562,7 +562,7 @@ export const LocationView: React.FC = () => {
                 value={newStatusInput}
                 onChange={(e) => setNewStatusInput(e.target.value)}
                 maxLength={45}
-                placeholder="VD: Đang cafe ☕, Học bài 📚..."
+                placeholder="VD: Đang cafe, Học bài..."
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <div className="text-[10px] text-slate-400 dark:text-slate-500 text-right mt-1">
@@ -573,11 +573,11 @@ export const LocationView: React.FC = () => {
             {/* Quick status recommendations */}
             <div className="flex flex-wrap gap-1.5 mb-5">
               {[
-                'Đang cafe ☕',
-                'Tập gym chiều 💪',
-                'Học bài thư viện 📚',
-                'Đi dạo phố 🛵',
-                'Ăn tối cùng bạn 🍲'
+                'Đang cafe',
+                'Tập gym chiều',
+                'Học bài thư viện',
+                'Đi dạo phố',
+                'Ăn tối cùng bạn'
               ].map((rec) => (
                 <button
                   key={rec}

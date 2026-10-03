@@ -713,7 +713,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await appHub.updateStatus(trimmed);
         dispatch(setMyStatus(trimmed));
         setCurrentUser(prev => ({ ...prev, status: trimmed, lastUpdated: 'Vừa xong' }));
-        showToast('Đã cập nhật trạng thái mới ✨', 'success');
+        showToast('Đã cập nhật trạng thái mới', 'success');
       } catch (err) {
         console.error('[AppContext] updateStatus failed:', err);
         showToast('Mất kết nối, chưa cập nhật được trạng thái', 'error');
@@ -728,7 +728,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dispatch(setMyVisibility(tier));
         setCurrentUser(prev => ({ ...prev, visibility: tier }));
         const labels = ['Chỉ mình tôi', 'Bạn bè', 'Bạn thân', 'Người yêu', 'Công khai'];
-        showToast(`Đã đổi quyền riêng tư vị trí: ${labels[tier]} 📍`, 'success');
+        showToast(`Đã đổi quyền riêng tư vị trí: ${labels[tier]}`, 'success');
       } catch (err) {
         console.error('[AppContext] updateVisibility failed:', err);
         showToast('Mất kết nối, chưa đổi được quyền riêng tư', 'error');
@@ -876,7 +876,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }, 45000);
         }
       }
-      showToast('Đã đăng khoảnh khắc mới thành công! 📸', 'success');
+      showToast('Đã đăng khoảnh khắc mới thành công!', 'success');
     } catch (err) {
       console.error('[AppContext] addMoment failed:', err);
       if (!isAxiosError(err)) {
@@ -923,7 +923,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const numericId = Number(momentId);
     if (!numericId || tier < 0 || tier > 4) return;
     setMoments((prev) => prev.map((m) => (m.id === momentId ? { ...m, visibility: tier } : m)));
-    showToast(`Đã đổi quyền xem: ${VISIBILITY_LABELS[tier]} 🔒`, 'success');
+    showToast(`Đã đổi quyền xem: ${VISIBILITY_LABELS[tier]}`, 'success');
     void changeMomentVisibilityApi(numericId, VISIBILITY_NAMES[tier]).catch((err) => {
       console.error('[AppContext] changeMomentVisibility failed:', err);
     });
@@ -969,7 +969,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const dto = await acceptFriendRequest(row.id);
           upsertFriendship(dto);
           syncSelectedRelationship(userId, relationshipFromDto(dto));
-          showToast(`Đã kết bạn với ${name} 🤝`, 'success');
+          showToast(`Đã kết bạn với ${name}`, 'success');
         } else {
           await rejectFriendRequest(row.id);
           dropFriendship(row.id);
@@ -991,8 +991,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         syncSelectedRelationship(userId, rel);
         showToast(
           rel?.status === 'accepted'
-            ? `Đã kết bạn với ${dto.otherUserName} 🤝`
-            : 'Đã gửi lời mời kết bạn ✨',
+            ? `Đã kết bạn với ${dto.otherUserName}`
+            : 'Đã gửi lời mời kết bạn',
           'success',
         );
       } catch (err) {
@@ -1038,8 +1038,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         syncSelectedRelationship(userId, relationshipFromDto(dto));
         const typeLabels: Record<FriendshipType, string> = {
           friend: 'Bạn bè',
-          best_friend: 'Bạn thân ⭐',
-          lover: 'Người yêu ❤️'
+          best_friend: 'Bạn thân',
+          lover: 'Người yêu'
         };
         showToast(`Đã cập nhật quan hệ: ${typeLabels[type]}`, 'success');
       } catch (err) {
@@ -1079,7 +1079,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const dto = await blockUser(row.id);
         upsertFriendship(dto);
         syncSelectedRelationship(userId, relationshipFromDto(dto));
-        showToast(`Đã chặn ${name} 🚫`, 'info');
+        showToast(`Đã chặn ${name}`, 'info');
       } catch (err) {
         onFriendshipError('blockFriend', err);
       }
@@ -1098,7 +1098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const dto = await unblockUser(row.id);
         upsertFriendship(dto);
         syncSelectedRelationship(userId, relationshipFromDto(dto));
-        showToast(`Đã bỏ chặn ${name} 🤝`, 'success');
+        showToast(`Đã bỏ chặn ${name}`, 'success');
       } catch (err) {
         onFriendshipError('unblockFriend', err);
       }
@@ -1151,7 +1151,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bio: mapped.bio ?? (profileData.bio !== undefined ? profileData.bio : prev.bio),
         lastUpdated: 'Vừa xong',
       }));
-      showToast('Đã lưu thông tin cá nhân thành công ✨', 'success');
+      showToast('Đã lưu thông tin cá nhân thành công', 'success');
     } catch (err) {
       if (!isAxiosError(err)) {
         showToast(err instanceof Error ? err.message : 'Không thể lưu hồ sơ.', 'error');
@@ -1175,7 +1175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         momentIds: data.selectedMomentIds.map(Number).filter((n) => n > 0),
       });
       await refreshTimelines();
-      showToast(`Đã tạo hành trình "${data.title.trim()}" 🧭`, 'success');
+      showToast(`Đã tạo hành trình "${data.title.trim()}"`, 'success');
     } catch (err) {
       console.error('[AppContext] createTimeline failed:', err);
       throw err;
@@ -1194,7 +1194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (activeTimelineId === timelineId) {
           setActiveTimelineId(null);
         }
-        showToast(`Đã xóa hành trình "${target?.title || ''}" 🗑️`, 'info');
+        showToast(`Đã xóa hành trình "${target?.title || ''}"`, 'info');
       } catch (err) {
         console.error('[AppContext] deleteTimeline failed:', err);
       }

@@ -169,7 +169,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
         setMediaType('image');
         setIsImmersive(false);
         setStep('edit');
-        showToast('Đã chụp ảnh thành công! 📸', 'success');
+        showToast('Đã chụp ảnh thành công!', 'success');
         return;
       }
     }
@@ -181,13 +181,13 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
     setMediaType('image');
     setIsImmersive(false);
     setStep('edit');
-    showToast('Đã chụp ảnh khoảnh khắc 📸', 'success');
+    showToast('Đã chụp ảnh khoảnh khắc', 'success');
   };
 
   // Video Recording Handlers
   const handleStartRecording = () => {
     if (!mediaStreamRef.current) {
-      showToast('Bắt đầu quay video ngắn... 🎥', 'info');
+      showToast('Bắt đầu quay video ngắn...', 'info');
       setIsRecording(true);
       setRecordingSeconds(0);
       recordTimerRef.current = window.setInterval(() => {
@@ -221,7 +221,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
         setMediaType('video');
         setIsImmersive(false);
         setStep('edit');
-        showToast('Đã quay xong video ngắn! 🎬', 'success');
+        showToast('Đã quay xong video ngắn!', 'success');
       };
 
       recorder.start();
@@ -276,7 +276,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
       setMediaType('video');
       setIsImmersive(false);
       setStep('edit');
-      showToast('Đã chọn video từ thư viện 🎬', 'success');
+      showToast('Đã chọn video từ thư viện', 'success');
       e.target.value = '';
       return;
     }
@@ -301,7 +301,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
           setMediaType('image');
           setIsImmersive(false);
           setStep('edit');
-          showToast(`Đã thêm ${newImages.length} ảnh 📸`, 'success');
+          showToast(`Đã thêm ${newImages.length} ảnh`, 'success');
         }
       };
       reader.readAsDataURL(file);
@@ -419,7 +419,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
           type: blob.type || 'video/mp4',
         });
         await addMoment({
-          caption: caption.trim() || 'Khoảnh khắc video mới 🎬✨',
+          caption: caption.trim() || 'Khoảnh khắc video mới',
           video: file,
           includeLocation,
           visibility,
@@ -435,7 +435,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
             }),
         );
         await addMoment({
-          caption: caption.trim() || 'Khoảnh khắc mới ✨',
+          caption: caption.trim() || 'Khoảnh khắc mới',
           images,
           includeLocation,
           visibility,

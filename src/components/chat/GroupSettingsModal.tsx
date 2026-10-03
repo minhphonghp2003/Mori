@@ -118,7 +118,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
       if (event.target?.result) {
         const dataUrl = event.target.result as string;
         handleSelectAvatar(dataUrl);
-        showToast('Đã đổi ảnh đại diện nhóm! 📸', 'success');
+        showToast('Đã đổi ảnh đại diện nhóm!', 'success');
       }
     };
     reader.readAsDataURL(file);
@@ -299,7 +299,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             <span>{conversation.memberCount || memberUsers.length} thành viên</span>
             <span>•</span>
             <span className={conversation.isPrivateGroup ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
-              {conversation.isPrivateGroup ? 'Nhóm Riêng tư 🔒' : 'Nhóm Công khai 🌐'}
+              {conversation.isPrivateGroup ? 'Nhóm Riêng tư' : 'Nhóm Công khai'}
             </span>
           </div>
 

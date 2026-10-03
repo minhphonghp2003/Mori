@@ -365,7 +365,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       if (statusRef.current !== "incoming" && statusRef.current !== "outgoing") return;
       cleanup();
       if (reason === "missed" || reason === "timeout") {
-        emitToast("Cuộc gọi nhỡ 📵", "info");
+        emitToast("Cuộc gọi nhỡ", "info");
       }
     },
     [cleanup],
@@ -458,7 +458,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         case "cancel":
           if (statusRef.current === "incoming") {
             cleanup();
-            emitToast(`Cuộc gọi nhỡ từ ${current.name || "người lạ"} 📵`, "info");
+            emitToast(`Cuộc gọi nhỡ từ ${current.name || "người lạ"}`, "info");
           }
           break;
 
