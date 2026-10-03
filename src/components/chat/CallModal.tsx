@@ -2,12 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   PhoneOff,
   Phone,
-  Mic,
-  MicOff,
   Video,
   VideoOff,
-  Volume2,
-  VolumeX
 } from 'lucide-react';
 import { useCall } from '../../providers/call-provider';
 
@@ -17,7 +13,6 @@ export const CallModal: React.FC = () => {
     peer,
     localStream,
     remoteStream,
-    micMuted,
     cameraOff,
     remoteCameraOff,
     callDuration,
@@ -25,14 +20,12 @@ export const CallModal: React.FC = () => {
     rejectCall,
     cancelCall,
     endCall,
-    toggleMic,
     toggleCamera
   } = useCall();
 
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [speakerEnabled, setSpeakerEnabled] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
 
   useEffect(() => {
@@ -48,13 +41,13 @@ export const CallModal: React.FC = () => {
     const el = remoteAudioRef.current;
     if (!el) return;
     el.srcObject = remoteStream;
-    el.muted = !speakerEnabled;
+    el.muted = false;
     if (remoteStream && (status === 'active' || status === 'reconnecting')) {
       el.play().catch(() => {});
     } else {
       el.pause();
     }
-  }, [remoteStream, speakerEnabled, status]);
+  }, [remoteStream, status]);
 
   useEffect(() => {
     const el = localVideoRef.current;
@@ -162,7 +155,11 @@ export const CallModal: React.FC = () => {
           <button
             type="button"
             aria-label={controlsVisible ? 'Ẩn điều khiển cuộc gọi' : 'Hiện điều khiển cuộc gọi'}
-            onClick={() => setControlsVisible((visible) => !visible)}
+            onClick={() => {
+              setControlsVisible((visible) => !visible);
+              const audio = remoteAudioRef.current;
+              if (audio?.paused) audio.play().catch(() => {});
+            }}
             className="absolute inset-0 z-10 h-full w-full cursor-default"
           />
         )}
@@ -235,20 +232,6 @@ export const CallModal: React.FC = () => {
           ) : (
             <>
               <div className="flex items-center justify-center gap-5 mb-6">
-                {/* Mute Mic */}
-                <button
-                  onClick={(event) => { event.stopPropagation(); toggleMic(); }}
-                  disabled={!isActive}
-                  className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
-                    micMuted
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-white/15 text-white hover:bg-white/25'
-                  }`}
-                  title={micMuted ? 'Bật mic' : 'Tắt mic'}
-                >
-                  {micMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-                </button>
-
                 {/* Toggle Camera */}
                 {peer.hasVideo && (
                   <button
@@ -265,28 +248,6 @@ export const CallModal: React.FC = () => {
                   </button>
                 )}
 
-                {/* Speaker */}
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setSpeakerEnabled((enabled) => {
-                      const next = !enabled;
-                      const audio = remoteAudioRef.current;
-                      if (audio) {
-                        audio.muted = !next;
-                        if (next) audio.play().catch(() => {});
-                      }
-                      return next;
-                    });
-                  }}
-                  className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                    speakerEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-rose-500 text-white'
-                  }`}
-                  title={speakerEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
-                  aria-label={speakerEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
-                >
-                  {speakerEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-                </button>
               </div>
 
               {/* Cancel / End Call Button */}

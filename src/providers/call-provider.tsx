@@ -65,6 +65,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   const videoSenderRef = useRef<RTCRtpSender | null>(null);
   const cameraToggleInProgressRef = useRef(false);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const offeredSdpRef = useRef<RTCSessionDescriptionInit | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -128,6 +129,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
     }
+    remoteStreamRef.current = null;
     pendingCandidatesRef.current = [];
     offeredSdpRef.current = null;
     reconnectAttemptsRef.current = 0;
@@ -179,6 +181,8 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 
   const createPeer = useCallback(() => {
     const pc = new RTCPeerConnection(RTC_CONFIG);
+    const incomingStream = new MediaStream();
+    remoteStreamRef.current = incomingStream;
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
@@ -189,8 +193,12 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     };
 
     pc.ontrack = (e) => {
-      const stream = e.streams[0] ?? new MediaStream([e.track]);
-      setRemoteStream(stream);
+      const stream = remoteStreamRef.current ?? new MediaStream();
+      if (!stream.getTracks().some((track) => track.id === e.track.id)) {
+        stream.addTrack(e.track);
+      }
+      remoteStreamRef.current = stream;
+      setRemoteStream(new MediaStream(stream.getTracks()));
     };
 
     pc.ondatachannel = (event) => configureControlChannel(event.channel);
