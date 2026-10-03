@@ -23,6 +23,31 @@ const initialState: ChatState = {
   totalUnreadCount: 0,
 };
 
+/** Folder token of a storage path/URL (strip query, then filename):
+ *  `https://cdn/x/chat/<guid>/original.webp?sv=..` → `…/x/chat/<guid>`. */
+const folderToken = (raw: string | undefined): string => {
+  if (!raw) return "";
+  const noQuery = raw.split("?")[0];
+  const idx = noQuery.lastIndexOf("/");
+  return idx > 0 ? noQuery.slice(0, idx) : noQuery;
+};
+
+/** Does a message attachment point at the file a FileMarkedSuccess names?
+ *  Matches exact URLs first, then folder-suffix (CDN URLs embed the key). */
+const attachmentMatchesFile = (
+  attachment: { originalUrl: string; thumbUrl: string },
+  data: { originalUrl?: string; originalKey?: string; key?: string; fileId?: string },
+): boolean => {
+  const urls = [data.originalUrl, data.originalKey, data.key].filter(Boolean) as string[];
+  if (urls.some((u) => u === attachment.originalUrl || u === attachment.thumbUrl)) return true;
+  const attToken = folderToken(attachment.originalUrl || attachment.thumbUrl);
+  if (!attToken) return false;
+  return urls.some((u) => {
+    const token = folderToken(u);
+    return !!token && (attToken.endsWith(token) || token.endsWith(attToken));
+  });
+};
+
 const chatSlice = createSlice({
   name: "chat",
   initialState,
@@ -258,6 +283,39 @@ const chatSlice = createSlice({
       const reactions = msg.reactions ?? [];
       msg.reactions = reactions.filter((r) => !(r.userId === userId && r.emoji === emoji));
     },
+    /** Fill generated thumbs into message attachments when
+     *  ReceiveFileMarkedSuccess arrives (no conversationId on the event,
+     *  so every cached list + preview row is scanned). */
+    patchMessageAttachment: (
+      state,
+      action: PayloadAction<{
+        originalUrl?: string;
+        originalKey?: string;
+        key?: string;
+        fileId?: string;
+        thumbUrl: string;
+      }>,
+    ) => {
+      const data = action.payload;
+      if (!data.thumbUrl) return;
+      const patchList = (list: MessageDto[] | undefined) => {
+        if (!list) return;
+        for (const msg of list) {
+          if (!msg.attachments) continue;
+          for (const att of msg.attachments) {
+            if (att.thumbUrl || !attachmentMatchesFile(att, data)) continue;
+            att.thumbUrl = data.thumbUrl;
+            if (!att.originalUrl && data.originalUrl) att.originalUrl = data.originalUrl;
+          }
+        }
+      };
+      for (const key of Object.keys(state.messages)) {
+        patchList(state.messages[Number(key)]);
+      }
+      for (const conv of state.conversations) {
+        if (conv.lastMessage?.attachments) patchList([conv.lastMessage]);
+      }
+    },
     markMessagesRead: (
       state,
       action: PayloadAction<{ conversationId: number; messageIds: number[]; myUserId: number }>,
@@ -312,6 +370,7 @@ export const {
   deleteMessage,
   mergeMessageReaction,
   removeMessageReaction,
+  patchMessageAttachment,
   markMessagesRead,
   updateConversationState,
   removeConversation,

@@ -6,6 +6,7 @@ import { useIsPwa } from '../../hooks/use-is-pwa';
 import { useTheme } from '../../providers/theme-provider';
 import { requestNotificationPermission, syncFcmTokenAfterAuth, deleteFcmToken } from '../../lib/fcm';
 import { FriendshipType, VisibilityTier, User as UserType, Timeline, Moment } from '../../types';
+import { LogoLoader } from '../common/LogoLoader';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { Avatar } from '../common/Avatar';
 import { VISIBILITY_OPTIONS } from '../../constants/visibility';
@@ -318,16 +319,14 @@ export const SettingsView: React.FC = () => {
               </div>
             </div>
 
-            {/* Name, Info & Clean Status Badge - Forced 1 line with ellipsis */}
+            {/* Name on line 1, age + gender on line 2 */}
             <div className="space-y-1 min-w-0 flex-1">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-none whitespace-nowrap truncate">{currentUser.name}</h2>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-xs text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">
-                    {currentUser.age} tuổi
-                  </span>
-                  {renderGenderIcon(currentUser.gender)}
-                </div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight whitespace-nowrap truncate">{currentUser.name}</h2>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">
+                  {currentUser.age} tuổi
+                </span>
+                {renderGenderIcon(currentUser.gender)}
               </div>
             </div>
           </div>
@@ -538,8 +537,7 @@ export const SettingsView: React.FC = () => {
 
             {isLoadingTimelines && timelines.length === 0 ? (
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-100 dark:border-slate-800 flex flex-col items-center gap-2">
-                <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-                <p className="text-xs text-slate-400 dark:text-slate-500">Đang tải hành trình...</p>
+                <LogoLoader size="sm" text={null} />
               </div>
             ) : timelines.length === 0 ? (
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-100 dark:border-slate-800">
@@ -1000,7 +998,7 @@ export const SettingsView: React.FC = () => {
                 <textarea
                   value={profileForm.bio}
                   onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
-                  rows={2}
+                  rows={4}
                   maxLength={150}
                   placeholder="Giới thiệu đôi nét về bản thân..."
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"

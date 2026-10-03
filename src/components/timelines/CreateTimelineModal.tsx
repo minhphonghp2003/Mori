@@ -5,6 +5,7 @@ import { getAvailableMoments, formatMomentDate } from '../../services/moment';
 import { mapMoment } from '../../lib/moment/mappers';
 import { X, Compass, Calendar, Users, Camera, Check, Loader2 } from 'lucide-react';
 import { Avatar } from '../common/Avatar';
+import { LogoLoader } from '../common/LogoLoader';
 
 interface CreateTimelineModalProps {
   onClose: () => void;
@@ -223,9 +224,8 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
               <span>Gắn khoảnh khắc vào hành trình ({selectedMomentIds.length} ảnh)</span>
             </label>
             {isLoadingAvailable ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400 dark:text-slate-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Đang tải khoảnh khắc...</span>
+              <div className="flex items-center justify-center py-6">
+                <LogoLoader size="sm" text={null} />
               </div>
             ) : available.length === 0 ? (
               <p className="text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-3 text-center">

@@ -4,6 +4,7 @@ import { CreateMomentModal } from './CreateMomentModal';
 import { MomentReelCard } from './MomentReelCard';
 import { MomentViewerModal } from './MomentViewerModal';
 import { Plus, Camera, Film, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { LogoLoader } from '../common/LogoLoader';
 import type { Moment } from '../../types';
 import { getMomentById } from '@/services/moment';
 import { mapMoment } from '@/lib/moment/mappers';
@@ -129,8 +130,7 @@ export const MomentsView: React.FC = () => {
       {/* INITIAL LOADING */}
       {isLoadingMoments && moments.length === 0 && !momentsError && (
         <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-950 text-white">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          <span className="text-xs text-slate-400 animate-pulse">Đang tải khoảnh khắc...</span>
+          <LogoLoader size="md" text={null} />
         </div>
       )}
 
@@ -187,10 +187,7 @@ export const MomentsView: React.FC = () => {
       {/* Cursor paging indicator (overlay — must not affect snap layout) */}
       {moments.length > 0 && isLoadingMoreMoments && (
         <div className="absolute bottom-5 inset-x-0 z-30 flex justify-center pointer-events-none">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/70 border border-white/15 text-white text-[11px] font-semibold shadow-lg">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-            <span>Đang tải thêm...</span>
-          </div>
+          <LogoLoader size="sm" text={null} />
         </div>
       )}
 

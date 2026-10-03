@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { MediaViewerModal } from '../common/MediaViewerModal';
+import { LogoLoader } from '../common/LogoLoader';
 import { Avatar } from '../common/Avatar';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { GroupSettingsModal } from './GroupSettingsModal';
@@ -436,8 +437,16 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
 
   if (!conversation) {
     return (
-      <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400 animate-pulse">
-        {showNotFound ? 'Không tìm thấy cuộc trò chuyện.' : 'Đang tải cuộc trò chuyện...'}
+      <div className="p-8 text-center">
+        {showNotFound ? (
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            Không tìm thấy cuộc trò chuyện.
+          </span>
+        ) : (
+          <div className="flex justify-center">
+            <LogoLoader size="md" text={null} />
+          </div>
+        )}
       </div>
     );
   }
@@ -804,8 +813,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                 : isPartnerTyping
                 ? 'Đang soạn tin...'
                 : convIsGroup === false && conversation.isOnline
-                ? 'Đang hoạt động • Chạm để xem hồ sơ'
-                : 'Không hoạt động • Chạm để xem hồ sơ'}
+                ? 'Đang hoạt động'
+                : 'Không hoạt động'}
             </div>
           </div>
         </div>
@@ -918,8 +927,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
         }}
       >
         {isLoadingOlder && (
-          <div className="text-center py-2 text-[11px] text-slate-400 dark:text-slate-500 animate-pulse">
-            Đang tải tin nhắn cũ...
+          <div className="py-2 flex justify-center">
+            <LogoLoader size="sm" text={null} />
           </div>
         )}
         {messages.map((msg) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../../context/AppContext';
+import { LogoLoader } from '../common/LogoLoader';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { getDiscoverableGroups } from '@/services/chat';
 import { mapDiscoverableGroup } from '@/lib/chat/mappers';
@@ -247,8 +248,8 @@ export const ChatListView: React.FC = () => {
                 );
               })}
               {isLoadingMoreConversations && (
-                <div className="py-3 text-center text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                  Đang tải thêm...
+                <div className="py-3 flex justify-center">
+                  <LogoLoader size="sm" text={null} />
                 </div>
               )}
               {!conversationsHasMore && allActiveConversations.length > 4 && (

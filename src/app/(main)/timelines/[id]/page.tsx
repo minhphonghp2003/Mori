@@ -7,7 +7,7 @@ import type { Timeline } from "@/types";
 import { getTimelineById, getTimelineMomentsAll } from "@/services/timeline";
 import { buildTimelineView, type TimelineOwnerLookup } from "@/lib/timeline/mappers";
 import { TimelineDetailView } from "@/components/timelines/TimelineDetailView";
-import { Loader2 } from "lucide-react";
+import { LogoLoader } from "@/components/common/LogoLoader";
 
 export default function TimelineDetailPage() {
   const params = useParams<{ id: string }>();
@@ -59,8 +59,7 @@ export default function TimelineDetailPage() {
     if (isLoading) {
       return (
         <div className="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 gap-2">
-          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-          <p className="text-xs text-slate-400 font-medium">Đang tải hành trình...</p>
+          <LogoLoader size="sm" text={null} />
         </div>
       );
     }

@@ -30,6 +30,7 @@ import {
   mapMember,
   uploadChatMedia,
 } from "@/lib/chat/mappers";
+import { waitForFileMarkedSuccess } from "@/lib/signalr/file-processing";
 
 export type SendMessageArgs = [
   conversationId: string,
@@ -274,18 +275,31 @@ export function useChatActions({
         }
 
         const media = image ?? video;
+        // Post media first, then wait for the server to generate the thumb
+        // (ReceiveFileMarkedSuccess) before sending — the bubble must never
+        // render alt text. A timeout falls through and sends anyway; the
+        // thumb patches in later via the same event.
+        const awaitThumb = async (upload: { fileId: string; key: string }) => {
+          try {
+            await waitForFileMarkedSuccess(upload);
+          } catch {
+            // Timeout — send anyway, chat-sync patches the thumb on arrival.
+          }
+        };
         if (media instanceof File) {
           const blob: Blob = media;
           const contentType = media.type || "application/octet-stream";
-          const fileId = await uploadChatMedia(blob, contentType);
-          fileIds = [fileId];
+          const upload = await uploadChatMedia(blob, contentType);
+          fileIds = [upload.fileId];
           messageType = MessageType.File;
+          await awaitThumb(upload);
         } else if (typeof media === "string" && media.length > 0) {
           if (media.startsWith("data:")) {
             const blob = dataUrlToBlob(media);
-            const fileId = await uploadChatMedia(blob, blob.type || "image/jpeg");
-            fileIds = [fileId];
+            const upload = await uploadChatMedia(blob, blob.type || "image/jpeg");
+            fileIds = [upload.fileId];
             messageType = MessageType.File;
+            await awaitThumb(upload);
           } else {
             // External URL (GIF from GIPHY) is referenced directly.
             content = media;
@@ -613,8 +627,8 @@ export function useChatActions({
         }
         if (updates.avatar && updates.avatar.startsWith("data:")) {
           const blob = dataUrlToBlob(updates.avatar);
-          const fileId = await uploadChatMedia(blob, blob.type || "image/jpeg");
-          await chatService.changeGroupImage(convId, fileId);
+          const upload = await uploadChatMedia(blob, blob.type || "image/jpeg");
+          await chatService.changeGroupImage(convId, upload.fileId);
           const detail = await chatService.getConversation(convId);
           if (detail.data) {
             dispatch(

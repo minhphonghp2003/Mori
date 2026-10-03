@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Timeline, Moment } from '../../types';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  MapPin, 
-  Share2, 
-  Users, 
-  PlaneTakeoff, 
+import {
+  ArrowLeft,
+  Calendar,
+  Share2,
+  Users,
+  PlaneTakeoff,
   Flag,
   Trash2
 } from 'lucide-react';
@@ -112,21 +111,23 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                 <span className="whitespace-nowrap truncate">{timeline.startDate} – {timeline.endDate}</span>
               </div>
 
-              {/* Co-travelers */}
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="text-[10px] text-white/70 mr-1 whitespace-nowrap truncate">Cùng đi:</span>
-                <div className="flex -space-x-2">
-                  {timeline.partners.map((partner) => (
-                    <Avatar
-                      key={partner.id}
-                      src={partner.avatar}
-                      name={partner.name}
-                      className="w-6 h-6 rounded-full object-cover ring-2 ring-slate-900"
-                      textClassName="text-[8px]"
-                    />
-                  ))}
+              {/* Co-travelers — hidden when travelling solo */}
+              {timeline.partners.length > 0 && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[10px] text-white/70 mr-1 whitespace-nowrap truncate">Cùng đi:</span>
+                  <div className="flex -space-x-2">
+                    {timeline.partners.map((partner) => (
+                      <Avatar
+                        key={partner.id}
+                        src={partner.avatar}
+                        name={partner.name}
+                        className="w-6 h-6 rounded-full object-cover ring-2 ring-slate-900"
+                        textClassName="text-[8px]"
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -193,10 +194,6 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-black/60 backdrop-blur-xs rounded-md text-[10px] text-white font-medium flex items-center gap-1 max-w-[200px]">
-                      <MapPin className="w-2.5 h-2.5 text-indigo-400 shrink-0" />
-                      <span className="whitespace-nowrap truncate">{m.locationName}</span>
-                    </div>
                   </div>
 
                   <div className="flex items-center justify-between mb-1 gap-2">

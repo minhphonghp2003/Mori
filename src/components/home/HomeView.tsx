@@ -6,6 +6,7 @@ import { emptyUser } from '@/lib/chat/mappers';
 import { formatDistance } from '@/lib/location/geo';
 import { getAllUsers } from '@/services/user';
 import { useFirstMessage } from '@/hooks/chat/use-first-message';
+import { LogoLoader } from '../common/LogoLoader';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { FirstMessageModal } from '../chat/FirstMessageModal';
 import type { UserListItemDto } from '@/types/user';
@@ -238,9 +239,9 @@ export const HomeView: React.FC = () => {
         {visibleUsers.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
             {isLoadingRoster ? (
-              <p className="text-xs text-slate-400 dark:text-slate-500 animate-pulse">
-                Đang tải danh sách...
-              </p>
+              <div className="py-8 flex justify-center">
+                <LogoLoader size="md" text={null} />
+              </div>
             ) : (
               <>
                 <Users className="w-9 h-9 text-slate-300 mx-auto mb-2" />
@@ -338,9 +339,9 @@ export const HomeView: React.FC = () => {
           </div>
         )}
         {isLoadingMore && (
-          <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 animate-pulse pb-2">
-            Đang tải thêm...
-          </p>
+          <div className="pb-2 flex justify-center">
+            <LogoLoader size="sm" text={null} />
+          </div>
         )}
       </div>
 

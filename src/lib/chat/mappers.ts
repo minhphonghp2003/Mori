@@ -233,10 +233,15 @@ export const dataUrlToBlob = (dataUrl: string): Blob => {
   return new Blob([bytes], { type: mime });
 };
 
+export interface UploadedChatMedia {
+  fileId: string;
+  key: string;
+}
+
 export const uploadChatMedia = async (
   blob: Blob,
   contentType: string,
-): Promise<string> => {
+): Promise<UploadedChatMedia> => {
   const items = await getPresignedUploadUrls({
     bucket: "Chat",
     contentTypes: [contentType],
@@ -244,5 +249,5 @@ export const uploadChatMedia = async (
   const item = items[0];
   if (!item) throw new Error("Không nhận được URL tải lên.");
   await uploadToPresignedUrl(item.uploadUrl, blob, contentType);
-  return item.fileId;
+  return { fileId: item.fileId, key: item.key };
 };

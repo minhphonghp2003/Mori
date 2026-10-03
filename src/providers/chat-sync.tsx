@@ -13,6 +13,7 @@ import {
   deleteMessage as deleteMessageAction,
   markMessagesRead,
   mergeMessageReaction,
+  patchMessageAttachment,
   removeConversation,
   removeMessageReaction,
   setConversations,
@@ -152,6 +153,23 @@ export function ChatSync({ children }: { children: ReactNode }) {
               messageId: data.messageId,
               userId: data.userId,
               emoji: data.emoji,
+            }),
+          );
+        }),
+      );
+
+      // Generated thumbs for sent media: patch message attachments so the
+      // bubble swaps from alt text to the real thumbnail when ready.
+      unsubs.push(
+        appHub.onReceiveFileMarkedSuccess((data) => {
+          if (!data?.thumbUrl) return;
+          dispatch(
+            patchMessageAttachment({
+              originalUrl: data.originalUrl,
+              originalKey: data.originalKey,
+              key: data.key,
+              fileId: data.fileId,
+              thumbUrl: data.thumbUrl,
             }),
           );
         }),

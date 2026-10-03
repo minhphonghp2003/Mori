@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Download, 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX,
+import {
+  X,
+  Download,
   Check
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -30,9 +26,6 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
   const { showToast } = useApp();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
 
   // Close on ESC
   useEffect(() => {
@@ -74,23 +67,6 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
     } finally {
       setIsDownloading(false);
     }
-  };
-
-  const toggleVideoPlayback = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play();
-      setIsPlaying(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  const toggleVideoMute = () => {
-    if (!videoRef.current) return;
-    videoRef.current.muted = !videoRef.current.muted;
-    setIsMuted(videoRef.current.muted);
   };
 
   return (
@@ -168,34 +144,13 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
         ) : (
           <div className="relative max-h-[82vh] max-w-full flex items-center justify-center">
             <video
-              ref={videoRef}
               src={mediaUrl}
+              controls
               autoPlay
               playsInline
               loop
               className="max-h-[82vh] max-w-full rounded-2xl shadow-2xl object-contain bg-black"
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
             />
-
-            {/* Video overlay controls */}
-            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between p-2 rounded-xl bg-black/60 backdrop-blur-md text-white">
-              <button
-                onClick={toggleVideoPlayback}
-                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
-                title={isPlaying ? 'Tạm dừng' : 'Phát'}
-              >
-                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-white" />}
-              </button>
-
-              <button
-                onClick={toggleVideoMute}
-                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
-                title={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
-              >
-                {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5" />}
-              </button>
-            </div>
           </div>
         )}
       </div>

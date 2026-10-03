@@ -1,8 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Moment, User, ReactionEmoji, Timeline, VisibilityTier } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { TimelineDetailView } from '../timelines/TimelineDetailView';
 import { Avatar } from '../common/Avatar';
+import { LogoLoader } from '../common/LogoLoader';
+import { getMomentReactions } from '@/services/moment';
+import type { GroupedReactionDto } from '@/types/moment';
 import { emptyUser } from '@/lib/chat/mappers';
 import { useFirstMessage } from '@/hooks/chat/use-first-message';
 import { FirstMessageModal } from '../chat/FirstMessageModal';
@@ -15,9 +18,8 @@ import {
   Play,
   Pause,
   Trash2,
-  ArrowLeft, 
-  X, 
-  AlertTriangle, 
+  ArrowLeft,
+  AlertTriangle,
   Compass,
   Eye,
   EyeOff
@@ -87,6 +89,37 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showTimelineModal, setShowTimelineModal] = useState<Timeline | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  // Reactions viewer (own moments show a stack instead of the react button).
+  const [showReactionsViewer, setShowReactionsViewer] = useState(false);
+  const [reactionUsers, setReactionUsers] = useState<GroupedReactionDto[]>([]);
+  const [isLoadingReactions, setIsLoadingReactions] = useState(false);
+
+  // Latest unique emojis for the stack (max 3).
+  const stackedEmojis = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (let i = moment.reactions.length - 1; i >= 0 && out.length < 3; i--) {
+      const emoji = moment.reactions[i].emoji;
+      if (!seen.has(emoji)) {
+        seen.add(emoji);
+        out.push(emoji);
+      }
+    }
+    return out.reverse();
+  }, [moment.reactions]);
+
+  const openReactionsViewer = async () => {
+    setShowReactionsViewer(true);
+    setIsLoadingReactions(true);
+    try {
+      const res = await getMomentReactions(Number(moment.id), null, 50);
+      setReactionUsers(res.data ?? []);
+    } catch (err) {
+      console.error('[MomentReelCard] getMomentReactions failed:', err);
+    } finally {
+      setIsLoadingReactions(false);
+    }
+  };
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastTapRef = useRef<number>(0);
@@ -508,9 +541,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
         isImmersive ? 'opacity-0' : 'opacity-100'
       }`} />
 
-      {/* Top Navigation Bar (When opened as viewer modal) */}
+      {/* Top Navigation Bar (When opened as viewer modal) — back only */}
       {onClose && !isImmersive && (
-        <div className="absolute top-4 inset-x-4 z-30 flex items-center justify-between pointer-events-auto">
+        <div className="absolute top-4 inset-x-4 z-30 flex items-center justify-start pointer-events-auto">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -520,17 +553,6 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             title="Quay lại"
           >
             <ArrowLeft className="w-5 h-5 stroke-white" />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/75 active:scale-90 transition-all cursor-pointer shadow-lg"
-            title="Đóng"
-          >
-            <X className="w-5 h-5 stroke-white" />
           </button>
         </div>
       )}
@@ -642,30 +664,60 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
             </div>
           )}
 
-          <button
-            onPointerDown={handleHeartPointerDown}
-            onPointerUp={handleHeartPointerUp}
-            onPointerLeave={() => {
-              if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-            }}
-            onTouchStart={handleHeartPointerDown}
-            onTouchEnd={handleHeartPointerUp}
-            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
-            title="Nhấn để thả tim, giữ lâu để chọn cảm xúc (Haha, Phẫn nộ...)"
-          >
-            {userReaction ? (
-              <span className="text-4xl leading-none drop-shadow-lg active:scale-90 transition-transform">
-                {userReaction.emoji}
+          {isMine ? (
+            // Own moment: stacked emojis instead of the react button —
+            // tap to see everyone who reacted.
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                void openReactionsViewer();
+              }}
+              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+              title="Xem tất cả cảm xúc"
+            >
+              {stackedEmojis.length > 0 ? (
+                <div className="flex items-center -space-x-4">
+                  {stackedEmojis.map((emoji) => (
+                    <span
+                      key={emoji}
+                      className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md border border-white/25 flex items-center justify-center text-lg shadow-md"
+                    >
+                      {emoji}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 bg-black/50 text-white/40">
+                  <Heart className="w-5 h-5" />
+                </div>
+              )}
+            </button>
+          ) : (
+            <button
+              onPointerDown={handleHeartPointerDown}
+              onPointerUp={handleHeartPointerUp}
+              onPointerLeave={() => {
+                if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+              }}
+              onTouchStart={handleHeartPointerDown}
+              onTouchEnd={handleHeartPointerUp}
+              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+              title="Nhấn để thả tim, giữ lâu để chọn cảm xúc (Haha, Phẫn nộ...)"
+            >
+              {userReaction ? (
+                <span className="text-4xl leading-none drop-shadow-lg active:scale-90 transition-transform">
+                  {userReaction.emoji}
+                </span>
+              ) : (
+                <div className="w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 bg-black/50 text-white hover:bg-black/70 transition-all">
+                  <Heart className="w-5 h-5 stroke-white" />
+                </div>
+              )}
+              <span className="text-[11px] font-bold text-white/95 drop-shadow-sm whitespace-nowrap truncate">
+                {moment.reactions.length}
               </span>
-            ) : (
-              <div className="w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 bg-black/50 text-white hover:bg-black/70 transition-all">
-                <Heart className="w-5 h-5 stroke-white" />
-              </div>
-            )}
-            <span className="text-[11px] font-bold text-white/95 drop-shadow-sm whitespace-nowrap truncate">
-              {moment.reactions.length}
-            </span>
-          </button>
+            </button>
+          )}
         </div>
 
         {/* Chat / Direct Message Button (others' moments only — carries the
@@ -889,6 +941,57 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
               >
                 Ẩn ngay
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REACTIONS BOTTOM SHEET (own moments — tap the emoji stack) */}
+      {showReactionsViewer && (
+        <div
+          className="absolute inset-0 z-40 bg-black/75 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowReactionsViewer(false);
+          }}
+        >
+          <div
+            className="w-full bg-slate-900 border-t border-x border-slate-800 rounded-t-[32px] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white shadow-2xl max-h-[75%] flex flex-col animate-in slide-in-from-bottom-8 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-3 shrink-0" />
+            <h4 className="text-sm font-bold whitespace-nowrap truncate text-center">
+              Cảm xúc · {moment.reactions.length}
+            </h4>
+            <div className="mt-3 flex-1 overflow-y-auto no-scrollbar space-y-1 min-h-[60px]">
+              {isLoadingReactions ? (
+                <div className="py-6">
+                  <LogoLoader size="sm" text={null} />
+                </div>
+              ) : reactionUsers.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-6">
+                  Chưa có cảm xúc nào.
+                </p>
+              ) : (
+                reactionUsers.map((u) => (
+                  <div
+                    key={u.userId}
+                    className="flex items-center gap-2.5 p-2 rounded-2xl hover:bg-white/5 transition-colors"
+                  >
+                    <Avatar
+                      src={u.userImage?.thumbUrl ?? ''}
+                      name={u.userName}
+                      className="w-9 h-9 rounded-full object-cover shrink-0"
+                    />
+                    <span className="flex-1 min-w-0 text-xs font-bold truncate">
+                      {u.userName}
+                    </span>
+                    <span className="text-lg leading-none shrink-0 tracking-tight">
+                      {u.emojis.join('')}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
