@@ -402,8 +402,9 @@ export const ChatListView: React.FC = () => {
                           )}
 
                           <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400 dark:text-slate-500">
-                            <span className="font-semibold text-slate-600 dark:text-slate-400">
-                              👥 {grp.memberCount} thành viên
+                            <span className="inline-flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-400">
+                              <Users className="w-3 h-3" aria-hidden="true" />
+                              {grp.memberCount} thành viên
                             </span>
                             {grp.activityTime && (
                               <>

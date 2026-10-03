@@ -661,7 +661,7 @@ export function useChatActions({
             }),
           );
         }
-        toast("Đã cập nhật cài đặt nhóm 👥", "success");
+        toast("Đã cập nhật cài đặt nhóm", "success");
       } catch (err) {
         console.error("[chat] updateGroupInfo failed:", err);
       }

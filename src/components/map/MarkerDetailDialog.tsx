@@ -27,7 +27,10 @@ import {
   UserX,
   Ban,
   Check,
-  UserPlus
+  UserPlus,
+  Mars,
+  Venus,
+  Transgender
 } from 'lucide-react';
 
 interface MarkerDetailDialogProps {
@@ -81,21 +84,21 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
     const g = (gender || '').toLowerCase();
     if (g.includes('nam') || g === 'male') {
       return (
-        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[11px] font-bold shrink-0" title="Nam">
-          ♂
+        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-600 shrink-0" title="Nam">
+          <Mars className="w-3 h-3" aria-hidden="true" />
         </span>
       );
     }
     if (g.includes('nữ') || g === 'female') {
       return (
-        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-pink-100 text-pink-600 text-[11px] font-bold shrink-0" title="Nữ">
-          ♀
+        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-pink-100 text-pink-600 shrink-0" title="Nữ">
+          <Venus className="w-3 h-3" aria-hidden="true" />
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-100 text-purple-600 text-[11px] font-bold shrink-0" title="Khác">
-        ⚧
+      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-100 text-purple-600 shrink-0" title="Khác">
+        <Transgender className="w-3 h-3" aria-hidden="true" />
       </span>
     );
   };

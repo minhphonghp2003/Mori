@@ -14,7 +14,10 @@ import type { User } from '../../types';
 import {
   MapPin,
   MessageCircle,
-  Users
+  Users,
+  Mars,
+  Venus,
+  Transgender
 } from 'lucide-react';
 
 export const HomeView: React.FC = () => {
@@ -183,21 +186,21 @@ export const HomeView: React.FC = () => {
     const g = (gender || '').toLowerCase();
     if (g.includes('nam') || g === 'male') {
       return (
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold shrink-0" title="Nam">
-          ♂
+        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 shrink-0" title="Nam">
+          <Mars className="w-2.5 h-2.5" aria-hidden="true" />
         </span>
       );
     }
     if (g.includes('nữ') || g === 'female') {
       return (
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-pink-100 text-pink-600 text-[10px] font-bold shrink-0" title="Nữ">
-          ♀
+        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-pink-100 text-pink-600 shrink-0" title="Nữ">
+          <Venus className="w-2.5 h-2.5" aria-hidden="true" />
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-100 text-purple-600 text-[10px] font-bold shrink-0" title="Khác">
-        ⚧
+      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-100 text-purple-600 shrink-0" title="Khác">
+        <Transgender className="w-2.5 h-2.5" aria-hidden="true" />
       </span>
     );
   };

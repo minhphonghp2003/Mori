@@ -1003,10 +1003,14 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                                       : 'border-2 border-white/30 opacity-30 grayscale'
                                   }`}
                                 />
-                                <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black border border-black shadow-xs ${
+                                <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center border border-black shadow-xs ${
                                   isAllowed ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-white'
                                 }`}>
-                                  {isAllowed ? '✓' : '✕'}
+                                  {isAllowed ? (
+                                    <Check className="w-2.5 h-2.5" aria-hidden="true" />
+                                  ) : (
+                                    <X className="w-2.5 h-2.5" aria-hidden="true" />
+                                  )}
                                 </span>
                               </div>
 

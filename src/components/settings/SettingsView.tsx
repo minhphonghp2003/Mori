@@ -40,7 +40,10 @@ import {
   Trash2,
   Image as ImageIcon,
   Upload,
-  Loader2
+  Loader2,
+  Mars,
+  Venus,
+  Transgender
 } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -290,21 +293,21 @@ export const SettingsView: React.FC = () => {
     const g = (gender || '').toLowerCase();
     if (g.includes('nam') || g === 'male') {
       return (
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold shrink-0" title="Nam">
-          ♂
+        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 shrink-0" title="Nam">
+          <Mars className="w-2.5 h-2.5" aria-hidden="true" />
         </span>
       );
     }
     if (g.includes('nữ') || g === 'female') {
       return (
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-pink-100 text-pink-600 text-[10px] font-bold shrink-0" title="Nữ">
-          ♀
+        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-pink-100 text-pink-600 shrink-0" title="Nữ">
+          <Venus className="w-2.5 h-2.5" aria-hidden="true" />
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold shrink-0" title="Khác">
-        ⚧
+      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-100 text-emerald-600 shrink-0" title="Khác">
+        <Transgender className="w-2.5 h-2.5" aria-hidden="true" />
       </span>
     );
   };
@@ -1139,7 +1142,7 @@ export const SettingsView: React.FC = () => {
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 text-xs">
                 <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Trên Android (Chrome):</div>
                 <div className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-                  Nhấn vào menu <span className="font-bold text-emerald-600">ba chấm (⋮)</span> ở góc trên, sau đó chọn <span className="font-bold text-emerald-600">"Cài đặt ứng dụng" (Install App)</span>.
+                  Nhấn vào menu <span className="font-bold text-emerald-600">ba chấm</span> ở góc trên, sau đó chọn <span className="font-bold text-emerald-600">"Cài đặt ứng dụng" (Install App)</span>.
                 </div>
               </div>
             </div>
