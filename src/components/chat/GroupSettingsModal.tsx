@@ -101,6 +101,8 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
       memberDtos[0]?.userId,
     [memberDtos],
   );
+  // Admin-only features (avatar, name, privacy, add/approve) hide for members.
+  const isMeAdmin = Number(currentUser.id) === adminUserId;
 
   const handleGroupAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -212,11 +214,13 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             onChange={handleGroupAvatarFileChange}
           />
 
-          {/* Avatar with edit button */}
-          <div 
-            className="relative mb-3 group cursor-pointer"
-            onClick={() => groupAvatarInputRef.current?.click()}
-            title="Chạm để đổi ảnh đại diện nhóm từ thiết bị"
+          {/* Avatar with edit button (admin only) */}
+          <div
+            className={`relative mb-3 group ${isMeAdmin ? 'cursor-pointer' : ''}`}
+            onClick={() => {
+              if (isMeAdmin) groupAvatarInputRef.current?.click();
+            }}
+            title={isMeAdmin ? 'Chạm để đổi ảnh đại diện nhóm từ thiết bị' : undefined}
           >
             <Avatar
               src={selectedAvatar}
@@ -224,23 +228,29 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
               className="w-20 h-20 rounded-full object-cover ring-4 ring-white shadow-md transition-transform group-hover:scale-105"
               textClassName="text-2xl"
             />
-            <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="w-5 h-5" />
-              <span className="text-[9px] font-bold mt-0.5">Đổi ảnh</span>
-            </div>
-            <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-md transition-transform hover:scale-110 border-2 border-white">
-              <Camera className="w-3.5 h-3.5" />
-            </div>
+            {isMeAdmin && (
+              <>
+                <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="w-5 h-5" />
+                  <span className="text-[9px] font-bold mt-0.5">Đổi ảnh</span>
+                </div>
+                <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-md transition-transform hover:scale-110 border-2 border-white">
+                  <Camera className="w-3.5 h-3.5" />
+                </div>
+              </>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => groupAvatarInputRef.current?.click()}
-            className="mb-2.5 px-3 py-1 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-300 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-          >
-            <Upload className="w-3 h-3" />
-            <span>Tải ảnh từ máy / Thư viện</span>
-          </button>
+          {isMeAdmin && (
+            <button
+              type="button"
+              onClick={() => groupAvatarInputRef.current?.click()}
+              className="mb-2.5 px-3 py-1 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-300 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Upload className="w-3 h-3" />
+              <span>Tải ảnh từ máy / Thư viện</span>
+            </button>
+          )}
 
           {/* Group Name with Inline Edit */}
           {isEditingName ? (
@@ -273,13 +283,15 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 text-center">
                 {conversation.name}
               </h2>
-              <button
-                onClick={() => setIsEditingName(true)}
-                className="w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors cursor-pointer"
-                title="Đổi tên nhóm"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
+              {isMeAdmin && (
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                  title="Đổi tên nhóm"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
 
@@ -316,16 +328,18 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={handleTogglePrivacy}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${
-                conversation.isPrivateGroup
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-amber-500 hover:bg-amber-600 text-white'
-              }`}
-            >
-              {conversation.isPrivateGroup ? 'Mở Công khai' : 'Đặt Riêng tư'}
-            </button>
+            {isMeAdmin && (
+              <button
+                onClick={handleTogglePrivacy}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 ${
+                  conversation.isPrivateGroup
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-amber-500 hover:bg-amber-600 text-white'
+                }`}
+              >
+                {conversation.isPrivateGroup ? 'Mở Công khai' : 'Đặt Riêng tư'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -343,34 +357,38 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
             <span>Thành viên ({conversation.memberCount || memberUsers.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('add')}
-            className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-              activeTab === 'add'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span>Thêm ({availableFriends.length})</span>
-          </button>
+          {isMeAdmin && (
+            <button
+              onClick={() => setActiveTab('add')}
+              className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                activeTab === 'add'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Thêm ({availableFriends.length})</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer relative ${
-              activeTab === 'requests'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>Duyệt yêu cầu</span>
-            {pendingRequests.length > 0 && (
-              <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] flex items-center justify-center">
-                {pendingRequests.length}
-              </span>
-            )}
-          </button>
+          {isMeAdmin && (
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-1.5 transition-colors cursor-pointer relative ${
+                activeTab === 'requests'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Duyệt yêu cầu</span>
+              {pendingRequests.length > 0 && (
+                <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] flex items-center justify-center">
+                  {pendingRequests.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Tab Content Body */}

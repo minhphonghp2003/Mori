@@ -629,15 +629,17 @@ export function useChatActions({
           const blob = dataUrlToBlob(updates.avatar);
           const upload = await uploadChatMedia(blob, blob.type || "image/jpeg");
           await chatService.changeGroupImage(convId, upload.fileId);
+          // The detail may still carry the old image (file processing lags)
+          // — put the device-selected avatar in the header directly and
+          // keep it over the stale return.
+          const deviceImage = { originalUrl: updates.avatar, thumbUrl: updates.avatar };
           const detail = await chatService.getConversation(convId);
-          if (detail.data) {
-            dispatch(
-              updateConversationState({
-                conversationId: convId,
-                patch: detail.data,
-              }),
-            );
-          }
+          dispatch(
+            updateConversationState({
+              conversationId: convId,
+              patch: { ...(detail.data ?? {}), image: deviceImage },
+            }),
+          );
         }
         if (updates.isPrivateGroup !== undefined) {
           await chatService.setGroupRestricted(convId, updates.isPrivateGroup);

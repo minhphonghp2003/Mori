@@ -37,7 +37,9 @@ import {
   Plus,
   AlertCircle,
   Loader2,
-  ArrowDown
+  ArrowDown,
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 
 interface ChatRoomViewProps {
@@ -776,6 +778,14 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
             {!conversation.isGroup && conversation.isOnline && (
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
             )}
+            {conversation.isGroup && (
+              <span
+                title="Nhóm trò chuyện"
+                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-indigo-600 text-white border-2 border-white dark:border-slate-900 flex items-center justify-center shadow-xs"
+              >
+                <Users className="w-2.5 h-2.5" />
+              </span>
+            )}
           </div>
 
           <div 
@@ -968,8 +978,11 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                     {sender.name}
                   </span>
                   {conversation.isGroup && adminUserId != null && Number(msg.senderId) === adminUserId && (
-                    <span className="text-[8px] font-bold text-amber-700 bg-amber-50 px-1 py-0.2 rounded-xs border border-amber-200">
-                      Admin
+                    <span
+                      title="Quản trị viên"
+                      className="w-3.5 h-3.5 rounded-full bg-amber-500 text-white inline-flex items-center justify-center shrink-0"
+                    >
+                      <ShieldCheck className="w-2.5 h-2.5" />
                     </span>
                   )}
                 </div>
@@ -1335,44 +1348,61 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 1. EMOJI DRAWER */}
+      {/* 1. EMOJI BOTTOM SHEET */}
       {activeDrawer === 'emoji' && (
-        <div className="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-3 shadow-lg animate-in slide-in-from-bottom-3 z-20 max-h-56 overflow-y-auto no-scrollbar">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Biểu tượng cảm xúc (Emoji)</span>
-            <button 
-              onClick={() => setActiveDrawer(null)}
-              className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setActiveDrawer(null)}
+        >
+          <div
+            className="w-full sm:max-w-md mx-auto bg-white dark:bg-slate-900 rounded-t-[32px] border-t border-x border-slate-100 dark:border-slate-800 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[65dvh] flex flex-col animate-in slide-in-from-bottom-8 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3 shrink-0" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Biểu tượng cảm xúc (Emoji)</span>
+              <button
+                onClick={() => setActiveDrawer(null)}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-          <div className="space-y-3">
-            {EMOJI_CATEGORIES.map((cat, catIdx) => (
-              <div key={catIdx}>
-                <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-wider">{cat.title}</div>
-                <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5 text-center">
+            <div className="space-y-3 overflow-y-auto no-scrollbar">
+              {EMOJI_CATEGORIES.map((cat, catIdx) => (
+                <div key={catIdx}>
+                  <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1.5 uppercase tracking-wider">{cat.title}</div>
+                <div className="grid grid-cols-7 sm:grid-cols-8 gap-1.5 text-center">
                   {cat.emojis.map((emoji, eIdx) => (
                     <button
                       key={eIdx}
                       type="button"
                       onClick={() => setInputText(prev => prev + emoji)}
-                      className="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-lg hover:scale-125 transition-transform cursor-pointer"
+                      className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-2xl hover:scale-125 transition-transform cursor-pointer"
                     >
                       {emoji}
                     </button>
                   ))}
                 </div>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* 2. GIF (GIPHY) DRAWER */}
+      {/* 2. GIF (GIPHY) BOTTOM SHEET */}
       {activeDrawer === 'gif' && (
-        <div className="shrink-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-3.5 shadow-lg animate-in slide-in-from-bottom-3 z-20 max-h-64 flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setActiveDrawer(null)}
+        >
+        <div
+          className="w-full sm:max-w-md mx-auto bg-white dark:bg-slate-900 rounded-t-[32px] border-t border-x border-slate-100 dark:border-slate-800 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] shadow-2xl h-[65dvh] flex flex-col animate-in slide-in-from-bottom-8 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-3 shrink-0" />
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-1.5">
               <span className="px-1.5 py-0.5 rounded bg-black text-white text-[10px] font-black tracking-widest">GIPHY</span>
@@ -1434,19 +1464,21 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({ conversationId, onBa
                 <button
                   key={`${gif.id}-${idx}`}
                   onClick={() => handleSendGif(gif.url)}
-                  className="w-full rounded-xl overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-600 transition-all cursor-pointer relative group"
+                  className="w-full h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-purple-600 transition-all cursor-pointer relative group shrink-0"
                 >
                   <img
                     src={gif.thumbUrl || gif.url}
                     alt="GIF"
                     referrerPolicy="no-referrer"
                     draggable={false}
+                    loading="lazy"
                     className="block w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                 </button>
               ))
             )}
           </div>
+        </div>
         </div>
       )}
 
