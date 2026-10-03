@@ -19,6 +19,7 @@ export const CallModal: React.FC = () => {
     remoteStream,
     micMuted,
     cameraOff,
+    remoteCameraOff,
     callDuration,
     acceptCall,
     rejectCall,
@@ -70,7 +71,7 @@ export const CallModal: React.FC = () => {
   const isActive = status === 'active';
   const isReconnecting = status === 'reconnecting';
   const isInCall = isActive || isReconnecting;
-  const showVideo = peer.hasVideo && isInCall && remoteStream;
+  const showVideo = peer.hasVideo && isInCall && remoteStream && !remoteCameraOff;
 
   const formatDuration = (sec: number) => {
     const mins = Math.floor(sec / 60);
@@ -120,6 +121,42 @@ export const CallModal: React.FC = () => {
             </div>
           </div>
         ) : null}
+
+        {isInCall && !showVideo && (
+          <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-slate-900">
+            {peer.imageUrl ? (
+              <img
+                src={peer.imageUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-xl"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-slate-900 to-black" />
+            )}
+            <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" />
+            <div className="relative z-10 flex flex-col items-center px-6 text-center">
+              {peer.imageUrl ? (
+                <img
+                  src={peer.imageUrl}
+                  alt={peer.name || 'Người gọi'}
+                  referrerPolicy="no-referrer"
+                  className="mb-5 h-28 w-28 rounded-full border border-white/30 object-cover shadow-2xl"
+                />
+              ) : (
+                <div className="mb-5 flex h-28 w-28 items-center justify-center rounded-full bg-emerald-700 text-4xl font-bold text-white shadow-2xl">
+                  {(peer.name || '?').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <h2 className="text-xl font-bold text-white drop-shadow-sm">
+                {peer.name || 'Người gọi'}
+              </h2>
+              <div className="mt-2 text-sm font-semibold tabular-nums text-white/80">
+                {isReconnecting ? 'Đang kết nối lại...' : formatDuration(callDuration)}
+              </div>
+            </div>
+          </div>
+        )}
 
         {isInCall && (
           <button

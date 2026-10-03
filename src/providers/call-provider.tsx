@@ -25,6 +25,7 @@ interface CallContextValue {
   remoteStream: MediaStream | null;
   micMuted: boolean;
   cameraOff: boolean;
+  remoteCameraOff: boolean;
   callDuration: number;
   acceptCall: () => void;
   rejectCall: () => void;
@@ -53,12 +54,16 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [micMuted, setMicMuted] = useState(false);
-  const [cameraOff, setCameraOff] = useState(false);
+  const [cameraOff, setCameraOff] = useState(true);
+  const [remoteCameraOff, setRemoteCameraOff] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
 
   const statusRef = useRef<CallStatus>("idle");
   const peerRef = useRef<CallPeer | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const controlChannelRef = useRef<RTCDataChannel | null>(null);
+  const videoSenderRef = useRef<RTCRtpSender | null>(null);
+  const cameraToggleInProgressRef = useRef(false);
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const offeredSdpRef = useRef<RTCSessionDescriptionInit | null>(null);
@@ -116,6 +121,9 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       pcRef.current.close();
       pcRef.current = null;
     }
+    controlChannelRef.current?.close();
+    controlChannelRef.current = null;
+    videoSenderRef.current = null;
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
@@ -127,7 +135,8 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     setLocalStream(null);
     setRemoteStream(null);
     setMicMuted(false);
-    setCameraOff(false);
+    setCameraOff(true);
+    setRemoteCameraOff(true);
     setCallDuration(0);
     setStatus("idle");
   }, []);
@@ -150,6 +159,24 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
+  const configureControlChannel = useCallback((channel: RTCDataChannel) => {
+    controlChannelRef.current = channel;
+    channel.onmessage = (event) => {
+      try {
+        const message = JSON.parse(String(event.data)) as { type?: unknown; enabled?: unknown };
+        if (message.type === "camera" && typeof message.enabled === "boolean") {
+          setRemoteCameraOff(!message.enabled);
+        }
+      } catch (err) {
+        console.error("[Call] invalid control message:", err);
+      }
+    };
+    channel.onopen = () => {
+      const enabled = localStreamRef.current?.getVideoTracks().some((track) => track.enabled) ?? false;
+      channel.send(JSON.stringify({ type: "camera", enabled }));
+    };
+  }, []);
+
   const createPeer = useCallback(() => {
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
@@ -165,6 +192,12 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       const stream = e.streams[0] ?? new MediaStream([e.track]);
       setRemoteStream(stream);
     };
+
+    pc.ondatachannel = (event) => configureControlChannel(event.channel);
+
+    if (peerRef.current?.hasVideo) {
+      videoSenderRef.current = pc.addTransceiver("video", { direction: "sendrecv" }).sender;
+    }
 
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
@@ -203,31 +236,20 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 
     pcRef.current = pc;
     return pc;
-  }, [cleanup, sendSignal]);
+  }, [cleanup, configureControlChannel, sendSignal]);
 
-  const getLocalMedia = useCallback(async (hasVideo: boolean): Promise<MediaStream> => {
+  const getLocalMedia = useCallback(async (): Promise<MediaStream> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: hasVideo
-          ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
-          : false,
+        video: false,
       });
       localStreamRef.current = stream;
       setLocalStream(stream);
+      setCameraOff(true);
       return stream;
     } catch {
-      if (hasVideo) {
-        try {
-          const fallback = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-          localStreamRef.current = fallback;
-          setLocalStream(fallback);
-          return fallback;
-        } catch {
-          // fall through to the friendly error below
-        }
-      }
-      throw new Error("Không thể truy cập camera/micro. Hãy cấp quyền và thử lại.");
+      throw new Error("Không thể truy cập micro. Hãy cấp quyền và thử lại.");
     }
   }, []);
 
@@ -242,12 +264,15 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       const callId = `call-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       const nextPeer: CallPeer = { userId: targetUserId, name, imageUrl, callId, hasVideo };
       setPeer(nextPeer);
+      setCameraOff(true);
+      setRemoteCameraOff(true);
       setStatus("outgoing");
       callAudio.play();
 
       try {
-        const stream = await getLocalMedia(hasVideo);
+        const stream = await getLocalMedia();
         const pc = createPeer();
+        configureControlChannel(pc.createDataChannel("call-control"));
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
         // 1. Ring the target (server generates the callId + notifies).
@@ -266,14 +291,16 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         emitToast(err instanceof Error ? err.message : "Không thể bắt đầu cuộc gọi", "error");
       }
     },
-    [getLocalMedia, createPeer, sendSignal, cleanup],
+    [getLocalMedia, createPeer, configureControlChannel, sendSignal, cleanup],
   );
 
   const acceptCall = useCallback(async () => {
     const current = peerRef.current;
     if (!current || statusRef.current !== "incoming") return;
     try {
-      const stream = await getLocalMedia(current.hasVideo);
+      setCameraOff(true);
+      setRemoteCameraOff(true);
+      const stream = await getLocalMedia();
       const pc = createPeer();
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
@@ -324,14 +351,60 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const toggleCamera = useCallback(() => {
-    setCameraOff((prev) => {
-      const next = !prev;
-      localStreamRef.current?.getVideoTracks().forEach((t) => {
-        t.enabled = !next;
-      });
-      return next;
-    });
-  }, []);
+    if (cameraToggleInProgressRef.current) return;
+    cameraToggleInProgressRef.current = true;
+
+    void (async () => {
+      let pendingCameraStream: MediaStream | null = null;
+      try {
+        if (cameraOff) {
+          pendingCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+            audio: false,
+          });
+          const track = pendingCameraStream.getVideoTracks()[0];
+          const localStream = localStreamRef.current;
+          const sender = videoSenderRef.current;
+          if (!track || !localStream || !sender) {
+            throw new Error("Không thể bật camera. Hãy thử lại.");
+          }
+
+          await sender.replaceTrack(track);
+          localStream.addTrack(track);
+          pendingCameraStream = null;
+          setLocalStream(new MediaStream(localStream.getTracks()));
+          setCameraOff(false);
+
+          const channel = controlChannelRef.current;
+          if (channel?.readyState === "open") {
+            channel.send(JSON.stringify({ type: "camera", enabled: true }));
+          }
+          return;
+        }
+
+        const localStream = localStreamRef.current;
+        const track = localStream?.getVideoTracks()[0];
+        if (track) {
+          await videoSenderRef.current?.replaceTrack(null);
+          localStream?.removeTrack(track);
+          track.stop();
+          if (localStream) setLocalStream(new MediaStream(localStream.getTracks()));
+        }
+        setCameraOff(true);
+
+        const channel = controlChannelRef.current;
+        if (channel?.readyState === "open") {
+          channel.send(JSON.stringify({ type: "camera", enabled: false }));
+        }
+      } catch (err) {
+        pendingCameraStream?.getTracks().forEach((track) => track.stop());
+        console.error("[Call] camera toggle failed:", err);
+        emitToast(err instanceof Error ? err.message : "Không thể thay đổi camera", "error");
+      } finally {
+        cameraToggleInProgressRef.current = false;
+      }
+    })();
+  }, [cameraOff]);
 
   /** Foreground FCM `call.incoming` — same ringing UI, deduped by callId. */
   const handlePushIncoming = useCallback(
@@ -514,6 +587,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         remoteStream,
         micMuted,
         cameraOff,
+        remoteCameraOff,
         callDuration,
         acceptCall: () => void acceptCall(),
         rejectCall,

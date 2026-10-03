@@ -16,7 +16,6 @@ import { mapMoment } from "@/lib/moment/mappers";
 import {
   ArrowLeft,
   Video,
-  Phone,
   Send,
   Image as ImageIcon,
   Smile,
@@ -939,7 +938,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             </button>
           </div>
         ) : (
-          /* DIRECT MESSAGE ACTIONS: SEARCH MSG, CALLING (VOICE & VIDEO), BLOCK CHAT */
+          /* DIRECT MESSAGE ACTIONS: SEARCH MSG, VIDEO CALL, BLOCK CHAT */
           <div className="flex shrink-0 items-center gap-1">
             <button
               onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
@@ -951,15 +950,6 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               title="Tìm kiếm tin nhắn"
             >
               <Search className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={() => partnerUser && startCall(partnerUser, false)}
-              disabled={!partnerUser}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-emerald-300"
-              title="Gọi thoại"
-            >
-              <Phone className="h-4 w-4" />
             </button>
 
             <button
