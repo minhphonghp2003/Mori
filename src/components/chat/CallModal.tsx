@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   PhoneOff,
   Phone,
@@ -6,7 +6,8 @@ import {
   MicOff,
   Video,
   VideoOff,
-  Volume2
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { useCall } from '../../providers/call-provider';
 
@@ -29,14 +30,30 @@ export const CallModal: React.FC = () => {
 
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [speakerEnabled, setSpeakerEnabled] = useState(true);
+  const [controlsVisible, setControlsVisible] = useState(true);
 
   useEffect(() => {
     const el = remoteVideoRef.current;
     if (el && remoteStream) {
       el.srcObject = remoteStream;
+      el.muted = true;
       el.play().catch(() => {});
     }
   }, [remoteStream, status]);
+
+  useEffect(() => {
+    const el = remoteAudioRef.current;
+    if (!el) return;
+    el.srcObject = remoteStream;
+    el.muted = !speakerEnabled;
+    if (remoteStream && (status === 'active' || status === 'reconnecting')) {
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }, [remoteStream, speakerEnabled, status]);
 
   useEffect(() => {
     const el = localVideoRef.current;
@@ -52,7 +69,8 @@ export const CallModal: React.FC = () => {
   const isOutgoing = status === 'outgoing';
   const isActive = status === 'active';
   const isReconnecting = status === 'reconnecting';
-  const showVideo = peer.hasVideo && isActive && remoteStream && !cameraOff;
+  const isInCall = isActive || isReconnecting;
+  const showVideo = peer.hasVideo && isInCall && remoteStream;
 
   const formatDuration = (sec: number) => {
     const mins = Math.floor(sec / 60);
@@ -69,22 +87,22 @@ export const CallModal: React.FC = () => {
         : `${peer.hasVideo ? 'Cuộc gọi video' : 'Cuộc gọi thoại'} · ${formatDuration(callDuration)}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-4 animate-in fade-in duration-200 select-none">
-      <div className="relative w-full max-w-sm h-[92vh] max-h-[700px] rounded-[36px] bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col justify-between p-6">
-
-        {/* Remote video fills the card when the video call is live */}
+    <div className="fixed inset-0 z-50 h-[100dvh] w-screen overflow-hidden bg-black animate-in fade-in duration-200 select-none">
+      <audio ref={remoteAudioRef} autoPlay playsInline aria-hidden="true" className="sr-only" />
+      <div className="relative h-full w-full overflow-hidden bg-black">
         {showVideo ? (
           <div className="absolute inset-0 z-0 bg-black">
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
+              muted
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40 pointer-events-none" />
             {/* Self PiP */}
-            <div className="absolute top-16 right-5 w-24 h-32 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl bg-slate-800">
-              {localStream ? (
+            <div className="absolute top-4 right-4 z-20 w-24 h-32 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl bg-slate-800">
+              {localStream && !cameraOff ? (
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -94,26 +112,25 @@ export const CallModal: React.FC = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/50 text-[10px] font-bold">
-                  Bạn
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-white/50 text-[10px] font-bold">
+                  <VideoOff className="w-4 h-4" />
+                  <span>Camera tắt</span>
                 </div>
               )}
-              <div className="absolute bottom-1 right-1 text-[9px] font-bold text-white bg-black/60 px-1 rounded">Bạn</div>
             </div>
-          </div>
-        ) : peer.hasVideo && isActive && cameraOff ? (
-          <div className="absolute inset-0 z-0">
-            <img
-              src={peer.imageUrl || undefined}
-              alt="Partner"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover blur-xs opacity-50 scale-105"
-            />
           </div>
         ) : null}
 
-        {/* Top Info */}
-        <div className="relative z-10 text-center pt-8">
+        {isInCall && (
+          <button
+            type="button"
+            aria-label={controlsVisible ? 'Ẩn điều khiển cuộc gọi' : 'Hiện điều khiển cuộc gọi'}
+            onClick={() => setControlsVisible((visible) => !visible)}
+            className="absolute inset-0 z-10 h-full w-full cursor-default"
+          />
+        )}
+
+        {!isInCall && <div className="absolute inset-x-0 top-0 z-10 text-center px-6 pt-[max(env(safe-area-inset-top),2rem)]">
           <div className="relative w-28 h-28 mx-auto mb-4">
             {(isIncoming || isOutgoing) && (
               <span className="absolute -inset-4 bg-emerald-500/20 rounded-full animate-ping" />
@@ -150,31 +167,16 @@ export const CallModal: React.FC = () => {
               </span>
             )}
           </div>
-        </div>
+        </div>}
 
-        {/* Audio waves animation if voice call */}
-        {!peer.hasVideo && isActive && (
-          <div className="relative z-10 flex items-center justify-center gap-1.5 h-12">
-            {[40, 70, 100, 60, 90, 50, 80, 45].map((height, idx) => (
-              <span
-                key={idx}
-                className="w-1.5 bg-emerald-500 rounded-full animate-pulse"
-                style={{
-                  height: `${height}%`,
-                  animationDelay: `${idx * 150}ms`
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Bottom Control Bar */}
-        <div className="relative z-10 pb-6 pt-4 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent">
+        <div className={`absolute inset-x-0 bottom-0 z-30 px-6 pt-16 pb-[max(env(safe-area-inset-bottom),1.5rem)] bg-gradient-to-t from-black via-black/75 to-transparent transition-all duration-200 ${
+          isInCall && !controlsVisible ? 'translate-y-4 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+        }`}>
           {isIncoming ? (
             <div className="flex items-center justify-center gap-8">
               <div className="flex flex-col items-center gap-1.5">
                 <button
-                  onClick={rejectCall}
+                  onClick={(event) => { event.stopPropagation(); rejectCall(); }}
                   className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-95 transition-all cursor-pointer"
                   title="Từ chối"
                 >
@@ -184,7 +186,7 @@ export const CallModal: React.FC = () => {
               </div>
               <div className="flex flex-col items-center gap-1.5">
                 <button
-                  onClick={() => acceptCall()}
+                  onClick={(event) => { event.stopPropagation(); acceptCall(); }}
                   className="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer animate-pulse"
                   title="Nghe máy"
                 >
@@ -198,7 +200,7 @@ export const CallModal: React.FC = () => {
               <div className="flex items-center justify-center gap-5 mb-6">
                 {/* Mute Mic */}
                 <button
-                  onClick={toggleMic}
+                  onClick={(event) => { event.stopPropagation(); toggleMic(); }}
                   disabled={!isActive}
                   className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
                     micMuted
@@ -213,7 +215,7 @@ export const CallModal: React.FC = () => {
                 {/* Toggle Camera */}
                 {peer.hasVideo && (
                   <button
-                    onClick={toggleCamera}
+                    onClick={(event) => { event.stopPropagation(); toggleCamera(); }}
                     disabled={!isActive}
                     className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
                       cameraOff
@@ -228,17 +230,36 @@ export const CallModal: React.FC = () => {
 
                 {/* Speaker */}
                 <button
-                  className="w-13 h-13 rounded-full bg-white/15 text-white hover:bg-white/25 flex items-center justify-center transition-all cursor-pointer"
-                  title="Loa ngoài"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSpeakerEnabled((enabled) => {
+                      const next = !enabled;
+                      const audio = remoteAudioRef.current;
+                      if (audio) {
+                        audio.muted = !next;
+                        if (next) audio.play().catch(() => {});
+                      }
+                      return next;
+                    });
+                  }}
+                  className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                    speakerEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-rose-500 text-white'
+                  }`}
+                  title={speakerEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+                  aria-label={speakerEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
                 >
-                  <Volume2 className="w-6 h-6" />
+                  {speakerEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
                 </button>
               </div>
 
               {/* Cancel / End Call Button */}
               <div className="flex justify-center">
                 <button
-                  onClick={isOutgoing ? cancelCall : endCall}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (isOutgoing) cancelCall();
+                    else endCall();
+                  }}
                   className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-95 transition-all cursor-pointer"
                   title={isOutgoing ? 'Hủy cuộc gọi' : 'Kết thúc cuộc gọi'}
                 >
