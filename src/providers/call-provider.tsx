@@ -68,6 +68,8 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const offeredSdpRef = useRef<RTCSessionDescriptionInit | null>(null);
+  const offerWaiterRef = useRef<((offer: RTCSessionDescriptionInit | null) => void) | null>(null);
+  const offerWaitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectAttemptsRef = useRef(0);
 
@@ -86,6 +88,28 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       if (callTimerRef.current) clearInterval(callTimerRef.current);
       callAudio.stop();
     };
+  }, []);
+
+  const resolveOfferWaiter = useCallback((offer: RTCSessionDescriptionInit | null) => {
+    if (offerWaitTimeoutRef.current) {
+      clearTimeout(offerWaitTimeoutRef.current);
+      offerWaitTimeoutRef.current = null;
+    }
+    const resolve = offerWaiterRef.current;
+    offerWaiterRef.current = null;
+    resolve?.(offer);
+  }, []);
+
+  const waitForOffer = useCallback(() => {
+    if (offeredSdpRef.current) return Promise.resolve(offeredSdpRef.current);
+    return new Promise<RTCSessionDescriptionInit | null>((resolve) => {
+      offerWaiterRef.current = resolve;
+      offerWaitTimeoutRef.current = setTimeout(() => {
+        offerWaitTimeoutRef.current = null;
+        offerWaiterRef.current = null;
+        resolve(null);
+      }, 15_000);
+    });
   }, []);
 
   // Duration ticks only while the call is established.
@@ -132,6 +156,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     remoteStreamRef.current = null;
     pendingCandidatesRef.current = [];
     offeredSdpRef.current = null;
+    resolveOfferWaiter(null);
     reconnectAttemptsRef.current = 0;
     setPeer(null);
     setLocalStream(null);
@@ -141,7 +166,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     setRemoteCameraOff(true);
     setCallDuration(0);
     setStatus("idle");
-  }, []);
+  }, [resolveOfferWaiter]);
 
   const flushCandidates = useCallback((pc: RTCPeerConnection) => {
     const pending = pendingCandidatesRef.current;
@@ -203,10 +228,6 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 
     pc.ondatachannel = (event) => configureControlChannel(event.channel);
 
-    if (peerRef.current?.hasVideo) {
-      videoSenderRef.current = pc.addTransceiver("video", { direction: "sendrecv" }).sender;
-    }
-
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       if (state === "connected") {
@@ -220,8 +241,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
           reconnectAttemptsRef.current += 1;
           const attempt = reconnectAttemptsRef.current;
           if (attempt > 3) {
-            cleanup();
-            emitToast("Mất kết nối cuộc gọi", "error");
+            emitToast("Mất kết nối mạng. Cuộc gọi vẫn đang mở.", "error");
             return;
           }
           await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (attempt - 1), 4000)));
@@ -236,15 +256,15 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         })();
       } else if (state === "failed") {
         if (statusRef.current === "active" || statusRef.current === "reconnecting") {
-          cleanup();
-          emitToast("Mất kết nối cuộc gọi", "error");
+          setStatus("reconnecting");
+          emitToast("Kết nối bị gián đoạn. Đang chờ khôi phục cuộc gọi.", "info");
         }
       }
     };
 
     pcRef.current = pc;
     return pc;
-  }, [cleanup, configureControlChannel, sendSignal]);
+  }, [configureControlChannel, sendSignal]);
 
   const getLocalMedia = useCallback(async (): Promise<MediaStream> => {
     try {
@@ -280,6 +300,9 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       try {
         const stream = await getLocalMedia();
         const pc = createPeer();
+        if (hasVideo) {
+          videoSenderRef.current = pc.addTransceiver("video", { direction: "sendrecv" }).sender;
+        }
         configureControlChannel(pc.createDataChannel("call-control"));
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
@@ -305,6 +328,13 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   const acceptCall = useCallback(async () => {
     const current = peerRef.current;
     if (!current || statusRef.current !== "incoming") return;
+    const offer = await waitForOffer();
+    if (!offer) {
+      if (statusRef.current === "incoming") {
+        emitToast("Chưa nhận được tín hiệu cuộc gọi. Vui lòng thử lại.", "info");
+      }
+      return;
+    }
     try {
       setCameraOff(true);
       setRemoteCameraOff(true);
@@ -312,10 +342,9 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       const pc = createPeer();
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
-      if (!offeredSdpRef.current) {
-        throw new Error("Không nhận được tín hiệu từ người gọi, vui lòng gọi lại.");
-      }
-      await pc.setRemoteDescription(new RTCSessionDescription(offeredSdpRef.current));
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      videoSenderRef.current =
+        pc.getTransceivers().find((transceiver) => transceiver.receiver.track.kind === "video")?.sender ?? null;
       flushCandidates(pc);
 
       const answer = await pc.createAnswer();
@@ -329,7 +358,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       cleanup();
       emitToast(err instanceof Error ? err.message : "Không thể nhận cuộc gọi", "error");
     }
-  }, [getLocalMedia, createPeer, flushCandidates, sendSignal, cleanup]);
+  }, [waitForOffer, getLocalMedia, createPeer, flushCandidates, sendSignal, cleanup]);
 
   const rejectCall = useCallback(() => {
     void sendSignal("reject").catch((err) => console.error("[Call] reject failed:", err));
@@ -482,7 +511,9 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         case "offer":
           if (statusRef.current === "incoming" && data.payload) {
             try {
-              offeredSdpRef.current = JSON.parse(data.payload);
+              const offer = JSON.parse(data.payload) as RTCSessionDescriptionInit;
+              offeredSdpRef.current = offer;
+              resolveOfferWaiter(offer);
             } catch (err) {
               console.error("[Call] bad offer payload:", err);
             }
@@ -556,7 +587,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       unsubCall();
       unsubSignal();
     };
-  }, [cleanup, flushCandidates]);
+  }, [cleanup, flushCandidates, resolveOfferWaiter]);
 
   // Publish the controller for AppContext actions + the push listener.
   useEffect(() => {

@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   PhoneOff,
   Phone,
+  Mic,
+  MicOff,
   Video,
   VideoOff,
 } from 'lucide-react';
@@ -13,6 +15,7 @@ export const CallModal: React.FC = () => {
     peer,
     localStream,
     remoteStream,
+    micMuted,
     cameraOff,
     remoteCameraOff,
     callDuration,
@@ -20,6 +23,7 @@ export const CallModal: React.FC = () => {
     rejectCall,
     cancelCall,
     endCall,
+    toggleMic,
     toggleCamera
   } = useCall();
 
@@ -232,6 +236,20 @@ export const CallModal: React.FC = () => {
           ) : (
             <>
               <div className="flex items-center justify-center gap-5 mb-6">
+                <button
+                  onClick={(event) => { event.stopPropagation(); toggleMic(); }}
+                  disabled={!isActive}
+                  className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
+                    micMuted
+                      ? 'bg-rose-500 text-white'
+                      : 'bg-white/15 text-white hover:bg-white/25'
+                  }`}
+                  title={micMuted ? 'Bật mic' : 'Tắt mic'}
+                  aria-label={micMuted ? 'Bật mic' : 'Tắt mic'}
+                >
+                  {micMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </button>
+
                 {/* Toggle Camera */}
                 {peer.hasVideo && (
                   <button
