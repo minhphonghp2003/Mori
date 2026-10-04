@@ -38,16 +38,6 @@ export async function revokeFriendRequest(id: number): Promise<FriendshipDto> {
   return data.data;
 }
 
-export async function blockUser(id: number): Promise<FriendshipDto> {
-  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/block`);
-  return data.data;
-}
-
-export async function unblockUser(id: number): Promise<FriendshipDto> {
-  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/unblock`);
-  return data.data;
-}
-
 export async function removeFriendship(id: number): Promise<void> {
   await httpClient.delete(`/Friendship/${id}`);
 }

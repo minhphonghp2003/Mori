@@ -22,9 +22,15 @@ import {
   FRIENDSHIP_TYPE_VALUES,
   getMyFriendshipType,
   isAccepted,
+  isAcceptedStatus,
   isBlocked,
+  isBlockedStatus,
   isPending,
+  isPendingStatus,
+  normalizeFriendshipType,
 } from "@/types/friendship";
+import type { FriendshipStatusDto } from "@/types/user";
+import type { FriendshipType as FriendshipApiType } from "@/types/friendship";
 import type { User as ApiUser } from "@/types/user";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 
@@ -199,9 +205,11 @@ const FRIENDSHIP_TYPE_TO_DESIGN: Record<FriendshipTypeValue, FriendshipType> = {
 
 export const mapFriendshipToUser = (f: FriendshipDto, myId: number): User => {
   const otherId = f.user1Id === myId ? f.user2Id : f.user1Id;
+  // Friendship blocking was removed — blocking lives in conversations only,
+  // so a Blocked row (legacy, or mirrored from a chat block) still counts as
+  // a friend here and must not disappear from the friends list.
   let status: FriendshipStatus = "none";
-  if (isBlocked(f)) status = "blocked";
-  else if (isAccepted(f)) status = "accepted";
+  if (isAccepted(f) || isBlocked(f)) status = "accepted";
   else if (isPending(f))
     status = f.requestedById === myId ? "pending_sent" : "pending_received";
 
@@ -211,6 +219,33 @@ export const mapFriendshipToUser = (f: FriendshipDto, myId: number): User => {
       type: FRIENDSHIP_TYPE_TO_DESIGN[getMyFriendshipType(f, myId)],
       status,
     },
+  };
+};
+
+/**
+ * Relationship from the embedded `friendship` payload of GET /User/{id}.
+ * Same design shape as mapFriendshipToUser — used as a fallback when the
+ * /Friendship/me cache has no row for the user (it is paged, so it can miss
+ * people). `type` reads as the viewer's side, mirroring the `otherUser*`
+ * convention (otherUserName = the other party); `otherUserType` is only a
+ * fallback. Returns undefined for Rejected/Removed (no usable relationship).
+ */
+export const mapProfileFriendshipToRelationship = (
+  f: FriendshipStatusDto,
+  myId: number,
+): User["relationship"] => {
+  let status: FriendshipStatus = "none";
+  if (isAcceptedStatus(f) || isBlockedStatus(f)) status = "accepted";
+  else if (isPendingStatus(f))
+    status = f.requestedById === myId ? "pending_sent" : "pending_received";
+  else return undefined;
+
+  const rawType = f.type ?? f.otherUserType;
+  return {
+    type: FRIENDSHIP_TYPE_TO_DESIGN[
+      normalizeFriendshipType(rawType as FriendshipApiType | number)
+    ],
+    status,
   };
 };
 

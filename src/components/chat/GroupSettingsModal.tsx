@@ -129,7 +129,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
   const existingMemberIds = new Set(memberUsers.map(p => p.id));
   
   // Available friends to add
-  const availableFriends = friends.filter(f => !existingMemberIds.has(f.id) && f.relationship?.status !== 'blocked');
+  const availableFriends = friends.filter(f => !existingMemberIds.has(f.id));
   const filteredAvailableFriends = availableFriends.filter(f => 
     f.name.toLowerCase().includes(memberSearch.toLowerCase())
   );

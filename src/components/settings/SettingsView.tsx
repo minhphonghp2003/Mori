@@ -35,7 +35,6 @@ import {
   Download,
   Share,
   X,
-  Ban,
   UserX,
   MoreVertical,
   Trash2,
@@ -65,8 +64,6 @@ export const SettingsView: React.FC = () => {
     cancelFriendRequest,
     changeFriendshipType, 
     removeFriend,
-    blockFriend,
-    unblockFriend,
     updateProfile,
     updateVisibility,
     deleteTimeline,
@@ -124,7 +121,6 @@ export const SettingsView: React.FC = () => {
 
   // Friend Actions & Modals
   const [friendActionMenuId, setFriendActionMenuId] = useState<string | null>(null);
-  const [friendToBlock, setFriendToBlock] = useState<UserType | null>(null);
   const [friendToRemove, setFriendToRemove] = useState<UserType | null>(null);
 
   // Single toggle notification as requested (SSR-safe default, synced post-hydration).
@@ -202,7 +198,6 @@ export const SettingsView: React.FC = () => {
   const acceptedFriends = friends.filter(f => f.relationship?.status === 'accepted');
   const pendingReceived = friends.filter(f => f.relationship?.status === 'pending_received');
   const pendingSent = friends.filter(f => f.relationship?.status === 'pending_sent');
-  const blockedFriends = friends.filter(f => f.relationship?.status === 'blocked');
 
   const myMoments = moments.filter(m => m.userId === currentUser.id);
 
@@ -271,14 +266,6 @@ export const SettingsView: React.FC = () => {
       // modal open so the user can retry without losing their edits.
     } finally {
       setIsSavingProfile(false);
-    }
-  };
-
-  const confirmBlockFriend = () => {
-    if (friendToBlock) {
-      blockFriend(friendToBlock.id);
-      setFriendToBlock(null);
-      setFriendActionMenuId(null);
     }
   };
 
@@ -718,7 +705,7 @@ export const SettingsView: React.FC = () => {
               </div>
             )}
 
-            {/* Accepted Friends List with Profile Tap, Block and Remove options */}
+            {/* Accepted Friends List with Profile Tap and Remove options */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
               <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center justify-between">
                 <span>Danh sách bạn bè ({acceptedFriends.length})</span>
@@ -807,17 +794,6 @@ export const SettingsView: React.FC = () => {
                           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 animate-in fade-in duration-100">
                             <button
                               onClick={() => {
-                                setFriendToBlock(friend);
-                                setFriendActionMenuId(null);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 hover:bg-amber-100 dark:hover:bg-amber-500/25 transition-colors cursor-pointer"
-                            >
-                              <Ban className="w-3 h-3" />
-                              <span>Chặn bạn</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
                                 setFriendToRemove(friend);
                                 setFriendActionMenuId(null);
                               }}
@@ -834,36 +810,6 @@ export const SettingsView: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* Blocked Friends List (if any) */}
-            {blockedFriends.length > 0 && (
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-1.5">
-                  <Ban className="w-4 h-4 text-amber-600" />
-                  <span>Danh sách đã chặn ({blockedFriends.length})</span>
-                </h3>
-                <div className="space-y-2">
-                  {blockedFriends.map((bf) => (
-                    <div key={bf.id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-2xl">
-                      <div className="flex items-center gap-2">
-                        <Avatar
-                          src={bf.avatar}
-                          name={bf.name}
-                          className="w-8 h-8 rounded-full object-cover opacity-60"
-                        />
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{bf.name}</span>
-                      </div>
-                      <button
-                        onClick={() => unblockFriend(bf.id)}
-                        className="px-2.5 py-1 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
-                      >
-                        Bỏ chặn
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1053,36 +999,6 @@ export const SettingsView: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* BLOCK FRIEND CONFIRMATION MODAL */}
-      {friendToBlock && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center mx-auto mb-3">
-              <Ban className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Chặn người dùng?</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
-              Bạn có chắc chắn muốn chặn <span className="font-bold text-slate-800 dark:text-slate-200">{friendToBlock.name}</span>? Hai bạn sẽ không nhìn thấy vị trí và khoảnh khắc của nhau nữa.
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFriendToBlock(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={confirmBlockFriend}
-                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 cursor-pointer"
-              >
-                Xác nhận chặn
-              </button>
-            </div>
           </div>
         </div>
       )}

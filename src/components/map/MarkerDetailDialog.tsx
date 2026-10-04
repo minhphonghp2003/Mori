@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { User, FriendshipType, Timeline, Moment } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { getUserById } from '@/services/user';
+import { mapProfileFriendshipToRelationship } from '@/lib/chat/mappers';
 import { useFirstMessage } from '@/hooks/chat/use-first-message';
 import { FirstMessageModal } from '../chat/FirstMessageModal';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
@@ -25,7 +26,6 @@ import {
   Sparkles,
   Trash2,
   UserX,
-  Ban,
   Check,
   UserPlus,
   Mars,
@@ -41,7 +41,6 @@ interface MarkerDetailDialogProps {
 export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, onClose }) => {
   const { 
     currentUser, 
-    friends,
     moments,
     ensureUserMoments,
     timelines,
@@ -51,8 +50,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
     sendFriendRequest,
     cancelFriendRequest,
     removeFriend,
-    blockFriend,
-    unblockFriend,
+    friendshipVersion,
     deleteTimeline
   } = useApp();
   const router = useRouter();
@@ -78,6 +76,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
     age: number;
     gender: 'Nam' | 'Nữ' | 'Khác';
     bio: string;
+    relationship?: User['relationship'];
   } | null>(null);
 
   const renderGenderIcon = (gender?: string) => {
@@ -103,14 +102,21 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
     );
   };
 
-  // Live user reference from friends state so changes are reflected in real-time
-  const liveUser = friends.find(f => f.id === user.id) || user;
+  // No cache here — relationship comes straight from GET /User/{id}.
+  // friendship: null means stranger, full stop.
+  const liveUser = profile ? { ...user, relationship: profile.relationship } : user;
   const isSelf = liveUser.id === currentUser.id;
   const currentType = liveUser.relationship?.type || 'friend';
   const friendStatus = liveUser.relationship?.status || (liveUser.relationship ? 'accepted' : 'none');
 
+  // Reset on user switch; refetch on friendship mutations (send/accept/…)
+  // so the dialog shows the new status right away. The reset is split out
+  // so a mutation refetch doesn't flash the dialog back to unloaded state.
   useEffect(() => {
     setProfile(null);
+  }, [user.id]);
+
+  useEffect(() => {
     if (isSelf) return;
     const numericId = Number(user.id);
     if (!Number.isFinite(numericId) || numericId <= 0) return;
@@ -122,13 +128,16 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
           age: u.age ?? 0,
           gender: u.genderId === 1 ? 'Nam' : u.genderId === 2 ? 'Nữ' : 'Khác',
           bio: u.bio ?? '',
+          relationship: u.friendship
+            ? mapProfileFriendshipToRelationship(u.friendship, Number(currentUser.id))
+            : undefined,
         });
       })
       .catch((err) => console.error('[MarkerDetailDialog] getUserById failed:', err));
     return () => {
       alive = false;
     };
-  }, [user.id, isSelf]);
+  }, [user.id, isSelf, currentUser.id, friendshipVersion]);
 
   // The feed only carries the recent page — merge this profile's visible
   // moments so the grid and viewer show them all.
@@ -151,7 +160,6 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
 
   const getRelationshipBadge = () => {
   if (isSelf) return { label: 'Tài khoản của bạn', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
-  if (friendStatus === 'blocked') return { label: 'Đã chặn', color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' };
   if (friendStatus === 'pending_received') return { label: 'Chờ bạn đồng ý', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
   if (friendStatus === 'pending_sent') return { label: 'Đã gửi lời mời', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
   if (friendStatus === 'none') return { label: 'Người qua đường', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
@@ -189,7 +197,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
       onClick={onClose}
     >
       <div
-        className="relative w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[94vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-200"
+        className="relative w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[80vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button (pinned above the single scroll area) */}
@@ -230,13 +238,14 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                 </div>
               </div>
 
-              {/* Bio bubble - strictly 1 line with overflow ellipsis, hidden when empty */}
+              {/* Bio bubble - clamped to 2 lines so a long bio can't push the
+                  fixed header past the modal max-h (full text stays in title) */}
               {displayUser.bio?.trim() ? (
                 <div
-                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-500/15 px-2.5 py-0.5 rounded-lg inline-block max-w-full "
+                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-500/15 px-2.5 py-0.5 rounded-lg max-w-full line-clamp-2 break-words"
                   title={displayUser.bio}
                 >
-                 {displayUser.bio}
+                  {displayUser.bio}
                 </div>
               ) : null}
 
@@ -257,8 +266,10 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
         </div>
 
         {/* Scroll area: chat / relationship / danger buttons scroll off,
-            tab bar sticks right below the user-info header */}
-        <div className="flex-1 overflow-y-auto no-scrollbar bg-white dark:bg-slate-900">
+            tab bar sticks right below the user-info header.
+            min-h-0 lets it shrink inside the flex column; bottom padding
+            keeps scrolled-to-end content clear of the safe area. */}
+        <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar bg-white dark:bg-slate-900 pb-[env(safe-area-inset-bottom)]">
           {!isSelf && (
             <div className="px-5 py-3 space-y-3 border-b border-slate-100 dark:border-slate-800">
               {friendStatus === 'none' ? (
@@ -355,18 +366,6 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                     Thu hồi
                   </button>
                 </div>
-              ) : friendStatus === 'blocked' ? (
-                <div className="flex items-center justify-between p-2 bg-slate-100 dark:bg-slate-800 rounded-2xl">
-                  <span className="text-xs text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap truncate">
-                    Bạn đang chặn người này
-                  </span>
-                  <button
-                    onClick={() => unblockFriend(liveUser.id)}
-                    className="px-3 py-1 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer whitespace-nowrap truncate shrink-0"
-                  >
-                    Bỏ chặn
-                  </button>
-                </div>
               ) : null}
 
           {/* Danger actions (moved from removed Info tab) */}
@@ -383,19 +382,6 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               >
                 <UserX className="w-3.5 h-3.5" />
                 <span>Hủy kết bạn</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  if (confirm(`Bạn có chắc muốn chặn ${liveUser.name}?`)) {
-                    blockFriend(liveUser.id);
-                    onClose();
-                  }
-                }}
-                className="flex-1 py-2 px-3 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap truncate"
-              >
-                <Ban className="w-3.5 h-3.5" />
-                <span>Chặn</span>
               </button>
             </div>
           )}

@@ -24,7 +24,8 @@ export const HomeView: React.FC = () => {
   const {
     currentUser,
     friends,
-    setSelectedUser
+    setSelectedUser,
+    refreshFriendships
   } = useApp();
   const {
     greetingTarget,
@@ -138,6 +139,12 @@ export const HomeView: React.FC = () => {
     scrollRef.current?.scrollTo({ top: 0 });
     void fetchPage(true, genderFilter);
   }, [genderFilter, fetchPage]);
+
+  // Relationship badges come from the API, not a stale session cache —
+  // refetch friendships on entry so rows reflect current server state.
+  useEffect(() => {
+    void refreshFriendships();
+  }, [refreshFriendships]);
 
   const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;

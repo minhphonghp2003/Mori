@@ -37,8 +37,6 @@ import {
   acceptFriendRequest,
   rejectFriendRequest,
   revokeFriendRequest,
-  blockUser,
-  unblockUser,
   removeFriendship,
   changeFriendshipType as changeFriendshipTypeApi,
 } from '@/services/friendship';
@@ -122,6 +120,8 @@ interface AppContextType {
   loadMoreMoments: () => Promise<void>;
   ensureUserMoments: (userId: string) => Promise<void>;
   refreshFriendships: () => Promise<void>;
+  /** Increments on every local friendship mutation — refetch key for API-driven UI. */
+  friendshipVersion: number;
   refreshTimelines: () => Promise<void>;
   ensureUserTimelines: (userId: string) => Promise<void>;
   ensureTimelineById: (timelineId: string) => Promise<void>;
@@ -140,8 +140,6 @@ interface AppContextType {
   cancelFriendRequest: (userId: string) => void;
   changeFriendshipType: (userId: string, type: FriendshipType) => void;
   removeFriend: (userId: string) => void;
-  blockFriend: (userId: string) => void;
-  unblockFriend: (userId: string) => void;
   blockChat: ChatActions['blockChat'];
   unblockChat: ChatActions['unblockChat'];
   updateProfile: (profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>) => Promise<void>;
@@ -210,6 +208,11 @@ const INITIAL_CURRENT_USER: User = {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(INITIAL_CURRENT_USER);
   const [friendships, setFriendships] = useState<FriendshipDto[]>([]);
+  // Bumped on every local friendship mutation (request/accept/reject/cancel/
+  // type/remove) so API-driven surfaces (profile dialog) refetch and show
+  // the new status immediately instead of sitting on stale data.
+  const [friendshipVersion, setFriendshipVersion] = useState(0);
+  const bumpFriendshipVersion = useCallback(() => setFriendshipVersion((v) => v + 1), []);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [momentsHasMore, setMomentsHasMore] = useState(false);
   const [isLoadingMoments, setIsLoadingMoments] = useState(false);
@@ -970,11 +973,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const dto = await acceptFriendRequest(row.id);
           upsertFriendship(dto);
           syncSelectedRelationship(userId, relationshipFromDto(dto));
+          bumpFriendshipVersion();
           showToast(`Đã kết bạn với ${name}`, 'success');
         } else {
           await rejectFriendRequest(row.id);
           dropFriendship(row.id);
           syncSelectedRelationship(userId, undefined);
+          bumpFriendshipVersion();
           showToast(`Đã từ chối lời mời từ ${name}`, 'info');
         }
       } catch (err) {
@@ -990,6 +995,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         upsertFriendship(dto);
         const rel = relationshipFromDto(dto);
         syncSelectedRelationship(userId, rel);
+        bumpFriendshipVersion();
         showToast(
           rel?.status === 'accepted'
             ? `Đã kết bạn với ${dto.otherUserName}`
@@ -1013,6 +1019,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await revokeFriendRequest(row.id);
         dropFriendship(row.id);
         syncSelectedRelationship(userId, undefined);
+        bumpFriendshipVersion();
         showToast('Đã thu hồi lời mời kết bạn', 'info');
       } catch (err) {
         onFriendshipError('cancelFriendRequest', err);
@@ -1037,6 +1044,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const dto = await changeFriendshipTypeApi(row.id, apiType);
         upsertFriendship(dto);
         syncSelectedRelationship(userId, relationshipFromDto(dto));
+        bumpFriendshipVersion();
         const typeLabels: Record<FriendshipType, string> = {
           friend: 'Bạn bè',
           best_friend: 'Bạn thân',
@@ -1061,47 +1069,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await removeFriendship(row.id);
         dropFriendship(row.id);
         syncSelectedRelationship(userId, undefined);
+        bumpFriendshipVersion();
         showToast(`Đã hủy kết bạn với ${name}`, 'info');
       } catch (err) {
         onFriendshipError('removeFriend', err);
-      }
-    })();
-  };
-
-  const blockFriend = (userId: string) => {
-    const row = findFriendshipRow(userId);
-    if (!row) {
-      void refreshFriendships();
-      return;
-    }
-    const name = row.otherUserName || 'Người dùng';
-    void (async () => {
-      try {
-        const dto = await blockUser(row.id);
-        upsertFriendship(dto);
-        syncSelectedRelationship(userId, relationshipFromDto(dto));
-        showToast(`Đã chặn ${name}`, 'info');
-      } catch (err) {
-        onFriendshipError('blockFriend', err);
-      }
-    })();
-  };
-
-  const unblockFriend = (userId: string) => {
-    const row = findFriendshipRow(userId);
-    if (!row) {
-      void refreshFriendships();
-      return;
-    }
-    const name = row.otherUserName || 'Người dùng';
-    void (async () => {
-      try {
-        const dto = await unblockUser(row.id);
-        upsertFriendship(dto);
-        syncSelectedRelationship(userId, relationshipFromDto(dto));
-        showToast(`Đã bỏ chặn ${name}`, 'success');
-      } catch (err) {
-        onFriendshipError('unblockFriend', err);
       }
     })();
   };
@@ -1246,6 +1217,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loadMoreMoments,
         ensureUserMoments,
         refreshFriendships,
+        friendshipVersion,
         refreshTimelines,
         ensureUserTimelines,
         ensureTimelineById,
@@ -1264,8 +1236,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cancelFriendRequest,
         changeFriendshipType,
         removeFriend,
-        blockFriend,
-        unblockFriend,
         blockChat: chatActions.blockChat,
         unblockChat: chatActions.unblockChat,
         updateProfile,

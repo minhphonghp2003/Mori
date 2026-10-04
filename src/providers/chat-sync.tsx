@@ -190,13 +190,15 @@ export function ChatSync({ children }: { children: ReactNode }) {
 
       unsubs.push(
         appHub.onReceiveChatBlocked((data) => {
-          if (data.targetUserId === myIdRef.current) void refresh();
+          const me = myIdRef.current;
+          if (data.targetUserId === me || data.blockerUserId === me) void refresh();
         }),
       );
 
       unsubs.push(
         appHub.onReceiveChatUnblocked((data) => {
-          if (data.targetUserId === myIdRef.current) void refresh();
+          const me = myIdRef.current;
+          if (data.targetUserId === me || data.blockerUserId === me) void refresh();
         }),
       );
 

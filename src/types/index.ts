@@ -6,7 +6,7 @@ export type VisibilityTier = 0 | 1 | 2 | 3 | 4;
 // 4: Công khai (Public)
 
 export type FriendshipType = 'friend' | 'best_friend' | 'lover';
-export type FriendshipStatus = 'accepted' | 'pending_received' | 'pending_sent' | 'blocked' | 'none';
+export type FriendshipStatus = 'accepted' | 'pending_received' | 'pending_sent' | 'none';
 
 export interface User {
   id: string;

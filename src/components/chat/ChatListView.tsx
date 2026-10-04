@@ -8,6 +8,7 @@ import { mapDiscoverableGroup } from '@/lib/chat/mappers';
 import { DiscoverableGroup, Conversation } from '../../types';
 import { CreateGroupModal } from './CreateGroupModal';
 import { Avatar } from '../common/Avatar';
+import { appHub } from '@/lib/signalr/app-hub';
 import { 
   Users, 
   MessageSquare, 
@@ -63,6 +64,42 @@ export const ChatListView: React.FC = () => {
   // Tapping the active Tin nhắn tab scrolls this list up.
   const listScrollRef = useRef<HTMLDivElement | null>(null);
   useScrollToTop(listScrollRef);
+
+  // Global typing previews — room-independent so the list shows
+  // "Đang soạn tin..." under the right conversation.
+  const [typingByConv, setTypingByConv] = useState<Record<number, { name: string; expires: number }>>({});
+  useEffect(() => {
+    const unsub = appHub.onReceiveTyping((data) => {
+      if (Number(data.userId) === Number(currentUser.id)) return;
+      const convId = Number(data.conversationId);
+      if (!convId) return;
+      setTypingByConv((prev) => {
+        const next = { ...prev };
+        if (data.isTyping) next[convId] = { name: data.userName, expires: Date.now() + 4000 };
+        else delete next[convId];
+        return next;
+      });
+    });
+    return unsub;
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTypingByConv((prev) => {
+        const now = Date.now();
+        const kept = Object.entries(prev).filter(([, v]) => v.expires > now);
+        if (kept.length === Object.keys(prev).length) return prev;
+        return Object.fromEntries(kept);
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const typingTextFor = (convId: string): string | undefined => {
+    const t = typingByConv[Number(convId)];
+    if (!t) return undefined;
+    return t.name ? `${t.name} đang soạn tin...` : 'Đang soạn tin...';
+  };
 
   useEffect(() => {
     if (filterTab !== 'discover') return;
@@ -220,6 +257,7 @@ export const ChatListView: React.FC = () => {
                   <ConversationItem
                     key={conv.id}
                     conv={conv}
+                    typingText={typingTextFor(conv.id)}
                     currentUserId={currentUser.id}
                     isMenuOpen={menuConvId === conv.id}
                     onToggleMenu={(e) => {
@@ -282,6 +320,7 @@ export const ChatListView: React.FC = () => {
                   <ConversationItem
                     key={conv.id}
                     conv={conv}
+                    typingText={typingTextFor(conv.id)}
                     currentUserId={currentUser.id}
                     isMenuOpen={menuConvId === conv.id}
                     onToggleMenu={(e) => {
@@ -521,6 +560,7 @@ export const ChatListView: React.FC = () => {
 // Reusable Conversation Item with Popover (Delete, Archive, Mute)
 interface ConversationItemProps {
   conv: Conversation;
+  typingText?: string;
   currentUserId: string;
   isMenuOpen: boolean;
   onToggleMenu: (e: React.MouseEvent) => void;
@@ -534,6 +574,7 @@ interface ConversationItemProps {
 
 const ConversationItem: React.FC<ConversationItemProps> = ({
   conv,
+  typingText,
   isMenuOpen,
   onToggleMenu,
   onCloseMenu,
@@ -600,8 +641,10 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate whitespace-nowrap leading-relaxed flex-1">
-            {conv.lastMessage.isDeleted
+          <p className={`text-[11px] truncate whitespace-nowrap leading-relaxed flex-1 ${typingText ? 'text-emerald-600 dark:text-emerald-400 font-semibold italic' : 'text-slate-500 dark:text-slate-400'}`}>
+            {typingText
+              ? typingText
+              : conv.lastMessage.isDeleted
               ? 'Tin nhắn đã bị thu hồi'
               : conv.lastMessage.mediaType === 'gif'
               ? '[GIF]'

@@ -344,6 +344,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
 
   // Typing: global ReceiveTyping filtered to this room (4s auto-hide).
   useEffect(() => {
+    setTypingUsers({});
     const unsub = appHub.onReceiveTyping((data) => {
       if (Number(data.conversationId) !== Number(conversationId)) return;
       if (Number(data.userId) === Number(currentUser.id)) return;
@@ -356,6 +357,27 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     });
     return unsub;
   }, [conversationId, currentUser.id]);
+
+  // Never leave a stale "typing..." on the partner side when leaving/sending.
+  useEffect(() => {
+    const convId = Number(conversationId);
+    return () => {
+      if (typingStopTimerRef.current) {
+        clearTimeout(typingStopTimerRef.current);
+        typingStopTimerRef.current = null;
+      }
+      typingThrottleRef.current = 0;
+      if (convId) void appHub.sendTyping(convId, false).catch(() => {});
+    };
+  }, [conversationId]);
+
+  // Typing bubble pins the viewport down while the partner is typing.
+  const hasTyping = Object.keys(typingUsers).length > 0;
+  useEffect(() => {
+    if (!hasTyping || searchMode) return;
+    if (!stickToBottomRef.current) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [hasTyping, searchMode]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -938,7 +960,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             </button>
           </div>
         ) : (
-          /* DIRECT MESSAGE ACTIONS: SEARCH MSG, VIDEO CALL, BLOCK CHAT */
+          /* DIRECT MESSAGE ACTIONS: SEARCH MSG, VIDEO CALL, BLOCK CHAT
+             Hidden call/block while blocked — blocked bar below owns the state. */
           <div className="flex shrink-0 items-center gap-1">
             <button
               onClick={() => (isSearchOpen ? closeSearch() : setIsSearchOpen(true))}
@@ -952,23 +975,27 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               <Search className="h-4 w-4" />
             </button>
 
-            <button
-              onClick={() => partnerUser && startCall(partnerUser, true)}
-              disabled={!partnerUser}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-emerald-300"
-              title="Gọi video"
-            >
-              <Video className="h-4 w-4" />
-            </button>
+            {!conversation.isBlocked && (
+              <>
+                <button
+                  onClick={() => partnerUser && startCall(partnerUser, true)}
+                  disabled={!partnerUser}
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-emerald-300"
+                  title="Gọi video"
+                >
+                  <Video className="h-4 w-4" />
+                </button>
 
-            <button
-              onClick={() => setShowBlockConfirm(true)}
-              disabled={!partnerUser}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-              title="Chặn cuộc trò chuyện"
-            >
-              <Ban className="h-4 w-4" />
-            </button>
+                <button
+                  onClick={() => setShowBlockConfirm(true)}
+                  disabled={!partnerUser}
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-wait disabled:opacity-40 dark:text-slate-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                  title="Chặn cuộc trò chuyện"
+                >
+                  <Ban className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1466,6 +1493,28 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
             </div>
           );
         })}
+
+        {/* TYPING INDICATOR — animated dots bubble while partner(s) type */}
+        {Object.keys(typingUsers).length > 0 && (
+          <div className="flex flex-col items-start">
+            {!convIsGroup || Object.keys(typingUsers).length > 1 ? null : (
+              <span className="mb-1 ml-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                {typingNames[0]}
+              </span>
+            )}
+            {convIsGroup && Object.keys(typingUsers).length > 1 ? (
+              <span className="mb-1 ml-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                {typingNames.length} người đang soạn tin...
+              </span>
+            ) : null}
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-xs border border-slate-100 bg-white px-3.5 py-3 shadow-xs dark:border-slate-700 dark:bg-slate-800">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms] dark:bg-slate-500" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms] dark:bg-slate-500" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms] dark:bg-slate-500" />
+              <span className="sr-only">Đang soạn tin...</span>
+            </div>
+          </div>
+        )}
 
         <div ref={messagesEndRef} />
       </div>

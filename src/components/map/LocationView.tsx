@@ -58,7 +58,8 @@ export const LocationView: React.FC = () => {
     friends, 
     setSelectedUser, 
     updateStatus,
-    updateVisibility
+    updateVisibility,
+    refreshFriendships
   } = useApp();
 
   // Live location state (seeded by REST, kept fresh by hub events).
@@ -87,6 +88,12 @@ export const LocationView: React.FC = () => {
     tryCenterOnMe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latitude, longitude]);
+
+  // Marker relationship badges come from the API, not a stale session cache —
+  // refetch friendships on entry so markers reflect current server state.
+  useEffect(() => {
+    void refreshFriendships();
+  }, [refreshFriendships]);
 
   // Status edit modal for self marker
   const [isEditingStatus, setIsEditingStatus] = useState(false);

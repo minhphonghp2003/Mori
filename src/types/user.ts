@@ -7,6 +7,8 @@ export interface FriendshipStatusDto {
   friendshipId: number;
   status: string | number;
   type?: string | number;
+  /** The profile owner's side of the classification (fallback only). */
+  otherUserType?: string | number;
   type1?: string | number;
   type2?: string | number;
   requestedById: number;
