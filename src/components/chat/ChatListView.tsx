@@ -736,7 +736,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                       )}
                     </button>
 
-                    <div className="h-px bg-slate-100 my-1" />
+                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" />
 
                     {/* Delete */}
                     <button
