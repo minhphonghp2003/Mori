@@ -108,30 +108,64 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const swipeStartXRef = useRef<number | null>(null);
   const swipeStartYRef = useRef<number | null>(null);
+  const cameraGenRef = useRef(0);
 
-  // Start Live Camera stream when in 'capture' step
+  // True while (re)acquiring the camera — flip button is disabled then.
+  // hasCameraError surfaces a retry UI instead of a bare black viewport.
+  const [isCameraLoading, setIsCameraLoading] = useState(false);
+  const [hasCameraError, setHasCameraError] = useState(false);
+  const [cameraRetryKey, setCameraRetryKey] = useState(0);
+
+  // Start Live Camera stream when in 'capture' step.
+  // Swap without blackout: keep the old stream rendering until the new one
+  // is acquired, then swap + stop the old tracks. Stopping first (old code)
+  // turned the viewport black for the whole device-switch gap.
   useEffect(() => {
     let active = true;
 
-    const startCamera = async () => {
-      if (step !== 'capture') return;
-      try {
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach(track => track.stop());
-        }
+    if (step !== 'capture') {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
+      setIsCameraLoading(false);
+      return () => {
+        active = false;
+      };
+    }
 
+    const gen = ++cameraGenRef.current;
+    const startCamera = async () => {
+      // Keep the current frame up when we already have a live stream
+      // (camera flip) — only show the spinner on cold start.
+      const hadLiveStream = !!mediaStreamRef.current;
+      if (!hadLiveStream) setIsCameraLoading(true);
+      setHasCameraError(false);
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: facingMode } },
           audio: captureMode === 'video'
         });
-
-        if (active && videoStreamRef.current) {
-          mediaStreamRef.current = stream;
+        if (!active || gen !== cameraGenRef.current) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        const old = mediaStreamRef.current;
+        mediaStreamRef.current = stream;
+        if (videoStreamRef.current) {
           videoStreamRef.current.srcObject = stream;
           videoStreamRef.current.play().catch(() => {});
         }
+        if (old && old !== stream) {
+          old.getTracks().forEach(track => track.stop());
+        }
       } catch (err) {
         console.warn('Camera stream could not be started or permission denied:', err);
+        if (active && gen === cameraGenRef.current && !hadLiveStream) {
+          setHasCameraError(true);
+        }
+      } finally {
+        if (active && gen === cameraGenRef.current) setIsCameraLoading(false);
       }
     };
 
@@ -139,11 +173,21 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
 
     return () => {
       active = false;
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
     };
-  }, [step, facingMode, captureMode]);
+  }, [step, facingMode, captureMode, cameraRetryKey]);
+
+  // Final safety net: release the camera if the modal unmounts mid-capture.
+  useEffect(
+    () => () => {
+      mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+      if (recordTimerRef.current) {
+        clearInterval(recordTimerRef.current);
+        recordTimerRef.current = null;
+      }
+    },
+    []
+  );
 
   // Flip Camera Front/Back
   const toggleCameraFacing = () => {
@@ -483,6 +527,31 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
 
               {/* Top and Bottom Gradient Overlays */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/60 pointer-events-none" />
+
+              {/* Cold-start spinner — small overlay, old frame stays visible on flip */}
+              {isCameraLoading && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 backdrop-blur-md">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  </span>
+                </div>
+              )}
+
+              {/* Permission / device failure — retry instead of a bare black screen */}
+              {hasCameraError && !isCameraLoading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-slate-900 px-8 text-center">
+                  <p className="text-xs font-semibold text-white/80">
+                    Không thể mở camera. Hãy cấp quyền và thử lại.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCameraRetryKey((k) => k + 1)}
+                    className="rounded-full bg-white/15 px-4 py-2 text-xs font-bold text-white backdrop-blur-md border border-white/20 hover:bg-white/25 active:scale-95 transition-all cursor-pointer"
+                  >
+                    Thử lại
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Top Camera Controls Bar */}
@@ -521,10 +590,15 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 <button
                   type="button"
                   onClick={toggleCameraFacing}
-                  className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/60 active:scale-90 transition-all cursor-pointer shadow-lg"
+                  disabled={isCameraLoading}
+                  className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/60 active:scale-90 transition-all cursor-pointer shadow-lg disabled:opacity-40 disabled:cursor-wait"
                   title="Đổi camera trước / sau"
                 >
-                  <SwitchCamera className="w-5 h-5" />
+                  {isCameraLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <SwitchCamera className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
