@@ -14,10 +14,8 @@ import {
   Upload, 
   Users, 
   RotateCcw, 
-  SwitchCamera, 
-  Check, 
-  Zap,
-  ZapOff,
+  SwitchCamera,
+  Check,
   Play,
   Pause,
   Volume2,
@@ -37,7 +35,6 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
   const [step, setStep] = useState<'capture' | 'edit'>('capture');
   const [captureMode, setCaptureMode] = useState<'photo' | 'video'>('photo');
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [isFlashOn, setIsFlashOn] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
@@ -525,8 +522,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 className={`w-full h-full object-cover ${facingMode === 'user' ? '-scale-x-100' : ''}`}
               />
 
-              {/* Top and Bottom Gradient Overlays */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/60 pointer-events-none" />
+              {/* No gradient overlay — keep the viewfinder video clear */}
 
               {/* Cold-start spinner — small overlay, old frame stays visible on flip */}
               {isCameraLoading && (
@@ -574,19 +570,8 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 </div>
               )}
 
-              {/* Flash & Flip Controls */}
+              {/* Flip Control */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsFlashOn(!isFlashOn)}
-                  className={`w-10 h-10 rounded-full backdrop-blur-md border border-white/20 flex items-center justify-center transition-all cursor-pointer ${
-                    isFlashOn ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/30' : 'bg-black/40 text-white hover:bg-black/60'
-                  }`}
-                  title="Đèn flash"
-                >
-                  {isFlashOn ? <Zap className="w-5 h-5 fill-slate-950" /> : <ZapOff className="w-5 h-5" />}
-                </button>
-
                 <button
                   type="button"
                   onClick={toggleCameraFacing}
@@ -603,10 +588,10 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
               </div>
             </div>
 
-            {/* Bottom Camera Action Area */}
-            <div className="relative z-20 pb-8 pt-4 px-6 flex flex-col items-center gap-5 bg-gradient-to-t from-black via-black/70 to-transparent">
+            {/* Bottom Camera Action Area — no dark overlay, keep video clear */}
+            <div className="relative z-20 pb-8 pt-4 px-6 flex flex-col items-center gap-5 bg-transparent">
               {/* Photo vs Video Mode Switcher */}
-              <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-wider drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
                 <button
                   type="button"
                   onClick={() => setCaptureMode('photo')}

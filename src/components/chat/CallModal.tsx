@@ -97,7 +97,6 @@ export const CallModal: React.FC = () => {
               muted
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40 pointer-events-none" />
           </div>
         ) : null}
 
@@ -209,7 +208,7 @@ export const CallModal: React.FC = () => {
           </div>
         </div>}
 
-        <div className={`absolute inset-x-0 bottom-0 z-30 px-6 pt-16 pb-[max(env(safe-area-inset-bottom),1.5rem)] bg-gradient-to-t from-black via-black/75 to-transparent transition-all duration-200 ${
+        <div className={`absolute inset-x-0 bottom-0 z-30 px-6 pt-4 pb-[max(env(safe-area-inset-bottom),1.5rem)] bg-transparent transition-all duration-200 ${
           isInCall && !controlsVisible ? 'translate-y-4 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
         }`}>
           {isIncoming ? (
@@ -241,10 +240,10 @@ export const CallModal: React.FC = () => {
                 <button
                   onClick={(event) => { event.stopPropagation(); toggleMic(); }}
                   disabled={!isActive}
-                  className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
+                  className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 border border-white/20 shadow-lg backdrop-blur-md ${
                     micMuted
                       ? 'bg-rose-500 text-white'
-                      : 'bg-white/15 text-white hover:bg-white/25'
+                      : 'bg-black/30 text-white hover:bg-black/45'
                   }`}
                   title={micMuted ? 'Bật mic' : 'Tắt mic'}
                   aria-label={micMuted ? 'Bật mic' : 'Tắt mic'}
@@ -257,10 +256,10 @@ export const CallModal: React.FC = () => {
                   <button
                     onClick={(event) => { event.stopPropagation(); toggleCamera(); }}
                     disabled={!isActive}
-                    className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
+                    className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 border border-white/20 shadow-lg backdrop-blur-md ${
                       cameraOff
                         ? 'bg-rose-500 text-white'
-                        : 'bg-white/15 text-white hover:bg-white/25'
+                        : 'bg-black/30 text-white hover:bg-black/45'
                     }`}
                     title={cameraOff ? 'Bật camera' : 'Tắt camera'}
                   >
