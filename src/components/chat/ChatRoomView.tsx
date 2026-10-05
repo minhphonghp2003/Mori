@@ -372,11 +372,14 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
   }, [conversationId]);
 
   // Typing bubble pins the viewport down while the partner is typing.
+  // NOTE: scroll the list container directly (never scrollIntoView) so the
+  // composer footer / outer page never gets scrolled out of view.
   const hasTyping = Object.keys(typingUsers).length > 0;
   useEffect(() => {
     if (!hasTyping || searchMode) return;
     if (!stickToBottomRef.current) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = listRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [hasTyping, searchMode]);
 
   useEffect(() => {
@@ -428,9 +431,13 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
 
   const scrollToAndHighlight = useCallback((messageId: number) => {
     const id = String(messageId);
-    const el = listRef.current?.querySelector(`[data-msg-id="${id}"]`);
-    if (el instanceof HTMLElement) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const list = listRef.current;
+    const el = list?.querySelector(`[data-msg-id="${id}"]`);
+    if (el instanceof HTMLElement && list) {
+      // Scroll only the message list container — scrollIntoView would also
+      // bubble to outer scrollers and push the composer footer off-screen.
+      const top = el.offsetTop - list.clientHeight / 2 + el.clientHeight / 2;
+      list.scrollTo({ top, behavior: "smooth" });
     }
     setHighlightedId(id);
     if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
@@ -527,7 +534,8 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
   useEffect(() => {
     if (searchQuery || searchMode) return;
     if (messages.length > 0 && !stickToBottomRef.current) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = listRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages.length, pendingSends.length, activeDrawer, replyingTo, editingMessage, searchQuery, searchMode]);
 
   // Revoke object-URL previews for optimistic file bubbles.
@@ -639,8 +647,14 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     return ok;
   };
 
+  const keepInputFocus = () => {
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Keep the keyboard open — submit blurs the input otherwise.
+    inputRef.current?.focus();
     if (!inputText.trim() && !pendingMoment) return;
 
     if (editingMessage) {
@@ -650,6 +664,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
         setInputText("");
       }
       // On failure keep the text in the box so the user can retry.
+      keepInputFocus();
       return;
     }
 
@@ -681,6 +696,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     setInputText("");
     setActiveDrawer(null);
     stopTypingSignal();
+    keepInputFocus();
     const ok = await runSend(pending);
     if (!ok && !showPending) {
       // sendMessage already toasted — give the text back so it isn't lost.
@@ -690,6 +706,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
       requestAnimationFrame(() => scrollToBottom("smooth"));
       if (pending.momentId) setPendingMoment(null);
     }
+    keepInputFocus();
   };
 
   const handleSendGif = (gifUrl: string) => {
@@ -1035,7 +1052,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
       {/* MESSAGES STREAM */}
       <div
         ref={listRef}
-        className="no-scrollbar flex-1 space-y-3.5 overflow-y-auto p-4"
+        className="no-scrollbar min-h-0 flex-1 space-y-3.5 overflow-y-auto overscroll-contain p-4"
         onScroll={handleListScroll}
         onClick={() => {
           setActiveDrawer(null);
@@ -1904,6 +1921,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
           {/* Send / Update Button */}
           <button
             type="submit"
+            onMouseDown={(e) => e.preventDefault()}
             disabled={!inputText.trim() && !pendingMoment}
             className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-white shadow-md transition-all active:scale-95 disabled:opacity-30 ${
               editingMessage
