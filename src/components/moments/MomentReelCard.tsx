@@ -504,7 +504,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
 
           {/* Top Dots Indicator (Pure swipe, no buttons) */}
           {hasMultipleImages && !isImmersive && (
-            <div className="absolute top-14 inset-x-0 flex justify-center items-center gap-1.5 z-25 pointer-events-none">
+            <div className="absolute top-14 inset-x-0 flex justify-center items-center gap-1.5 z-20 pointer-events-none">
               {images.map((_, idx) => (
                 <span
                   key={idx}
@@ -559,7 +559,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
 
       {/* Left Bottom Information Overlay - Hidden in Immersive Media-Only mode.
           Lifted on videos so the appended controller sits right below it. */}
-      <div className={`absolute left-3 ${isVideo ? 'bottom-11' : 'bottom-5'} right-18 z-20 text-white space-y-2 pointer-events-auto transition-all duration-300 ${
+      <div className={`absolute left-3 ${isVideo ? 'bottom-12' : 'bottom-6'} right-20 z-20 text-white space-y-2 pointer-events-auto transition-all duration-300 ${
         isImmersive ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'
       }`}>
         {/* Author row */}
@@ -613,9 +613,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Location badge */}
             {moment.locationName && (
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[11px] text-white/90 whitespace-nowrap truncate max-w-[170px]">
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[11px] text-white/90 truncate max-w-[min(180px,40vw)]">
                 <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="truncate whitespace-nowrap overflow-hidden text-ellipsis">{moment.locationName}</span>
+                <span className="truncate">{moment.locationName}</span>
               </div>
             )}
 
@@ -627,11 +627,11 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
                   e.stopPropagation();
                   setShowTimelineModal(momentTimeline);
                 }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-600/80 to-emerald-600/80 hover:from-emerald-600 hover:to-emerald-600 backdrop-blur-md border border-emerald-300/30 text-[11px] text-white font-semibold whitespace-nowrap truncate max-w-[180px] shadow-sm cursor-pointer transition-all active:scale-95"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/80 hover:bg-emerald-600 backdrop-blur-md border border-emerald-300/30 text-[11px] text-white font-semibold truncate max-w-[min(180px,40vw)] shadow-sm cursor-pointer transition-all active:scale-95"
                 title={`Xem chi tiết hành trình: ${momentTimeline.title}`}
               >
                 <Compass className="w-3 h-3 text-emerald-200 shrink-0" />
-                <span className="truncate whitespace-nowrap overflow-hidden text-ellipsis">{momentTimeline.title}</span>
+                <span className="truncate">{momentTimeline.title}</span>
               </button>
             )}
           </div>
@@ -672,7 +672,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
                 e.stopPropagation();
                 void openReactionsViewer();
               }}
-              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-90 transition-transform"
               title="Xem tất cả cảm xúc"
             >
               {stackedEmojis.length > 0 ? (
@@ -701,7 +701,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
               }}
               onTouchStart={handleHeartPointerDown}
               onTouchEnd={handleHeartPointerUp}
-              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-90 transition-transform"
               title="Nhấn để thả tim, giữ lâu để chọn cảm xúc (Haha, Phẫn nộ...)"
             >
               {userReaction ? (
@@ -728,7 +728,7 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
               e.stopPropagation();
               void startGreetingChat(author, { id: moment.id, previewImage: moment.imageUrl });
             }}
-            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-90 transition-transform"
             title="Nhắn tin"
           >
             <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
@@ -743,11 +743,11 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
         {/* Share Button */}
         <button
           onClick={handleShare}
-          className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+          className="flex flex-col items-center gap-1 cursor-pointer group active:scale-90 transition-transform"
           title="Chia sẻ"
         >
           <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
-            <Share2 className="w-4.5 h-4.5 stroke-white" />
+            <Share2 className="w-5 h-5 stroke-white" />
           </div>
           <span className="text-[10px] font-bold text-white/90 drop-shadow-sm whitespace-nowrap truncate">
             Chia sẻ
@@ -792,11 +792,11 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
                 e.stopPropagation();
                 setShowVisibilityPicker(prev => !prev);
               }}
-              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+              className="flex flex-col items-center gap-1 cursor-pointer group active:scale-90 transition-transform"
               title="Đổi quyền xem khoảnh khắc"
             >
               <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
-                <Eye className="w-4.5 h-4.5 stroke-white" />
+                <Eye className="w-5 h-5 stroke-white" />
               </div>
               <span className="text-[10px] font-bold text-white/90 drop-shadow-sm whitespace-nowrap truncate max-w-[68px]">
                 {currentVisibilityLabel}
@@ -812,11 +812,11 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
               e.stopPropagation();
               setShowHideConfirm(true);
             }}
-            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-90 transition-transform"
             title="Ẩn khoảnh khắc khỏi feed"
           >
             <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
-              <EyeOff className="w-4.5 h-4.5 stroke-white" />
+              <EyeOff className="w-5 h-5 stroke-white" />
             </div>
             <span className="text-[10px] font-bold text-white/90 drop-shadow-sm whitespace-nowrap truncate">
               Ẩn
@@ -831,11 +831,11 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
               e.stopPropagation();
               setShowDeleteConfirm(true);
             }}
-            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-80 transition-transform"
+            className="flex flex-col items-center gap-1 cursor-pointer group active:scale-90 transition-transform"
             title="Xóa khoảnh khắc"
           >
             <div className="w-11 h-11 rounded-full bg-rose-600/40 backdrop-blur-md border border-rose-500/40 flex items-center justify-center text-rose-300 hover:bg-rose-600/60 transition-colors">
-              <Trash2 className="w-4.5 h-4.5 stroke-rose-200" />
+              <Trash2 className="w-5 h-5 stroke-rose-200" />
             </div>
             <span className="text-[10px] font-bold text-rose-300 drop-shadow-sm whitespace-nowrap truncate">
               Xóa
