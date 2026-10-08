@@ -10,12 +10,12 @@ interface AvatarProps {
 }
 
 const FALLBACK_BG = [
-  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-  "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
-  "bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300",
-  "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
-  "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-  "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
+  "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/25 dark:text-emerald-100",
+  "bg-sky-100 text-sky-800 dark:bg-sky-500/25 dark:text-sky-100",
+  "bg-amber-100 text-amber-800 dark:bg-amber-500/25 dark:text-amber-100",
+  "bg-rose-100 text-rose-800 dark:bg-rose-500/25 dark:text-rose-100",
+  "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/25 dark:text-indigo-100",
+  "bg-teal-100 text-teal-800 dark:bg-teal-500/25 dark:text-teal-100",
 ];
 
 /**

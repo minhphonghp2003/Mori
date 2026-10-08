@@ -17,7 +17,9 @@ import {
   Users,
   Mars,
   Venus,
-  Transgender
+  Transgender,
+  RotateCcw,
+  WifiOff,
 } from 'lucide-react';
 
 export const HomeView: React.FC = () => {
@@ -38,6 +40,7 @@ export const HomeView: React.FC = () => {
   } = useFirstMessage();
 
   const [genderFilter, setGenderFilter] = useState<'all' | 'Nam' | 'Nữ'>('all');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // First-message flow is shared (see useFirstMessage) — also used by
   // the location profile dialog.
@@ -68,8 +71,10 @@ export const HomeView: React.FC = () => {
       if (loadingRef.current) return;
       if (!reset && (!pagingRef.current.hasMore || exhaustedRef.current)) return;
       loadingRef.current = true;
-      if (reset) setIsLoadingRoster(true);
-      else setIsLoadingMore(true);
+      if (reset) {
+        setIsLoadingRoster(true);
+        setLoadError(null);
+      } else setIsLoadingMore(true);
 
       const runOnce = async (freshCursor: boolean) => {
         const res = await getAllUsers({
@@ -124,6 +129,9 @@ export const HomeView: React.FC = () => {
         }
       } catch (err) {
         console.error('[HomeView] getAllUsers failed:', err);
+        // Surface instead of failing silent — empty "nobody nearby" on
+        // flaky mobile was indistinguishable from a real empty roster.
+        setLoadError('Không tải được danh sách. Kiểm tra mạng rồi thử lại.');
       } finally {
         loadingRef.current = false;
         if (reset) setIsLoadingRoster(false);
@@ -145,6 +153,10 @@ export const HomeView: React.FC = () => {
   useEffect(() => {
     void refreshFriendships();
   }, [refreshFriendships]);
+
+  const handleRetry = useCallback(() => {
+    void fetchPage(true, genderFilter);
+  }, [fetchPage, genderFilter]);
 
   const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -179,13 +191,20 @@ export const HomeView: React.FC = () => {
   // Server order (userId desc) — no client sort/filter beyond gender.
   const visibleUsers = nearbyUsers;
 
+  const handleRowKeyDown = (e: React.KeyboardEvent, user: User & { isOnline: boolean }) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setSelectedUser(user);
+    }
+  };
+
   // Windowing: pages come from the API (take=50 + cursor), but only rows
   // near the viewport are mounted — the rest is a sized spacer.
   const rowVirtualizer = useVirtualizer({
     count: visibleUsers.length,
     getScrollElement: () => scrollRef.current,
     // Measured per row below; this is just the first-paint guess.
-    estimateSize: () => 72,
+    estimateSize: () => 76,
     overscan: 6,
   });
 
@@ -193,20 +212,20 @@ export const HomeView: React.FC = () => {
     const g = (gender || '').toLowerCase();
     if (g.includes('nam') || g === 'male') {
       return (
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 shrink-0" title="Nam">
+        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/25 dark:text-blue-100 shrink-0" title="Nam">
           <Mars className="w-2.5 h-2.5" aria-hidden="true" />
         </span>
       );
     }
     if (g.includes('nữ') || g === 'female') {
       return (
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-pink-100 text-pink-600 shrink-0" title="Nữ">
+        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-500/25 dark:text-pink-100 shrink-0" title="Nữ">
           <Venus className="w-2.5 h-2.5" aria-hidden="true" />
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-100 text-purple-600 shrink-0" title="Khác">
+      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-500/25 dark:text-purple-100 shrink-0" title="Khác">
         <Transgender className="w-2.5 h-2.5" aria-hidden="true" />
       </span>
     );
@@ -216,12 +235,12 @@ export const HomeView: React.FC = () => {
     <div
       ref={scrollRef}
       onScroll={handleListScroll}
-      className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none"
+      className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar"
     >
-      {/* Compact Gender Filter Bar (server-side genderId, no header) */}
-      <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 shadow-xs flex items-center gap-2">
+      {/* Compact Gender Filter Bar (server-side genderId, no header) — select-none scoped here so bios stay copyable */}
+      <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-3 py-2.5 shadow-xs select-none">
         {/* Gender Filter Chips — follows GET /api/user ?genderId= */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1" role="group" aria-label="Lọc theo giới tính">
           {(
             [
               { id: 'all', label: 'Tất cả' },
@@ -232,9 +251,10 @@ export const HomeView: React.FC = () => {
             <button
               key={opt.id}
               onClick={() => setGenderFilter(opt.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-[11px] font-bold shrink-0 transition-all cursor-pointer whitespace-nowrap ${
+              aria-pressed={genderFilter === opt.id}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer whitespace-nowrap ${
                 genderFilter === opt.id
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-emerald-700 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
@@ -242,9 +262,18 @@ export const HomeView: React.FC = () => {
             </button>
           ))}
         </div>
+        {loadError && roster.length > 0 && (
+          <div className="mt-2 flex items-center gap-2 px-2.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-xs font-medium text-amber-800 dark:text-amber-100" role="alert">
+            <WifiOff className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1 truncate">{loadError}</span>
+            <button onClick={handleRetry} className="font-bold underline underline-offset-2 shrink-0 cursor-pointer">
+              Thử lại
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Compact Nearby Users List (virtualized — only viewport rows mount) */}
+      {/* Nearby Users List (virtualized — only viewport rows mount) */}
       <div className="p-3 max-w-lg mx-auto w-full pb-16">
         {visibleUsers.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
@@ -252,26 +281,44 @@ export const HomeView: React.FC = () => {
               <div className="py-8 flex justify-center">
                 <LogoLoader size="md" text={null} />
               </div>
+            ) : loadError ? (
+              <>
+                <WifiOff className="w-9 h-9 text-slate-300 mx-auto mb-2" aria-hidden="true" />
+                <div className="text-[13px] font-bold text-slate-800 dark:text-slate-100">Không tải được danh sách</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {loadError} Lần thử trước không có kết quả để hiển thị.
+                </p>
+                <button
+                  onClick={handleRetry}
+                  className="mt-3 px-4 min-h-[44px] rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                  Thử lại
+                </button>
+              </>
             ) : (
               <>
-                <Users className="w-9 h-9 text-slate-300 mx-auto mb-2" />
-                <div className="text-xs font-bold text-slate-700 dark:text-slate-300">Không có người dùng nào</div>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                <Users className="w-9 h-9 text-slate-300 mx-auto mb-2" aria-hidden="true" />
+                <div className="text-[13px] font-bold text-slate-800 dark:text-slate-100">Không có người dùng nào</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Hãy thử bộ lọc giới tính khác.
                 </p>
               </>
             )}
           </div>
         ) : (
-          <div
-            className="relative w-full"
+          <ul
+            className="relative w-full list-none m-0 p-0"
+            aria-label="Người gần bạn"
             style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const user = visibleUsers[virtualRow.index];
               if (!user) return null;
+              const hasBio = Boolean(user.bio?.trim());
+              const rowLabel = `${user.name}, ${user.distanceM ? `cách ${formatDistance(user.distanceM)}` : 'vị trí ẩn'}, ${user.isOnline ? 'đang online' : 'ngoại tuyến'}`;
               return (
-                <div
+                <li
                   key={virtualRow.key}
                   data-index={virtualRow.index}
                   ref={rowVirtualizer.measureElement}
@@ -281,20 +328,25 @@ export const HomeView: React.FC = () => {
                   <div className="pb-2">
               <div
                 onClick={() => setSelectedUser(user)}
-                className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 border border-slate-100/90 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer group flex items-center justify-between gap-2.5"
+                onKeyDown={(e) => handleRowKeyDown(e, user)}
+                tabIndex={0}
+                role="button"
+                aria-label={rowLabel}
+                className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 border border-slate-100/90 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer group flex items-center justify-between gap-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
                 {/* Left: Avatar with presence dot */}
                 <div className="relative shrink-0">
                   <Avatar
                     src={user.avatar}
                     name={user.name}
-                    className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-100 dark:ring-white/10 group-hover:ring-emerald-500 transition-all"
+                    className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-100 dark:ring-white/10 group-hover:ring-emerald-600 transition-all"
                   />
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-white rounded-full ${
-                      user.isOnline ? 'bg-emerald-500' : 'bg-slate-300'
+                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-white dark:border-slate-900 rounded-full ring-1 ring-white/60 ${
+                      user.isOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
                     }`}
                     title={user.isOnline ? 'Đang online' : 'Ngoại tuyến'}
+                    aria-hidden="true"
                   />
                 </div>
 
@@ -303,12 +355,12 @@ export const HomeView: React.FC = () => {
                   {/* Name, age, gender & distance */}
                   <div className="flex items-center justify-between gap-1 mb-0.5">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      <span className="text-[13px] font-bold text-slate-900 dark:text-slate-50 truncate">
                         {user.name}
                       </span>
                       <div className="flex items-center gap-1 shrink-0">
                         {user.age > 0 && (
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                             {user.age}t
                           </span>
                         )}
@@ -317,36 +369,47 @@ export const HomeView: React.FC = () => {
                     </div>
 
                     {user.distanceM ? (
-                      <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold shrink-0">
-                        <MapPin className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-100 text-[11px] font-bold shrink-0">
+                        <MapPin className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-200 shrink-0" aria-hidden="true" />
                         <span>{formatDistance(user.distanceM)}</span>
                       </div>
-                    ) : null}
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-[11px] font-semibold shrink-0">
+                        Vị trí ẩn
+                      </span>
+                    )}
                   </div>
 
-                  {/* Bio — single line with overflow ellipsis, fallback when empty */}
-                  <div className="text-[11px] text-slate-600 dark:text-slate-400 truncate font-medium max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
-                    {user.bio?.trim() || 'Cốc cốc cốc mở cửa cho anh đê'}
+                  {/* Bio — honest placeholder framing, copyable */}
+                  <div className="text-xs text-slate-600 dark:text-slate-300 truncate font-medium max-w-full overflow-hidden text-ellipsis whitespace-nowrap select-text">
+                    {hasBio ? (
+                      user.bio?.trim()
+                    ) : (
+                      <span className="italic font-normal text-slate-400 dark:text-slate-500">
+                        “Cốc cốc…” — gợi ý giới thiệu, bạn này chưa viết gì
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Right: Only Send Message Button */}
-                <div className="shrink-0 pl-1" onClick={(e) => e.stopPropagation()}>
+                {/* Right: Only Send Message Button (44px touch target) */}
+                <div className="shrink-0 pl-1" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => startGreetingChat(user)}
-                    className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                    aria-label={`Nhắn tin cho ${user.name}`}
                     title={`Nhắn tin cho ${user.name}`}
+                    className="px-3 min-h-[44px] min-w-[44px] rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-xs transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                   >
-                    <MessageCircle className="w-3 h-3" />
+                    <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>Nhắn</span>
                   </button>
                 </div>
               </div>
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
         {isLoadingMore && (
           <div className="pb-2 flex justify-center">
