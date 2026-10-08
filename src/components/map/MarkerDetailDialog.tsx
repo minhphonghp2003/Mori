@@ -70,6 +70,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
   } = useFirstMessage();
   const [timelineToDelete, setTimelineToDelete] = useState<Timeline | null>(null);
   const [viewingMoment, setViewingMoment] = useState<Moment | null>(null);
+  const [confirmUnfriend, setConfirmUnfriend] = useState(false);
   // Age/gender/bio come from the public profile endpoint (location events
   // only carry id/name/image).
   const [profile, setProfile] = useState<{
@@ -114,6 +115,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
   // so a mutation refetch doesn't flash the dialog back to unloaded state.
   useEffect(() => {
     setProfile(null);
+    setConfirmUnfriend(false);
   }, [user.id]);
 
   useEffect(() => {
@@ -162,7 +164,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
   if (isSelf) return { label: 'Tài khoản của bạn', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
   if (friendStatus === 'pending_received') return { label: 'Chờ bạn đồng ý', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
   if (friendStatus === 'pending_sent') return { label: 'Đã gửi lời mời', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
-  if (friendStatus === 'none') return { label: 'Người qua đường', color: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30' };
+  if (friendStatus === 'none') return { label: 'Người qua đường', color: 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-500/30' };
   if (currentType === 'lover') return { label: 'Người yêu', color: 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' };
   if (currentType === 'best_friend') return { label: 'Bạn thân', color: 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30' };
   return { label: 'Bạn bè', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
@@ -203,9 +205,10 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
         {/* Close button (pinned above the single scroll area) */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 shadow-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+          aria-label="Đóng hồ sơ"
+          className="absolute top-4 right-4 z-20 w-11 h-11 flex items-center justify-center rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 shadow-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
         {/* Fixed user-info header (sticks at top) */}
@@ -219,7 +222,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
               <Avatar
                 src={liveUser.avatar}
                 name={liveUser.name}
-                className="w-15 h-15 rounded-2xl object-cover ring-3 ring-emerald-500/20 shadow-md"
+                className="w-16 h-16 rounded-2xl object-cover ring-2 ring-emerald-500/20 shadow-md"
                 textClassName="text-xl"
               />
             </div>
@@ -370,19 +373,41 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
 
           {/* Danger actions (moved from removed Info tab) */}
           {friendStatus === 'accepted' && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  if (confirm(`Bạn có chắc muốn hủy kết bạn với ${liveUser.name}?`)) {
-                    removeFriend(liveUser.id);
-                    onClose();
-                  }
-                }}
-                className="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap truncate"
-              >
-                <UserX className="w-3.5 h-3.5" />
-                <span>Hủy kết bạn</span>
-              </button>
+            <div className="flex flex-col gap-2">
+              {!confirmUnfriend ? (
+                <button
+                  onClick={() => setConfirmUnfriend(true)}
+                  aria-label={`Hủy kết bạn với ${liveUser.name}`}
+                  className="flex-1 py-2 px-3 min-h-[44px] bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                >
+                  <UserX className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Hủy kết bạn</span>
+                </button>
+              ) : (
+                <div role="alert" className="rounded-xl border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 p-3">
+                  <p className="text-xs font-bold text-rose-700 dark:text-rose-200">
+                    Hủy kết bạn với {liveUser.name}? Hai bạn sẽ không còn thấy nhau trên bản đồ.
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setConfirmUnfriend(false)}
+                      className="flex-1 py-2 min-h-[44px] rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                    >
+                      Giữ lại
+                    </button>
+                    <button
+                      onClick={() => {
+                        removeFriend(liveUser.id);
+                        onClose();
+                      }}
+                      aria-label={`Xác nhận hủy kết bạn với ${liveUser.name}`}
+                      className="flex-1 py-2 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
+                    >
+                      Hủy kết bạn
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
             </div>
@@ -587,7 +612,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
         />
         {/* DELETE TIMELINE CONFIRMATION MODAL */}
         {timelineToDelete && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
             <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
                 <Trash2 className="w-6 h-6" />

@@ -104,6 +104,16 @@ export const LocationView: React.FC = () => {
 
   // Filter state: all, friends, strangers
   const [mapFilter, setMapFilter] = useState<'all' | 'friends' | 'strangers'>('all');
+  // Canvas declutter: avatar-only below zoom 14; bubbles capped at ~8.
+  const [mapZoom, setMapZoom] = useState<number>(initialView.zoom);
+  // Two-step escalation to Public: pending tier + undo window.
+  const [pendingPublic, setPendingPublic] = useState(false);
+  const [visibilityUndo, setVisibilityUndo] = useState<VisibilityTier | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+  }, []);
 
   const myId = currentUser.id;
   const myStatus = status || currentUser.status || 'Trực tuyến';
@@ -160,9 +170,9 @@ export const LocationView: React.FC = () => {
         return {
           label: 'Công khai',
           shortLabel: 'Công khai',
-          desc: 'Mọi người quanh khu vực đều thấy (Kể cả người lạ)',
-          badgeClass: 'border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20',
-          dotClass: 'bg-emerald-500',
+          desc: 'Mọi người quanh khu vực đều thấy (Kể cả người lạ) — cân nhắc kỹ',
+          badgeClass: 'border-indigo-200 dark:border-indigo-500/40 text-indigo-700 dark:text-indigo-200 bg-indigo-50/90 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25',
+          dotClass: 'bg-indigo-500',
           Icon: Globe
         };
     }
@@ -204,12 +214,24 @@ export const LocationView: React.FC = () => {
     return true; // 'all'
   });
 
+  const friendCount = useMemo(
+    () => markerUsers.filter(({ user }) => user.relationship?.status === 'accepted').length,
+    [markerUsers],
+  );
+  const strangerCount = markerUsers.length - friendCount;
+
+  // Declutter: avatar-only below zoom 14; status bubbles capped to ~8.
+  const showBubbles = mapZoom >= 14;
+  const bubbleIds = useMemo(() => new Set(visibleUsers.slice(0, 8).map(({ user }) => user.id)), [visibleUsers]);
+  const hiddenBubbleCount = Math.max(0, visibleUsers.length - bubbleIds.size);
+
   // Map controls -----------------------------------------------------------
   const persistView = () => {
     const map = mapRef.current;
     if (!map) return;
     const center = map.getCenter();
     const zoom = map.getZoom();
+    setMapZoom(zoom);
     try {
       window.localStorage.setItem(
         MAP_VIEW_KEY,
@@ -218,6 +240,35 @@ export const LocationView: React.FC = () => {
     } catch {
       // ignore storage errors
     }
+  };
+
+  const commitVisibility = (tier: VisibilityTier) => {
+    if (tier === 4 && currentVisibility !== 4) {
+      // Escalating to Public always asks inline first.
+      setPendingPublic(true);
+      return;
+    }
+    updateVisibility(tier);
+    setIsEditingPrivacy(false);
+    setPendingPublic(false);
+  };
+
+  const confirmPublic = () => {
+    const prev = currentVisibility;
+    updateVisibility(4);
+    setIsEditingPrivacy(false);
+    setPendingPublic(false);
+    // Undo window — going Public should never feel irreversible.
+    setVisibilityUndo(prev);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => setVisibilityUndo(null), 2000);
+  };
+
+  const undoPublic = () => {
+    if (visibilityUndo == null) return;
+    updateVisibility(visibilityUndo);
+    setVisibilityUndo(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
   };
 
   const centerOnUser = () => {
@@ -244,54 +295,73 @@ export const LocationView: React.FC = () => {
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden select-none">
       {/* Top Map Floating Header: 3 Filter Tabs + Visibility Changing Button */}
-      <div className="absolute top-3 inset-x-3 z-20 flex items-center justify-between gap-2 pointer-events-auto">
-        {/* 3 Filter Tabs */}
-        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border border-slate-200/80 dark:border-slate-700 p-1 rounded-2xl flex items-center gap-1">
-          <button
-            onClick={() => setMapFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              mapFilter === 'all'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            Tất cả
-          </button>
-          <button
-            onClick={() => setMapFilter('friends')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              mapFilter === 'friends'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            Bạn bè
-          </button>
-          <button
-            onClick={() => setMapFilter('strangers')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              mapFilter === 'strangers'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            Người lạ
-          </button>
+      <div className="absolute top-3 inset-x-2 z-20 flex items-start justify-between gap-1.5 pointer-events-auto">
+        {/* 3 Filter Tabs — counts included, scrollable at 360px */}
+        <div
+          role="group"
+          aria-label="Lọc người trên bản đồ"
+          className="min-w-0 flex-1 max-w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border border-slate-200/80 dark:border-slate-700 p-1 rounded-2xl flex items-center gap-1 overflow-x-auto no-scrollbar"
+        >
+          {(
+            [
+              { id: 'all', label: `Tất cả (${markerUsers.length})` },
+              { id: 'friends', label: `Bạn bè (${friendCount})` },
+              { id: 'strangers', label: `Người lạ (${strangerCount})` },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => setMapFilter(opt.id)}
+              aria-pressed={mapFilter === opt.id}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+                mapFilter === opt.id
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {/* Right: Current Visibility Indicator & Quick Edit Button */}
         <button
           onClick={() => setIsEditingPrivacy(true)}
-          className={`bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border px-3 py-2 rounded-2xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 ${currentVisibilityInfo.badgeClass}`}
+          aria-label={`Quyền riêng tư vị trí: ${currentVisibilityInfo.label}. Chạm để chỉnh sửa`}
           title="Chạm để chỉnh sửa quyền riêng tư vị trí"
+          className={`bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-lg border px-2.5 py-2 rounded-2xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${currentVisibilityInfo.badgeClass}`}
         >
-          <currentVisibilityInfo.Icon className="w-3.5 h-3.5 shrink-0" />
-          <span className="text-xs font-bold whitespace-nowrap">
+          <currentVisibilityInfo.Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <span className="text-xs font-bold whitespace-nowrap truncate max-w-[min(88px,22vw)]">
             {currentVisibilityInfo.shortLabel}
           </span>
-          <Edit3 className="w-3 h-3 opacity-60 ml-0.5 shrink-0" />
+          <Edit3 className="w-3 h-3 opacity-60 ml-0.5 shrink-0" aria-hidden="true" />
         </button>
       </div>
+      {/* Visibility undo banner (Public escalation) */}
+      {visibilityUndo != null && (
+        <div className="absolute top-[68px] inset-x-2 z-20 flex justify-center pointer-events-auto">
+          <div role="status" className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-full bg-slate-900/95 text-white text-[11px] font-semibold shadow-xl border border-white/15 max-w-full">
+            <span className="truncate">Đã bật Công khai — chạm để hoàn tác</span>
+            <button
+              type="button"
+              onClick={undoPublic}
+              aria-label="Hoàn tác bật công khai"
+              className="px-3 min-h-[36px] rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              Hoàn tác
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Cluster count when bubbles are capped */}
+      {showBubbles && hiddenBubbleCount > 0 && (
+        <div className="absolute bottom-24 inset-x-0 z-10 flex justify-center pointer-events-none">
+          <span className="px-3 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white text-[11px] font-semibold">
+            Đang hiện {bubbleIds.size}/{visibleUsers.length} bong bóng
+          </span>
+        </div>
+      )}
 
       {/* Map Interactive Canvas */}
       <div className="relative flex-1 w-full h-full overflow-hidden">
@@ -313,18 +383,23 @@ export const LocationView: React.FC = () => {
             {/* CURRENT USER MARKER */}
             {hasMyPosition && latitude != null && longitude != null && (
               <Marker longitude={longitude} latitude={latitude} anchor="center">
-                <div
-                  className="relative pointer-events-auto cursor-pointer group z-30"
+                <button
+                  type="button"
+                  aria-label={`Vị trí của bạn: ${myStatus}. Chạm để đổi trạng thái`}
                   onClick={openStatusEditor}
+                  className="relative pointer-events-auto cursor-pointer group z-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded-full"
                 >
-                    {/* Status speech bubble */}
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white px-2.5 py-1 rounded-full shadow-lg border border-slate-200 text-[11px] font-bold text-slate-800 group-hover:scale-105 transition-transform">
-                      <span>{myStatus}</span>
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" />
+                    {/* Status speech bubble — visible Đổi trạng thái affordance */}
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white pl-2.5 pr-1.5 py-1 rounded-full shadow-lg border border-slate-200 text-[11px] font-bold text-slate-800 group-hover:scale-105 transition-transform flex items-center gap-1">
+                      <span className="truncate max-w-[140px]">{myStatus}</span>
+                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center" title="Đổi trạng thái">
+                        <Edit3 className="w-3 h-3" aria-hidden="true" />
+                      </span>
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" aria-hidden="true" />
                     </div>
 
                   {/* Avatar */}
-                  <div className="relative w-11 h-11 rounded-full ring-3 ring-emerald-600 shadow-xl overflow-hidden bg-white">
+                  <div className="relative w-11 h-11 rounded-full ring-2 ring-emerald-600 shadow-xl overflow-hidden bg-white">
                     {currentUser.avatar ? (
                       <img
                         src={currentUser.avatar}
@@ -340,17 +415,27 @@ export const LocationView: React.FC = () => {
                   </div>
 
                   {/* Self Visibility Shield Indicator Badge on Avatar */}
-                  <span 
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Quyền riêng tư: ${currentVisibilityInfo.label}. Chạm để chỉnh sửa`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsEditingPrivacy(true);
                     }}
-                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md border border-slate-200 cursor-pointer hover:scale-110 transition-transform"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsEditingPrivacy(true);
+                      }
+                    }}
+                    className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md border border-slate-200 cursor-pointer hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                     title={`Quyền riêng tư: ${currentVisibilityInfo.label}`}
                   >
-                    <currentVisibilityInfo.Icon className="w-2.5 h-2.5 text-emerald-600" />
+                    <currentVisibilityInfo.Icon className={`w-3 h-3 ${currentVisibility === 4 ? 'text-indigo-600' : 'text-emerald-600'}`} aria-hidden="true" />
                   </span>
-                </div>
+                </button>
               </Marker>
             )}
 
@@ -360,11 +445,14 @@ export const LocationView: React.FC = () => {
               const isLover = user.relationship?.type === 'lover' && isFriend;
               const isBestFriend = user.relationship?.type === 'best_friend' && isFriend;
               const isStranger = !isFriend;
+              const showBubble = showBubbles && bubbleIds.has(user.id);
 
+              // Friends keep emerald; strangers move off emerald to slate so
+              // Công khai green is never confused with stranger markers.
               let ringColor = 'ring-emerald-500';
               if (isLover) ringColor = 'ring-rose-500';
               else if (isBestFriend) ringColor = 'ring-amber-500';
-              else if (isStranger) ringColor = 'ring-emerald-500';
+              else if (isStranger) ringColor = 'ring-slate-400';
 
               return (
                 <Marker
@@ -373,48 +461,58 @@ export const LocationView: React.FC = () => {
                   latitude={loc.latitude}
                   anchor="center"
                 >
-                  <div
-                    className="relative pointer-events-auto cursor-pointer group transition-transform duration-200 hover:z-20 hover:scale-105"
+                  <button
+                    type="button"
+                    aria-label={`${user.name}, ${user.status?.trim() || 'Trực tuyến'}, ${isStranger ? 'người lạ' : isLover ? 'người yêu' : isBestFriend ? 'bạn thân' : 'bạn bè'}${user.distanceM ? `, cách ${metersToKm(user.distanceM)} km` : ''}`}
                     onClick={() => setSelectedUser(user)}
+                    className="relative pointer-events-auto cursor-pointer group transition-transform duration-200 hover:z-20 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded-full"
                   >
-                    {/* Status speech bubble */}
+                    {/* Status speech bubble — avatar-only when zoomed out or capped */}
+                    {showBubble && (
                     <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white px-2 py-0.5 rounded-full shadow-lg border border-slate-200 text-[10px] font-semibold text-slate-800 flex items-center gap-1 group-hover:scale-105 transition-transform">
-                      {isLover && <span className="text-rose-500" aria-hidden="true" />}
-                      {isBestFriend && <span className="text-amber-500" aria-hidden="true" />}
-                      {isStranger && <span className="text-emerald-500" aria-hidden="true" />}
-                      <span>{user.status?.trim() || 'Trực tuyến'}</span>
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" />
+                      {isLover && <span className="w-1.5 h-1.5 rounded-full bg-rose-500" aria-hidden="true" />}
+                      {isBestFriend && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />}
+                      {isStranger && <span className="w-1.5 h-1.5 rounded-full bg-slate-400" aria-hidden="true" />}
+                      <span className="truncate max-w-[120px]">{user.status?.trim() || 'Trực tuyến'}</span>
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" aria-hidden="true" />
                     </div>
+                    )}
 
                     {/* Ring and Avatar */}
-                    <div className={`relative w-10 h-10 rounded-full ring-3 ${ringColor} shadow-lg overflow-hidden bg-white group-hover:ring-4 transition-all`}>
+                    <div className={`relative w-10 h-10 rounded-full ring-2 ${ringColor} shadow-lg overflow-hidden bg-white group-hover:ring-4 transition-all`}>
                       {user.avatar ? (
                         <img
                           src={user.avatar}
-                          alt={user.name}
+                          alt=""
+                          aria-hidden="true"
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-base font-bold">
+                        <div className="w-full h-full flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-base font-bold" aria-hidden="true">
                           {(user.name || '?').charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
-
-                  
-                  </div>
+                  </button>
                 </Marker>
               );
             })}
           </MapGl>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center px-6">
-            <MapPin className="w-8 h-8 text-slate-300" />
-            <div className="text-xs font-bold text-slate-600 dark:text-slate-400">Bản đồ chưa được cấu hình</div>
+            <MapPin className="w-8 h-8 text-slate-300" aria-hidden="true" />
+            <div className="text-xs font-bold text-slate-600 dark:text-slate-400">Chưa tải được bản đồ</div>
             <p className="text-[11px] text-slate-400">
-              Thiếu NEXT_PUBLIC_MAP_STYLE_URL trong biến môi trường.
+              Kiểm tra kết nối mạng rồi thử lại nhé.
             </p>
+            <button
+              type="button"
+              onClick={() => setMapStyle(primaryStyle)}
+              className="mt-2 px-4 min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+            >
+              Thử lại
+            </button>
           </div>
         )}
 
@@ -422,7 +520,7 @@ export const LocationView: React.FC = () => {
         {locationDenied && (
           <div className="absolute inset-x-3 bottom-3 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-              <Crosshair className="w-4.5 h-4.5" />
+              <Crosshair className="w-5 h-5" aria-hidden="true" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold text-slate-800 dark:text-slate-200">Chưa cho phép truy cập vị trí</div>
@@ -445,28 +543,31 @@ export const LocationView: React.FC = () => {
           <button
             onClick={centerOnUser}
             disabled={!hasMyPosition}
-            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="Định vị của tôi"
             title="Định vị của tôi"
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
           >
-            <Navigation className="w-5 h-5 fill-emerald-600 text-emerald-600" />
+            <Navigation className="w-5 h-5 fill-emerald-600 text-emerald-600" aria-hidden="true" />
           </button>
 
           {/* Zoom In */}
           <button
             onClick={() => zoomBy(1)}
-            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer active:scale-95"
+            aria-label="Phóng to bản đồ"
             title="Phóng to"
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-5 h-5" aria-hidden="true" />
           </button>
 
           {/* Zoom Out */}
           <button
             onClick={() => zoomBy(-1)}
-            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer active:scale-95"
+            aria-label="Thu nhỏ bản đồ"
             title="Thu nhỏ"
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
           >
-            <Minus className="w-5 h-5" />
+            <Minus className="w-5 h-5" aria-hidden="true" />
           </button>
 
         </div>
@@ -474,12 +575,25 @@ export const LocationView: React.FC = () => {
 
       {/* IN-MAP LOCATION PRIVACY MODAL (Same feature as privacy in settings) */}
       {isEditingPrivacy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setIsEditingPrivacy(false);
+              setPendingPublic(false);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Quyền riêng tư vị trí"
+            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150 motion-reduce:animate-none"
+          >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Quyền riêng tư vị trí</h3>
@@ -487,17 +601,40 @@ export const LocationView: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => setIsEditingPrivacy(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
+                onClick={() => {
+                  setIsEditingPrivacy(false);
+                  setPendingPublic(false);
+                }}
+                aria-label="Đóng quyền riêng tư vị trí"
+                className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
             {/* Current visibility status alert banner (no desc) */}
             <div className={`px-3 py-2.5 rounded-2xl border mb-3 flex items-center gap-2 ${currentVisibilityInfo.badgeClass}`}>
-              <currentVisibilityInfo.Icon className="w-4 h-4 shrink-0" />
+              <currentVisibilityInfo.Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span className="text-xs font-bold">Hiện tại: {currentVisibilityInfo.label}</span>
+            </div>
+
+            {/* Ring/badge legend — emerald is friends-only, strangers are slate */}
+            <div className="px-1 pb-3 flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Chú thích màu viền">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true" /> Bạn bè
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden="true" /> Bạn thân
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-rose-500" aria-hidden="true" /> Người yêu
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-slate-400" aria-hidden="true" /> Người lạ
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-indigo-500" aria-hidden="true" /> Công khai
+              </span>
             </div>
 
             {/* Visibility options list */}
@@ -510,11 +647,9 @@ export const LocationView: React.FC = () => {
                 return (
                   <button
                     key={opt.value}
-                    onClick={() => {
-                      updateVisibility(opt.value as VisibilityTier);
-                      setIsEditingPrivacy(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer ${
+                    aria-pressed={isChecked}
+                    onClick={() => commitVisibility(opt.value as VisibilityTier)}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
                       isChecked
                         ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200 font-bold shadow-xs'
                         : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent text-slate-700 dark:text-slate-300 font-medium'
@@ -524,7 +659,7 @@ export const LocationView: React.FC = () => {
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                         isChecked ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                       }`}>
-                        <IconComponent className="w-4 h-4" />
+                        <IconComponent className="w-4 h-4" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs leading-tight">{opt.label}</div>
@@ -535,7 +670,7 @@ export const LocationView: React.FC = () => {
                     </div>
 
                     {isChecked && (
-                      <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 ml-2">
+                      <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 ml-2" aria-hidden="true">
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
                     )}
@@ -544,9 +679,38 @@ export const LocationView: React.FC = () => {
               })}
             </div>
 
+            {/* Inline confirm for Public escalation */}
+            {pendingPublic && (
+              <div role="alert" className="mb-3 px-3 py-2.5 rounded-2xl border border-indigo-200 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-500/10">
+                <p className="text-xs font-bold text-indigo-800 dark:text-indigo-100">
+                  Bật Công khai? Mọi người quanh khu vực đều thấy bạn, kể cả người lạ.
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendingPublic(false)}
+                    className="flex-1 py-2 min-h-[44px] rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+                  >
+                    Để sau
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmPublic}
+                    aria-label="Xác nhận bật công khai"
+                    className="flex-1 py-2 min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+                  >
+                    Bật Công khai
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button
-              onClick={() => setIsEditingPrivacy(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              onClick={() => {
+                setIsEditingPrivacy(false);
+                setPendingPublic(false);
+              }}
+              className="w-full py-2.5 min-h-[44px] rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
             >
               Đóng
             </button>
@@ -556,8 +720,18 @@ export const LocationView: React.FC = () => {
 
       {/* SELF STATUS EDIT MODAL */}
       {isEditingStatus && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setIsEditingStatus(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Cập nhật trạng thái"
+            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150 motion-reduce:animate-none"
+          >
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Cập nhật trạng thái bạn bè</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               Bạn bè trên bản đồ sẽ nhìn thấy bong bóng trạng thái này.
@@ -569,11 +743,13 @@ export const LocationView: React.FC = () => {
                 value={newStatusInput}
                 onChange={(e) => setNewStatusInput(e.target.value)}
                 maxLength={45}
+                autoFocus
                 placeholder="VD: Đang cafe, Học bài..."
+                aria-label="Trạng thái của bạn"
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <div className="text-[10px] text-slate-400 dark:text-slate-500 text-right mt-1">
-                {newStatusInput.length}/45 ký tự
+                {newStatusInput.trim() ? `${newStatusInput.trim().length}/45 ký tự` : 'Nhập trạng thái để lưu (không lưu trạng thái trống)'}
               </div>
             </div>
 
@@ -599,18 +775,18 @@ export const LocationView: React.FC = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setIsEditingStatus(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer"
+                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
                 Hủy
               </button>
               <button
                 onClick={() => {
-                  if (newStatusInput.trim()) {
-                    updateStatus(newStatusInput.trim());
-                  }
+                  updateStatus(newStatusInput.trim());
                   setIsEditingStatus(false);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 cursor-pointer"
+                disabled={!newStatusInput.trim()}
+                aria-label="Lưu trạng thái"
+                className="flex-1 py-2.5 min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold shadow-md shadow-emerald-600/20 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
                 Lưu trạng thái
               </button>
