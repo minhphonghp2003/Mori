@@ -495,8 +495,15 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-in fade-in duration-200">
-      <div className="relative w-full h-full max-w-md mx-auto bg-slate-950 flex flex-col overflow-hidden select-none">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tạo khoảnh khắc mới"
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && !isPublishing) onClose();
+      }}
+      className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-in fade-in duration-200"
+    >      <div className="relative w-full h-full max-w-md mx-auto bg-slate-950 flex flex-col overflow-hidden select-none">
         {/* Hidden File Picker for Gallery Selection (Single or Multi-media) */}
         <input
           ref={galleryInputRef}
@@ -556,7 +563,8 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/60 active:scale-90 transition-all cursor-pointer shadow-lg"
+                aria-label="Đóng"
+                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/60 active:scale-90 transition-all cursor-pointer shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 title="Đóng"
               >
                 <X className="w-5 h-5 stroke-white" />
@@ -576,7 +584,8 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                   type="button"
                   onClick={toggleCameraFacing}
                   disabled={isCameraLoading}
-                  className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/60 active:scale-90 transition-all cursor-pointer shadow-lg disabled:opacity-40 disabled:cursor-wait"
+                  aria-label="Đổi camera trước / sau"
+                  className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-black/60 active:scale-90 transition-all cursor-pointer shadow-lg disabled:opacity-40 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                   title="Đổi camera trước / sau"
                 >
                   {isCameraLoading ? (
@@ -589,7 +598,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
             </div>
 
             {/* Bottom Camera Action Area — no dark overlay, keep video clear */}
-            <div className="relative z-20 pb-8 pt-4 px-6 flex flex-col items-center gap-5 bg-transparent">
+            <div className="relative z-20 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4 px-6 flex flex-col items-center gap-5 bg-transparent">
               {/* Photo vs Video Mode Switcher */}
               <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-wider drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
                 <button
@@ -634,7 +643,8 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                   <button
                     type="button"
                     onClick={handleSnapPhoto}
-                    className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1.5 transition-transform active:scale-90 cursor-pointer shadow-2xl"
+                    aria-label="Chụp ảnh"
+                    className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1.5 transition-transform active:scale-90 cursor-pointer shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                     title="Chụp ảnh"
                   >
                     <div className="w-full h-full rounded-full bg-white hover:bg-slate-100 transition-colors shadow-inner" />
@@ -643,7 +653,8 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                   <button
                     type="button"
                     onClick={isRecording ? handleStopRecording : handleStartRecording}
-                    className={`w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1.5 transition-transform active:scale-90 cursor-pointer shadow-2xl ${
+                    aria-label={isRecording ? 'Dừng quay' : 'Bắt đầu quay'}
+                    className={`w-20 h-20 rounded-full border-4 flex items-center justify-center p-1.5 transition-transform active:scale-90 cursor-pointer shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
                       isRecording ? 'border-rose-500' : 'border-white'
                     }`}
                     title={isRecording ? 'Dừng quay' : 'Bắt đầu quay'}
@@ -835,7 +846,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
             </div>
 
             {/* Bottom Form Sheet & Video Controller (Hidden in Immersive mode) */}
-            <div className={`relative z-20 px-4 pb-6 space-y-3 transition-all duration-300 ${
+            <div className={`relative z-20 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-3 transition-all duration-300 ${
               isImmersive ? 'opacity-0 translate-y-6 pointer-events-none' : 'opacity-100 translate-y-0'
             }`}>
               {/* VIDEO CONTROLLER COMPONENT (When editing a video moment) */}
@@ -1028,7 +1039,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 <button
                   type="submit"
                   disabled={isPublishing}
-                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+                  className="w-full py-3 min-h-[48px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 >
                   {isPublishing ? (
                     <>

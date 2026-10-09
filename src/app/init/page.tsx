@@ -71,9 +71,9 @@ export default function InitPage() {
   };
 
   return (
-    <main className="min-h-dvh w-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-6 py-10">
+    <main className="min-h-dvh w-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-6 pt-10 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div className="w-full max-w-sm flex flex-col items-center">
-        <div className="p-1.5 bg-white dark:bg-slate-900 rounded-[28px] shadow-xl shadow-slate-900/10 ring-1 ring-slate-200/70 dark:ring-slate-800">
+        <div className="p-1.5 bg-white dark:bg-slate-900 rounded-[28px] shadow-lg shadow-slate-900/10 ring-1 ring-slate-200/70 dark:ring-slate-800">
           <Image
             src="/images/logo.webp"
             alt={env.NEXT_PUBLIC_APP_NAME}
@@ -84,10 +84,10 @@ export default function InitPage() {
           />
         </div>
 
-        <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+        <h1 className="mt-6 text-3xl font-extrabold tracking-tight text-balance text-slate-900 dark:text-slate-100">
           {env.NEXT_PUBLIC_APP_NAME}
         </h1>
-        <p className="mt-2 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
+        <p className="mt-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
           Gần nhau hơn. Gặp gỡ xung quanh. Trò chuyện ngay.
         </p>
 
@@ -95,7 +95,7 @@ export default function InitPage() {
           <button
             type="button"
             onClick={() => handleOAuth("google")}
-            className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold flex items-center justify-center gap-3 shadow-sm transition cursor-pointer active:scale-[0.98]"
+            className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold flex items-center justify-center gap-3 shadow-sm transition cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950"
           >
             <GoogleIcon />
             Tiếp tục với Google
@@ -104,33 +104,34 @@ export default function InitPage() {
           <button
             type="button"
             onClick={() => handleOAuth("facebook")}
-            className="w-full h-12 rounded-2xl bg-[#1877F2] hover:bg-[#1877F2]/90 text-white text-sm font-bold flex items-center justify-center gap-3 shadow-md shadow-[#1877F2]/25 transition cursor-pointer active:scale-[0.98]"
+            className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-[#1877F2] hover:bg-[#0f66d6] text-white text-sm font-bold flex items-center justify-center gap-3 shadow-md shadow-[#1877F2]/25 transition cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1877F2]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950"
           >
             <FacebookIcon />
             Tiếp tục với Facebook
           </button>
 
-          <div className="flex items-center gap-3 py-2">
-            <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <div className="flex items-center gap-3 py-2" aria-hidden="true">
+            <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               hoặc
             </span>
-            <span className="h-px flex-1 bg-slate-200" />
+            <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
           </div>
 
-          <Link href="/login" className="block">
-            <button
-              type="button"
-              className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/25 transition cursor-pointer active:scale-[0.98]"
-            >
-              <LogIn className="w-4.5 h-4.5" />
-              Đăng nhập bằng email
-            </button>
+          <Link
+            href="/login"
+            className="w-full min-h-[48px] px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/25 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950"
+          >
+            <LogIn className="w-5 h-5" aria-hidden="true" />
+            Đăng nhập bằng email
           </Link>
 
-          <p className="pt-2 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
+          <p className="pt-2 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
             Chưa có tài khoản?{" "}
-            <Link href="/register" className="font-bold text-emerald-600 hover:text-emerald-700">
+            <Link
+              href="/register"
+              className="font-bold text-emerald-600 hover:text-emerald-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+            >
               Đăng ký
             </Link>
           </p>

@@ -116,19 +116,30 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tạo hành trình mới"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+    >
       <div 
-        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 p-5 max-h-[90vh] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-8 duration-200"
+        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92dvh] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto mb-3 sm:hidden" aria-hidden="true" />
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-emerald-600" />
+            <Compass className="w-5 h-5 text-emerald-600" aria-hidden="true" />
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Tạo hành trình mới</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+            aria-label="Đóng"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
           >
             <X className="w-4 h-4" />
           </button>
@@ -145,7 +156,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
               placeholder="VD: Chuyến đi Đà Lạt mùa sương 🌲, Săn mây Tà Xùa..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 font-medium"
             />
           </div>
 
@@ -261,18 +272,18 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
             )}
           </div>
 
-          <div className="pt-2 flex gap-2">
+          <div className="pt-2 flex gap-2 pb-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer"
+              className="flex-1 py-2.5 min-h-[44px] rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 min-h-[44px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>{isSubmitting ? 'Đang lưu...' : 'Lưu hành trình'}</span>

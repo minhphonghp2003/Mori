@@ -22,8 +22,12 @@ export const MomentViewerModal: React.FC<MomentViewerModalProps> = ({ moment, on
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-in fade-in duration-200">
-      <div className="relative w-full h-full max-w-md mx-auto bg-black overflow-hidden shadow-2xl flex flex-col">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Xem khoảnh khắc"
+      className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-in fade-in duration-200"
+    >      <div className="relative w-full h-full max-w-md mx-auto bg-black overflow-hidden shadow-2xl flex flex-col">
         <MomentReelCard 
           moment={moment} 
           onClose={onClose} 

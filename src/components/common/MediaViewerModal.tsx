@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Download,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -70,14 +71,20 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between select-none animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={senderName || (mediaType === 'video' ? 'Video' : 'Hình ảnh')}
+      className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between select-none animate-in fade-in duration-200"
+    >
       
       {/* Top Controls Header */}
-      <div className="relative z-10 shrink-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
+      <div className="relative z-10 shrink-0 flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-3 text-white min-w-0">
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Đóng"
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             title="Đóng"
           >
             <X className="w-5 h-5 text-white" />
@@ -101,7 +108,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 ${
+            className={`px-3.5 py-2 min-h-[40px] rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-60 ${
               downloadSuccess 
                 ? 'bg-emerald-600 text-white' 
                 : 'bg-emerald-600 hover:bg-emerald-500 text-white'
@@ -113,9 +120,14 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
                 <Check className="w-4 h-4" />
                 <span className="hidden sm:inline">Đã tải</span>
               </>
+            ) : isDownloading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                <span>Đang tải…</span>
+              </>
             ) : (
               <>
-                <Download className={`w-4 h-4 ${isDownloading ? 'animate-bounce' : ''}`} />
+                <Download className="w-4 h-4" />
                 <span>Tải xuống</span>
               </>
             )}
@@ -157,7 +169,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
 
       {/* Bottom Caption Bar */}
       {caption && (
-        <div className="relative z-10 shrink-0 px-5 py-3.5 bg-gradient-to-t from-black/90 to-transparent text-center">
+        <div className="relative z-10 shrink-0 px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/90 to-transparent text-center">
           <p className="text-xs text-white/90 font-medium max-w-lg mx-auto leading-relaxed">
             {caption}
           </p>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { forgotPassword } from "@/services/auth";
 import {
   AuthBackLink,
@@ -53,21 +53,21 @@ export default function ForgotPasswordPage() {
       <AuthBackLink href="/login">Quay lại đăng nhập</AuthBackLink>
 
       <div className="mb-9">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Quên mật khẩu</h1>
-        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
+        <h1 className="text-3xl font-extrabold tracking-tight text-balance text-slate-900 dark:text-slate-100">Quên mật khẩu</h1>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
           Nhập email của bạn và chúng tôi sẽ gửi link đặt lại mật khẩu.
         </p>
       </div>
 
       {sent ? (
         <div className="flex flex-1 flex-col items-center justify-center text-center pb-16">
-          <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-5 ring-8 ring-emerald-500/10">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+          <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-500/15 flex items-center justify-center mb-5 ring-1 ring-emerald-600/20 shadow-lg shadow-emerald-600/10">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
 
           <h2 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Đã gửi email</h2>
 
-          <p className="mt-2 max-w-[280px] text-sm text-slate-400 dark:text-slate-500 font-medium">
+          <p className="mt-2 max-w-[280px] text-sm text-slate-500 dark:text-slate-400 font-medium">
             Kiểm tra hộp thư của bạn để nhận link đặt lại mật khẩu.
           </p>
 
@@ -78,14 +78,14 @@ export default function ForgotPasswordPage() {
               setSent(false);
               setError(null);
             }}
-            className="mt-7 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            className="mt-7 px-5 py-3 min-h-[44px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/25 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
           >
             {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại email"}
           </button>
 
           <Link
             href="/login"
-            className="mt-6 text-sm font-bold text-emerald-600 hover:text-emerald-700"
+            className="mt-6 rounded text-sm font-bold text-emerald-600 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
           >
             Quay lại đăng nhập
           </Link>
@@ -94,8 +94,9 @@ export default function ForgotPasswordPage() {
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
           <div className="space-y-5">
             <div>
-              <AuthLabel>Email</AuthLabel>
+              <AuthLabel htmlFor="forgot-email">Email</AuthLabel>
               <AuthInput
+                id="forgot-email"
                 type="email"
                 inputMode="email"
                 autoComplete="email"
@@ -109,14 +110,17 @@ export default function ForgotPasswordPage() {
             {error && <AuthError message={error} />}
           </div>
 
-          <div className="mt-auto pt-9">
+          <div className="mt-auto pt-9 pb-[env(safe-area-inset-bottom)]">
             <AuthSubmitButton loading={isLoading} loadingText="Đang gửi...">
               Gửi link đặt lại
             </AuthSubmitButton>
 
-            <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
+            <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
               Nhớ mật khẩu?{" "}
-              <Link href="/login" className="font-bold text-emerald-600 hover:text-emerald-700">
+              <Link
+                href="/login"
+                className="font-bold text-emerald-600 hover:text-emerald-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+              >
                 Đăng nhập
               </Link>
             </p>

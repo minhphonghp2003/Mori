@@ -186,18 +186,32 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cài đặt nhóm"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+    >
+      <div
+        className="bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[92dvh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Header */}
-        <div className="shrink-0 px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="shrink-0 px-5 pt-4 pb-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700 absolute top-2 left-1/2 -translate-x-1/2 sm:hidden" aria-hidden="true" />
           <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-emerald-600" />
+            <Users className="w-5 h-5 text-emerald-600" aria-hidden="true" />
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Cài đặt nhóm</h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            aria-label="Đóng cài đặt nhóm"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
           >
             <X className="w-4 h-4" />
           </button>
@@ -430,7 +444,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                         <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 group-hover/member:text-emerald-600 dark:group-hover/member:text-emerald-400 transition-colors">
                           <span className="truncate">{member.name}</span>
                           {isUserMe && (
-                            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded-md shrink-0">
+                            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded-md shrink-0">
                               Bạn
                             </span>
                           )}
@@ -442,7 +456,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                     </div>
 
                     {isAdmin && (
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/30">
                         Admin
                       </span>
                     )}
@@ -462,7 +476,8 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
                   placeholder="Tìm bạn bè để thêm vào nhóm..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 rounded-xl border border-transparent focus:border-emerald-300 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
+                  aria-label="Tìm bạn bè để thêm vào nhóm"
+                  className="w-full pl-8 pr-3 py-2.5 min-h-[44px] text-xs bg-slate-100 dark:bg-slate-800 rounded-xl border border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-emerald-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                 />
               </div>
 
@@ -512,7 +527,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
               {selectedFriendIds.length > 0 && (
                 <button
                   onClick={handleAddSelectedMembers}
-                  className="w-full py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-98 transition-all cursor-pointer"
+                  className="w-full py-2.5 min-h-[44px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-98 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Thêm {selectedFriendIds.length} bạn vào nhóm</span>
@@ -533,7 +548,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                 pendingRequests.map((req) => (
                   <div
                     key={req.id}
-                    className="p-3 rounded-2xl bg-amber-50/40 border border-amber-200/80 flex items-center justify-between"
+                    className="p-3 rounded-2xl bg-amber-50/40 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/25 flex items-center justify-between"
                   >
                     <div 
                       onClick={() => {
@@ -564,14 +579,14 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                       <button
                         onClick={() => handleReviewRequest(req, false)}
                         disabled={isLoadingRequests}
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-3 py-2 min-h-[36px] rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                       >
                         Từ chối
                       </button>
                       <button
                         onClick={() => handleReviewRequest(req, true)}
                         disabled={isLoadingRequests}
-                        className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-3 py-2 min-h-[36px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
                       >
                         Duyệt
                       </button>
@@ -585,22 +600,22 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
         </div>
 
         {/* Footer: Leave Group Option */}
-        <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60">
+        <div className="shrink-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60">
           {confirmLeave ? (
-            <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center animate-in fade-in">
-              <p className="text-xs text-rose-800 font-bold mb-2">
+            <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-center animate-in fade-in">
+              <p className="text-xs text-rose-800 dark:text-rose-200 font-bold mb-2">
                 Bạn có chắc chắn muốn rời khỏi nhóm này không?
               </p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setConfirmLeave(false)}
-                  className="flex-1 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
+                  className="flex-1 py-2 min-h-[44px] rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                 >
                   Ở lại
                 </button>
                 <button
                   onClick={handleLeaveGroup}
-                  className="flex-1 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                  className="flex-1 py-2 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60"
                 >
                   Xác nhận rời
                 </button>
@@ -609,7 +624,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
           ) : (
             <button
               onClick={() => setConfirmLeave(true)}
-              className="w-full py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full py-2.5 min-h-[44px] rounded-2xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
             >
               <LogOut className="w-4 h-4" />
               <span>Rời khỏi nhóm</span>

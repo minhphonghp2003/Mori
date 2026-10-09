@@ -85,8 +85,12 @@ export const CallModal: React.FC = () => {
         : `${peer.hasVideo ? 'Cuộc gọi video' : 'Cuộc gọi thoại'} · ${formatDuration(callDuration)}`;
 
   return (
-    <div className="fixed inset-0 z-50 h-[100dvh] w-screen overflow-hidden bg-black animate-in fade-in duration-200 select-none">
-      <audio ref={remoteAudioRef} autoPlay playsInline aria-hidden="true" className="sr-only" />
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={peer.hasVideo ? 'Cuộc gọi video' : 'Cuộc gọi thoại'}
+      className="fixed inset-0 z-50 h-[100dvh] w-screen overflow-hidden bg-black animate-in fade-in duration-200 select-none"
+    >      <audio ref={remoteAudioRef} autoPlay playsInline aria-hidden="true" className="sr-only" />
       <div className="relative h-full w-full overflow-hidden bg-black">
         {showVideo ? (
           <div className="absolute inset-0 z-0 bg-black">
@@ -216,7 +220,8 @@ export const CallModal: React.FC = () => {
               <div className="flex flex-col items-center gap-1.5">
                 <button
                   onClick={(event) => { event.stopPropagation(); rejectCall(); }}
-                  className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-95 transition-all cursor-pointer"
+                  aria-label="Từ chối cuộc gọi"
+                  className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                   title="Từ chối"
                 >
                   <PhoneOff className="w-7 h-7" />
@@ -226,7 +231,8 @@ export const CallModal: React.FC = () => {
               <div className="flex flex-col items-center gap-1.5">
                 <button
                   onClick={(event) => { event.stopPropagation(); acceptCall(); }}
-                  className="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer animate-pulse"
+                  aria-label="Nghe máy"
+                  className="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 active:scale-95 transition-all cursor-pointer animate-pulse focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                   title="Nghe máy"
                 >
                   <Phone className="w-7 h-7" />
@@ -240,7 +246,7 @@ export const CallModal: React.FC = () => {
                 <button
                   onClick={(event) => { event.stopPropagation(); toggleMic(); }}
                   disabled={!isActive}
-                  className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 border border-white/20 shadow-lg backdrop-blur-md ${
+                  className={`w-13 h-13 min-w-[52px] min-h-[52px] rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 border border-white/20 shadow-lg backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
                     micMuted
                       ? 'bg-rose-500 text-white'
                       : 'bg-black/30 text-white hover:bg-black/45'
@@ -256,7 +262,7 @@ export const CallModal: React.FC = () => {
                   <button
                     onClick={(event) => { event.stopPropagation(); toggleCamera(); }}
                     disabled={!isActive}
-                    className={`w-13 h-13 rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 border border-white/20 shadow-lg backdrop-blur-md ${
+                    className={`w-13 h-13 min-w-[52px] min-h-[52px] rounded-full flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 border border-white/20 shadow-lg backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
                       cameraOff
                         ? 'bg-rose-500 text-white'
                         : 'bg-black/30 text-white hover:bg-black/45'
@@ -277,7 +283,8 @@ export const CallModal: React.FC = () => {
                     if (isOutgoing) cancelCall();
                     else endCall();
                   }}
-                  className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-95 transition-all cursor-pointer"
+                  aria-label={isOutgoing ? 'Hủy cuộc gọi' : 'Kết thúc cuộc gọi'}
+                  className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                   title={isOutgoing ? 'Hủy cuộc gọi' : 'Kết thúc cuộc gọi'}
                 >
                   <PhoneOff className="w-7 h-7" />

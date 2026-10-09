@@ -41,10 +41,10 @@ export default function LoginPage() {
       <AuthBackLink href="/init">Quay lại</AuthBackLink>
 
       <div className="mb-9">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+        <h1 className="text-3xl font-extrabold tracking-tight text-balance text-slate-900 dark:text-slate-100">
           Chào mừng trở lại
         </h1>
-        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
           Đăng nhập để tiếp tục trò chuyện và xem bạn bè ở đâu.
         </p>
       </div>
@@ -52,8 +52,9 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
         <div className="space-y-5">
           <div>
-            <AuthLabel>Email</AuthLabel>
+            <AuthLabel htmlFor="login-email">Email</AuthLabel>
             <AuthInput
+              id="login-email"
               type="email"
               inputMode="email"
               autoComplete="email"
@@ -66,15 +67,16 @@ export default function LoginPage() {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <AuthLabel>Mật khẩu</AuthLabel>
+              <AuthLabel htmlFor="login-password">Mật khẩu</AuthLabel>
               <Link
                 href="/forgot-password"
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition"
+                className="rounded text-xs font-bold text-emerald-600 hover:text-emerald-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
               >
                 Quên mật khẩu?
               </Link>
             </div>
             <AuthInput
+              id="login-password"
               type="password"
               autoComplete="current-password"
               placeholder="Mật khẩu"
@@ -88,14 +90,17 @@ export default function LoginPage() {
           {error && <AuthError message={error} />}
         </div>
 
-        <div className="mt-auto pt-9">
+        <div className="mt-auto pt-9 pb-[env(safe-area-inset-bottom)]">
           <AuthSubmitButton loading={isLoading} loadingText="Đang đăng nhập...">
             Đăng nhập
           </AuthSubmitButton>
 
-          <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
+          <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
             Chưa có tài khoản?{" "}
-            <Link href="/register" className="font-bold text-emerald-600 hover:text-emerald-700">
+            <Link
+              href="/register"
+              className="font-bold text-emerald-600 hover:text-emerald-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+            >
               Tạo tài khoản
             </Link>
           </p>

@@ -59,8 +59,8 @@ export default function RegisterPage() {
       <AuthBackLink href="/init">Quay lại</AuthBackLink>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Tạo tài khoản</h1>
-        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500 font-medium">
+        <h1 className="text-3xl font-extrabold tracking-tight text-balance text-slate-900 dark:text-slate-100">Tạo tài khoản</h1>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
           Tham gia {process.env.NEXT_PUBLIC_APP_NAME ?? "Mori"} và bắt đầu khám phá bạn bè xung
           quanh bạn.
         </p>
@@ -69,8 +69,10 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
         <div className="space-y-5">
           <div>
-            <AuthLabel>Tên</AuthLabel>
+            <AuthLabel htmlFor="register-name">Tên</AuthLabel>
             <AuthInput
+              id="register-name"
+              autoComplete="name"
               placeholder="Tên của bạn"
               value={form.name}
               onChange={(e) => setForm((x) => ({ ...x, name: e.target.value }))}
@@ -81,8 +83,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <AuthLabel>Email</AuthLabel>
+            <AuthLabel htmlFor="register-email">Email</AuthLabel>
             <AuthInput
+              id="register-email"
               type="email"
               inputMode="email"
               autoComplete="email"
@@ -95,8 +98,9 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <AuthLabel>Tuổi</AuthLabel>
+              <AuthLabel htmlFor="register-age">Tuổi</AuthLabel>
               <AuthInput
+                id="register-age"
                 type="number"
                 inputMode="numeric"
                 placeholder="18"
@@ -109,12 +113,12 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <AuthLabel>Giới tính</AuthLabel>
+              <AuthLabel htmlFor="register-gender">Giới tính</AuthLabel>
               <Select
                 value={form.genderId}
                 onValueChange={(genderId) => setForm((x) => ({ ...x, genderId }))}
               >
-                <SelectTrigger aria-label="Giới tính" className="h-auto w-full rounded-2xl bg-slate-50 px-4 py-3 text-base font-medium dark:bg-slate-800">
+                <SelectTrigger id="register-gender" aria-label="Giới tính" className="h-auto min-h-[52px] w-full rounded-2xl bg-slate-50 px-4 py-3 text-base font-medium dark:bg-slate-800">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -128,8 +132,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <AuthLabel>Mật khẩu</AuthLabel>
+            <AuthLabel htmlFor="register-password">Mật khẩu</AuthLabel>
             <AuthInput
+              id="register-password"
               type="password"
               autoComplete="new-password"
               placeholder="Ít nhất 8 ký tự"
@@ -142,8 +147,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <AuthLabel>Xác nhận mật khẩu</AuthLabel>
+            <AuthLabel htmlFor="register-confirm">Xác nhận mật khẩu</AuthLabel>
             <AuthInput
+              id="register-confirm"
               type="password"
               autoComplete="new-password"
               placeholder="Nhập lại mật khẩu"
@@ -158,14 +164,17 @@ export default function RegisterPage() {
           {error && <AuthError message={error} />}
         </div>
 
-        <div className="mt-auto pt-8">
+        <div className="mt-auto pt-8 pb-[env(safe-area-inset-bottom)]">
           <AuthSubmitButton loading={isLoading} loadingText="Đang tạo tài khoản...">
             Tạo tài khoản
           </AuthSubmitButton>
 
-          <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500 font-medium">
+          <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
             Đã có tài khoản?{" "}
-            <Link href="/login" className="font-bold text-emerald-600 hover:text-emerald-700">
+            <Link
+              href="/login"
+              className="font-bold text-emerald-600 hover:text-emerald-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+            >
               Đăng nhập
             </Link>
           </p>

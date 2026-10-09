@@ -27,6 +27,17 @@
     background-color: #f8fafc;
     color: #0f172a;
   }
+  ::selection {
+    background: rgb(16 185 129 / 0.25);
+  }
+  input,
+  textarea,
+  select {
+    caret-color: #059669;
+  }
+  input[type="date"] {
+    font-variant-numeric: tabular-nums;
+  }
   .dark body {
     background-color: #09090b;
     color: #f1f5f9;

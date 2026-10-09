@@ -195,26 +195,32 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
 
   return (
     <div 
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Hồ sơ của ${liveUser.name}`}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
     >
       <div
-        className="relative w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[80vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-200"
+        className="relative w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[92dvh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button (pinned above the single scroll area) */}
         <button
           onClick={onClose}
           aria-label="Đóng hồ sơ"
-          className="absolute top-4 right-4 z-20 w-11 h-11 flex items-center justify-center rounded-full bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700 shadow-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          className="absolute top-4 right-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-700 shadow-md ring-1 ring-slate-900/5 dark:ring-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
         {/* Fixed user-info header (sticks at top) */}
-        <div className="relative shrink-0 bg-gradient-to-b from-emerald-50/70 dark:from-emerald-500/10 via-slate-50/40 dark:via-slate-800/40 to-white dark:to-slate-900 px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="relative shrink-0 bg-gradient-to-b from-emerald-50/70 dark:from-emerald-500/10 via-slate-50/40 dark:via-slate-800/40 to-white dark:to-slate-900 px-5 pt-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           {/* Drag handle for mobile */}
-          <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3 sm:hidden" />
+          <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3 sm:hidden" aria-hidden="true" />
 
           <div className="flex items-start gap-3.5">
             {/* Avatar with online status */}
@@ -612,9 +618,18 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
         />
         {/* DELETE TIMELINE CONFIRMATION MODAL */}
         {timelineToDelete && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Xóa hành trình"
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+            onClick={() => setTimelineToDelete(null)}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl w-full sm:max-w-xs px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/15 ring-1 ring-rose-600/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
                 <Trash2 className="w-6 h-6" />
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1 whitespace-nowrap truncate">
@@ -627,7 +642,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                 <button
                   type="button"
                   onClick={() => setTimelineToDelete(null)}
-                  className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer whitespace-nowrap truncate"
+                  className="flex-1 py-2 min-h-[44px] rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer whitespace-nowrap truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                 >
                   Hủy
                 </button>
@@ -637,7 +652,7 @@ export const MarkerDetailDialog: React.FC<MarkerDetailDialogProps> = ({ user, on
                     deleteTimeline(timelineToDelete.id);
                     setTimelineToDelete(null);
                   }}
-                  className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer whitespace-nowrap truncate"
+                  className="flex-1 py-2 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer whitespace-nowrap truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
                 >
                   Xóa luôn
                 </button>

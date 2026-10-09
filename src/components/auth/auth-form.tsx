@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import type { AxiosError } from "axios";
 import { handleApiError } from "@/lib/axios";
 
@@ -9,8 +9,13 @@ import { handleApiError } from "@/lib/axios";
 const inputClasses =
   "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 transition disabled:opacity-60";
 
-export const AuthLabel = ({ children }: { children: ReactNode }) => (
-  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">{children}</span>
+export const AuthLabel = ({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) => (
+  <label
+    htmlFor={htmlFor}
+    className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5"
+  >
+    {children}
+  </label>
 );
 
 export const AuthInput = ({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) => (
@@ -32,17 +37,25 @@ export const AuthSubmitButton = ({
   <button
     type="submit"
     disabled={loading}
-    className={`w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-600/25 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:pointer-events-none ${className ?? ""}`}
+    aria-busy={loading}
+    className={`w-full min-h-[52px] py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-600/25 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 flex items-center justify-center gap-2 ${className ?? ""}`}
     {...props}
   >
-    {loading ? loadingText : children}
+    {loading ? (
+      <>
+        <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+        <span>{loadingText}</span>
+      </>
+    ) : (
+      children
+    )}
   </button>
 );
 
 export const AuthError = ({ message }: { message: string }) => (
   <div
     role="alert"
-    className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-600"
+    className="rounded-2xl border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-xs font-semibold text-rose-600 dark:text-rose-200"
   >
     {message}
   </div>
@@ -57,7 +70,7 @@ export const AuthBackLink = ({
 }) => (
   <Link
     href={href}
-    className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition mb-8"
+    className="inline-flex items-center gap-1.5 -ml-2 rounded-lg px-2 py-2.5 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition mb-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
   >
     <ArrowLeft className="w-4 h-4" />
     {children}
