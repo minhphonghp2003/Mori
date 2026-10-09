@@ -191,7 +191,7 @@ export const ChatListView: React.FC = () => {
               onClick={() => setFilterTab('discover')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap truncate shrink-0 flex items-center gap-1.5 ${
                 filterTab === 'discover'
-                  ? 'bg-gradient-to-r from-emerald-600 to-emerald-600 text-white shadow-xs'
+                  ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
@@ -609,7 +609,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100 dark:ring-white/10"
         />
         {!conv.isGroup && conv.isOnline && (
-          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
         )}
       </div>
 

@@ -14,14 +14,9 @@ import { VISIBILITY_OPTIONS } from '../../constants/visibility';
 import { CreateTimelineModal } from '../timelines/CreateTimelineModal';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { 
-  User, 
-  Heart, 
-  Star, 
   Users, 
-  UserCheck, 
   UserPlus, 
   ShieldCheck, 
-  Bell, 
   Moon,
   LogOut, 
   Camera, 
@@ -33,12 +28,10 @@ import {
   ArrowRight,
   Edit3,
   Download,
-  Share,
   X,
   UserX,
   MoreVertical,
   Trash2,
-  Image as ImageIcon,
   Upload,
   Loader2,
   Mars,
@@ -194,6 +187,21 @@ export const SettingsView: React.FC = () => {
   // Logout modal
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  // Escape closes the topmost open dialog without changing visuals.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (viewingMoment) setViewingMoment(null);
+      else if (timelineToDelete) setTimelineToDelete(null);
+      else if (showLogoutModal) setShowLogoutModal(false);
+      else if (showDownloadModal) setShowDownloadModal(false);
+      else if (showEditProfileModal) setShowEditProfileModal(false);
+      else if (friendToRemove) setFriendToRemove(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [viewingMoment, timelineToDelete, showLogoutModal, showDownloadModal, showEditProfileModal, friendToRemove]);
+
   // Friends categorization
   const acceptedFriends = friends.filter(f => f.relationship?.status === 'accepted');
   const pendingReceived = friends.filter(f => f.relationship?.status === 'pending_received');
@@ -307,10 +315,12 @@ export const SettingsView: React.FC = () => {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3.5">
             {/* Avatar */}
-            <div 
-              className="relative group cursor-pointer" 
+            <button
+              type="button"
               onClick={handleOpenEditProfile}
               title="Chạm để chỉnh sửa ảnh đại diện & hồ sơ"
+              aria-label="Chỉnh sửa ảnh đại diện và hồ sơ"
+              className="relative group cursor-pointer rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
             >
               <Avatar
                 src={currentUser.avatar}
@@ -319,16 +329,16 @@ export const SettingsView: React.FC = () => {
                 textClassName="text-xl"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
-              <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity" aria-hidden="true">
                 <Camera className="w-4 h-4 text-white" />
               </div>
-            </div>
+            </button>
 
             {/* Name on line 1, age + gender on line 2 */}
             <div className="space-y-1 min-w-0 flex-1">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight whitespace-nowrap truncate">{currentUser.name}</h2>
               <div className="flex items-center gap-1">
-                <span className="text-xs text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
                   {currentUser.age} tuổi
                 </span>
                 {renderGenderIcon(currentUser.gender)}
@@ -339,7 +349,7 @@ export const SettingsView: React.FC = () => {
           {/* Single, neat Edit Profile Button - strictly 1 line */}
           <button
             onClick={handleOpenEditProfile}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap truncate shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap truncate shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
             title="Chỉnh sửa hồ sơ"
           >
             <Edit3 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
@@ -377,9 +387,9 @@ export const SettingsView: React.FC = () => {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveSubTab(id)}
-                className={`relative flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                className={`relative flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
                   isActive
-                    ? 'bg-white text-emerald-700 shadow-sm'
+                    ? 'bg-white text-emerald-700 shadow-sm dark:bg-slate-900 dark:text-emerald-300'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
@@ -431,7 +441,7 @@ export const SettingsView: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-xs font-bold text-slate-900 dark:text-slate-100">Thông báo</div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500">Nhận thông báo khi có tin nhắn & cuộc gọi</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Nhận thông báo khi có tin nhắn & cuộc gọi</div>
                   </div>
                 </div>
 
@@ -457,8 +467,8 @@ export const SettingsView: React.FC = () => {
                     <Moon className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 dark:text-slate-100">Giao diện tối</div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500">Dịu mắt khi dùng ban đêm</div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100">Giao diện tối</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Dịu mắt khi dùng ban đêm</div>
                   </div>
                 </div>
 
@@ -467,9 +477,10 @@ export const SettingsView: React.FC = () => {
                     type="checkbox"
                     checked={theme === 'dark'}
                     onChange={toggleTheme}
+                    aria-label="Bật giao diện tối"
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600" />
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:bg-emerald-600 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-600 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-white dark:peer-focus-visible:ring-offset-slate-900 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white" />
                 </label>
               </div>
             </div>
@@ -491,7 +502,7 @@ export const SettingsView: React.FC = () => {
                     <button
                       key={opt.value}
                       onClick={() => updateVisibility(opt.value as VisibilityTier)}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer ${
+                      className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
                         isChecked
                           ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200 font-bold'
                           : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent text-slate-700 dark:text-slate-300'
@@ -499,7 +510,7 @@ export const SettingsView: React.FC = () => {
                     >
                       <div>
                         <div className="text-xs">{opt.label}</div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{opt.desc}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">{opt.desc}</div>
                       </div>
                       {isChecked && (
                         <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
@@ -515,7 +526,7 @@ export const SettingsView: React.FC = () => {
             {/* Logout button */}
             <button
               onClick={() => setShowLogoutModal(true)}
-              className="w-full py-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              className="w-full py-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
             >
               <LogOut className="w-4 h-4" />
               <span>Đăng xuất tài khoản</span>
@@ -529,7 +540,7 @@ export const SettingsView: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">Hành trình của bạn & bạn bè</h3>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">Các tuyến đường và bộ sưu tập chuyến đi</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Các tuyến đường và bộ sưu tập chuyến đi</p>
               </div>
               <button
                 onClick={() => setShowCreateTimeline(true)}
@@ -547,20 +558,31 @@ export const SettingsView: React.FC = () => {
             ) : timelines.length === 0 ? (
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-slate-100 dark:border-slate-800">
                 <Compass className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs text-slate-400 dark:text-slate-500">Chưa có hành trình nào</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Chưa có hành trình nào</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {timelines.map((tl) => (
                   <div
                     key={tl.id}
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`Xem chi tiết hành trình ${tl.title}`}
                     onClick={() => router.push(`/timelines/${tl.id}`)}
-                    className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        router.push(`/timelines/${tl.id}`);
+                      }
+                    }}
+                    className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-shadow cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                   >
                     <div className="relative h-32 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                       <img
                         src={tl.bannerImage}
                         alt={tl.title}
+                        loading="lazy"
+                        decoding="async"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -608,7 +630,7 @@ export const SettingsView: React.FC = () => {
                               e.stopPropagation();
                               setTimelineToDelete(tl);
                             }}
-                            className="p-1.5 rounded-xl text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
                             title="Xóa hành trình"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -641,30 +663,32 @@ export const SettingsView: React.FC = () => {
                 <div className="space-y-2">
                   {pendingReceived.map((req) => (
                     <div key={req.id} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-2xl">
-                      <div 
-                        className="flex items-center gap-2.5 cursor-pointer flex-1"
+                      <button
+                        type="button"
                         onClick={() => setSelectedUser(req)}
+                        aria-label={`Xem hồ sơ của ${req.name}`}
+                        className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 text-left rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                       >
                         <Avatar
                           src={req.avatar}
                           name={req.name}
                           className="w-10 h-10 rounded-full object-cover"
                         />
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400">{req.name}</div>
-                          <div className="text-[10px] text-slate-400 dark:text-slate-500">{req.status}</div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 truncate">{req.name}</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{req.status}</div>
                         </div>
-                      </div>
+                      </button>
                       <div className="flex gap-1.5 shrink-0">
                         <button
                           onClick={() => respondFriendRequest(req.id, true)}
-                          className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                         >
                           Đồng ý
                         </button>
                         <button
                           onClick={() => respondFriendRequest(req.id, false)}
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                         >
                           Từ chối
                         </button>
@@ -682,20 +706,22 @@ export const SettingsView: React.FC = () => {
                 <div className="space-y-2">
                   {pendingSent.map((req) => (
                     <div key={req.id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                      <div 
-                        className="flex items-center gap-2 cursor-pointer flex-1"
+                      <button
+                        type="button"
                         onClick={() => setSelectedUser(req)}
+                        aria-label={`Xem hồ sơ của ${req.name}`}
+                        className="flex items-center gap-2 cursor-pointer flex-1 min-w-0 text-left rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                       >
                         <Avatar
                           src={req.avatar}
                           name={req.name}
                           className="w-8 h-8 rounded-full object-cover"
                         />
-                        <span className="text-xs font-medium text-slate-800 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400">{req.name}</span>
-                      </div>
+                        <span className="text-xs font-medium text-slate-800 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 truncate">{req.name}</span>
+                      </button>
                       <button
                         onClick={() => cancelFriendRequest(req.id)}
-                        className="text-[11px] text-rose-600 font-semibold hover:underline cursor-pointer"
+                        className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold hover:underline cursor-pointer rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                       >
                         Thu hồi
                       </button>
@@ -709,11 +735,11 @@ export const SettingsView: React.FC = () => {
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
               <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center justify-between">
                 <span>Danh sách bạn bè ({acceptedFriends.length})</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Chạm tên/ảnh để xem hồ sơ</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Chạm tên/ảnh để xem hồ sơ</span>
               </h3>
 
               {acceptedFriends.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500">
+                <div className="text-center py-6 text-xs text-slate-500 dark:text-slate-400">
                   Bạn chưa có bạn bè nào.
                 </div>
               ) : (
@@ -729,9 +755,11 @@ export const SettingsView: React.FC = () => {
                       >
                         <div className="flex items-center justify-between">
                           {/* Tap friend to view full profile */}
-                          <div 
-                            className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 pr-2"
+                          <button
+                            type="button"
                             onClick={() => setSelectedUser(friend)}
+                            aria-label={`Xem hồ sơ của ${friend.name}`}
+                            className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 pr-2 text-left rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                           >
                             <div className="shrink-0">
                               <Avatar
@@ -746,9 +774,9 @@ export const SettingsView: React.FC = () => {
                                 {type === 'lover' && <span className="text-xs shrink-0" aria-hidden="true" />}
                                 {type === 'best_friend' && <span className="text-xs shrink-0" aria-hidden="true" />}
                               </div>
-                              <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{friend.status}</div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{friend.status}</div>
                             </div>
-                          </div>
+                          </button>
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {/* Friendship type selector */}
@@ -772,7 +800,8 @@ export const SettingsView: React.FC = () => {
                             {/* Chat button */}
                             <button
                               onClick={() => openChatWithUser(friend)}
-                              className="w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                              aria-label={`Nhắn tin với ${friend.name}`}
+                              className="w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                               title="Nhắn tin"
                             >
                               <MessageCircle className="w-3.5 h-3.5" />
@@ -781,7 +810,9 @@ export const SettingsView: React.FC = () => {
                             {/* More Actions Menu Button */}
                             <button
                               onClick={() => setFriendActionMenuId(isMenuOpen ? null : friend.id)}
-                              className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                              aria-expanded={isMenuOpen}
+                              aria-label={`Tùy chọn khác cho ${friend.name}`}
+                              className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                               title="Tùy chọn khác"
                             >
                               <MoreVertical className="w-3.5 h-3.5" />
@@ -818,7 +849,7 @@ export const SettingsView: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs">
             <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3">Khoảnh khắc đã đăng</h3>
             {myMoments.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
+              <div className="text-center py-8 text-xs text-slate-500 dark:text-slate-400">
                 Chưa có ảnh nào được đăng.
               </div>
             ) : (
@@ -826,8 +857,17 @@ export const SettingsView: React.FC = () => {
                 {myMoments.map((m) => (
                   <div 
                     key={m.id} 
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Xem khoảnh khắc ${m.caption || ''}`}
                     onClick={() => setViewingMoment(m)}
-                    className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 group cursor-pointer hover:shadow-md transition-all active:scale-95"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setViewingMoment(m);
+                      }
+                    }}
+                    className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 group cursor-pointer hover:shadow-md transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                   >
                     {m.mediaType === 'video' || m.videoUrl ? (
                       <video
@@ -835,17 +875,20 @@ export const SettingsView: React.FC = () => {
                         poster={m.imageUrl}
                         muted
                         playsInline
+                        preload="metadata"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     ) : (
                       <img
                         src={m.imageUrl}
                         alt={m.caption}
+                        loading="lazy"
+                        decoding="async"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white text-[10px]">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white text-[10px]">
                       <span className="truncate font-semibold">{m.caption}</span>
                       <span className="text-white/70">{m.timeAgo}</span>
                     </div>
@@ -861,7 +904,7 @@ export const SettingsView: React.FC = () => {
       {/* UNIFIED EDIT PROFILE MODAL */}
       {showEditProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm max-h-[90vh] overflow-y-auto no-scrollbar p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+          <div role="dialog" aria-modal="true" aria-label="Chỉnh sửa hồ sơ" className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm max-h-[90vh] overflow-y-auto no-scrollbar p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
               <div className="flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-emerald-600" />
@@ -869,7 +912,8 @@ export const SettingsView: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowEditProfileModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                aria-label="Đóng chỉnh sửa hồ sơ"
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -890,10 +934,12 @@ export const SettingsView: React.FC = () => {
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2">Ảnh đại diện</label>
 
                 {/* Avatar Preview with Camera Overlay */}
-                <div 
-                  className="relative group cursor-pointer"
+                <button
+                  type="button"
                   onClick={() => avatarFileInputRef.current?.click()}
                   title="Chạm để chọn ảnh từ thư viện hoặc chụp ảnh mới"
+                  aria-label="Chọn ảnh đại diện"
+                  className="relative group cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-800"
                 >
                   <Avatar
                     src={profileForm.avatar}
@@ -901,14 +947,14 @@ export const SettingsView: React.FC = () => {
                     className="w-20 h-20 rounded-full object-cover ring-4 ring-emerald-500/30 shadow-md transition-transform group-hover:scale-105"
                     textClassName="text-2xl"
                   />
-                  <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity" aria-hidden="true">
                     <Camera className="w-5 h-5" />
                     <span className="text-[9px] font-bold mt-0.5">Đổi ảnh</span>
                   </div>
-                  <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border-2 border-white">
+                  <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md border-2 border-white" aria-hidden="true">
                     <Camera className="w-3.5 h-3.5" />
                   </div>
-                </div>
+                </button>
 
                 {/* Upload from device / camera button */}
                 <button
@@ -977,7 +1023,7 @@ export const SettingsView: React.FC = () => {
                   placeholder="Giới thiệu đôi nét về bản thân..."
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 text-right block">{profileForm.bio.length}/150</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 text-right block">{profileForm.bio.length}/150</span>
               </div>
 
               {/* Actions */}
@@ -1006,7 +1052,7 @@ export const SettingsView: React.FC = () => {
       {/* REMOVE FRIEND CONFIRMATION MODAL */}
       {friendToRemove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+          <div role="dialog" aria-modal="true" aria-label="Xác nhận hủy kết bạn" className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
               <UserX className="w-6 h-6" />
             </div>
@@ -1041,7 +1087,7 @@ export const SettingsView: React.FC = () => {
       {/* DOWNLOAD APP MODAL */}
       {showDownloadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
+          <div role="dialog" aria-modal="true" aria-label="Hướng dẫn tải ứng dụng Mori" className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
               <div className="flex items-center gap-2">
                 <Download className="w-5 h-5 text-emerald-600" />
@@ -1049,7 +1095,8 @@ export const SettingsView: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowDownloadModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                aria-label="Đóng hướng dẫn tải ứng dụng"
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1091,7 +1138,7 @@ export const SettingsView: React.FC = () => {
       {/* LOGOUT CONFIRMATION MODAL */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+          <div role="dialog" aria-modal="true" aria-label="Xác nhận đăng xuất" className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
               <LogOut className="w-6 h-6" />
             </div>
@@ -1121,7 +1168,7 @@ export const SettingsView: React.FC = () => {
       {/* DELETE TIMELINE CONFIRMATION MODAL */}
       {timelineToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
+          <div role="dialog" aria-modal="true" aria-label="Xác nhận xóa hành trình" className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-5 shadow-2xl border border-slate-100 dark:border-slate-800 text-center animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6" />
             </div>

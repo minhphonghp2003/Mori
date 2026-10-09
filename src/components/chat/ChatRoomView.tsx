@@ -916,7 +916,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
               className="h-9 w-9 rounded-full object-cover ring-2 ring-emerald-500/20 transition-all group-hover:ring-emerald-600"
             />
             {!conversation.isGroup && conversation.isOnline && (
-              <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+              <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900" />
             )}
             {conversation.isGroup && (
               <span
