@@ -386,7 +386,7 @@ export const HomeView: React.FC = () => {
                       user.bio?.trim()
                     ) : (
                       <span className="italic font-normal text-slate-400 dark:text-slate-500">
-                        “Cốc cốc…” — gợi ý giới thiệu, bạn này chưa viết gì
+                        Hi! Chào bạn.
                       </span>
                     )}
                   </div>

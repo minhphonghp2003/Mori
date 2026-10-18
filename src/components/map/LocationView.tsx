@@ -446,6 +446,7 @@ export const LocationView: React.FC = () => {
               const isBestFriend = user.relationship?.type === 'best_friend' && isFriend;
               const isStranger = !isFriend;
               const showBubble = showBubbles && bubbleIds.has(user.id);
+              const statusText = user.status?.trim() || '';
 
               // Friends keep emerald; strangers move off emerald to slate so
               // Công khai green is never confused with stranger markers.
@@ -463,17 +464,17 @@ export const LocationView: React.FC = () => {
                 >
                   <button
                     type="button"
-                    aria-label={`${user.name}, ${user.status?.trim() || 'Trực tuyến'}, ${isStranger ? 'người lạ' : isLover ? 'người yêu' : isBestFriend ? 'bạn thân' : 'bạn bè'}${user.distanceM ? `, cách ${metersToKm(user.distanceM)} km` : ''}`}
+                    aria-label={`${user.name}, ${statusText ? `${statusText}, ` : ''}${isStranger ? 'người lạ' : isLover ? 'người yêu' : isBestFriend ? 'bạn thân' : 'bạn bè'}${user.distanceM ? `, cách ${metersToKm(user.distanceM)} km` : ''}`}
                     onClick={() => setSelectedUser(user)}
                     className="relative pointer-events-auto cursor-pointer group transition-transform duration-200 hover:z-20 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded-full"
                   >
-                    {/* Status speech bubble — avatar-only when zoomed out or capped */}
-                    {showBubble && (
+                    {/* Status speech bubble — avatar-only when zoomed out, capped, or no status set */}
+                    {showBubble && statusText && (
                     <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white px-2 py-0.5 rounded-full shadow-lg border border-slate-200 text-[10px] font-semibold text-slate-800 flex items-center gap-1 group-hover:scale-105 transition-transform">
                       {isLover && <span className="w-1.5 h-1.5 rounded-full bg-rose-500" aria-hidden="true" />}
                       {isBestFriend && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />}
                       {isStranger && <span className="w-1.5 h-1.5 rounded-full bg-slate-400" aria-hidden="true" />}
-                      <span className="truncate max-w-[120px]">{user.status?.trim() || 'Trực tuyến'}</span>
+                      <span className="truncate max-w-[120px]">{statusText}</span>
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-200" aria-hidden="true" />
                     </div>
                     )}
