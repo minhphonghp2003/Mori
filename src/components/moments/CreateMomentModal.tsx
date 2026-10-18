@@ -423,7 +423,7 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
           ),
         );
         await addMoment({
-          caption: caption.trim() || 'Khoảnh khắc mới',
+          caption: caption.trim() || '',
           images,
           includeLocation,
           visibility,
