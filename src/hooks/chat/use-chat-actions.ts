@@ -30,6 +30,7 @@ import {
   uploadChatMedia,
 } from "@/lib/chat/mappers";
 import { waitForFileMarkedSuccess } from "@/lib/signalr/file-processing";
+import { fileToOrientedFile } from "@/lib/image";
 
 export type SendMessageArgs = [
   conversationId: string,
@@ -298,9 +299,14 @@ export function useChatActions({
           }
         };
         if (media instanceof File) {
-          const blob: Blob = media;
-          const contentType = media.type || "application/octet-stream";
-          const upload = await uploadChatMedia(blob, contentType);
+          // iPhone photos store rotation as an EXIF tag — re-encode through a
+          // canvas so the pixels are upright before the server strips metadata
+          // for its thumbnails (rotated bubbles otherwise). Videos pass through.
+          const data: Blob = media.type.startsWith("image/")
+            ? await fileToOrientedFile(media)
+            : media;
+          const contentType = data.type || "application/octet-stream";
+          const upload = await uploadChatMedia(data, contentType);
           fileIds = [upload.fileId];
           messageType = MessageType.File;
           await awaitThumb(upload);

@@ -4,6 +4,7 @@ import { Avatar } from '../common/Avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VisibilityTier } from '../../types';
 import { VISIBILITY_OPTIONS } from '@/constants/visibility';
+import { fileToOrientedFile } from '@/lib/image';
 import { 
   X, 
   MapPin, 
@@ -410,11 +411,16 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
         });
       } else {
         const blobs = await Promise.all(selectedImages.map((src) => sourceToBlob(src)));
-        const images = blobs.map(
-          (b, i) =>
-            new File([b], `moment_${i + 1}.${extFromType(b.type, 'jpg')}`, {
-              type: b.type || 'image/jpeg',
-            }),
+        // Bake any EXIF orientation into the pixels (iPhone gallery shots)
+        // so the server-side thumbnail is never sideways.
+        const images = await Promise.all(
+          blobs.map((b, i) =>
+            fileToOrientedFile(
+              new File([b], `moment_${i + 1}.${extFromType(b.type, 'jpg')}`, {
+                type: b.type || 'image/jpeg',
+              }),
+            ),
+          ),
         );
         await addMoment({
           caption: caption.trim() || 'Khoảnh khắc mới',
