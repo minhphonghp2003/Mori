@@ -5,6 +5,7 @@ import { useLogout } from '../../hooks/auth/use-logout';
 import { useIsPwa } from '../../hooks/use-is-pwa';
 import { useTheme } from '../../providers/theme-provider';
 import { requestNotificationPermission, syncFcmTokenAfterAuth, deleteFcmToken } from '../../lib/fcm';
+import { fileToDataUrl } from '../../lib/image';
 import { FriendshipType, VisibilityTier, User as UserType, Timeline, Moment } from '../../types';
 import { LogoLoader } from '../common/LogoLoader';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
@@ -93,6 +94,7 @@ export const SettingsView: React.FC = () => {
 
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -100,16 +102,14 @@ export const SettingsView: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        const dataUrl = event.target.result as string;
+    void (async () => {
+      // Canvas re-encode bakes iOS EXIF rotation into the pixels before upload.
+      const dataUrl = await fileToDataUrl(file, 512);
+      if (dataUrl) {
         setProfileForm(prev => ({ ...prev, avatar: dataUrl }));
         showToast('Đã tải ảnh đại diện lên từ máy!', 'success');
       }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    })();
   };
 
   // Friend Actions & Modals

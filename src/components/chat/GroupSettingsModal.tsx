@@ -12,6 +12,7 @@ import {
   confirmJoinRequest,
 } from '@/services/chat';
 import { mapMember } from '@/lib/chat/mappers';
+import { fileToDataUrl } from '../../lib/image';
 import { Avatar } from '../common/Avatar';
 import { 
   X, 
@@ -106,6 +107,7 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
 
   const handleGroupAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -113,16 +115,14 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        const dataUrl = event.target.result as string;
+    void (async () => {
+      // Canvas re-encode bakes iOS EXIF rotation into the pixels before upload.
+      const dataUrl = await fileToDataUrl(file, 512);
+      if (dataUrl) {
         handleSelectAvatar(dataUrl);
         showToast('Đã đổi ảnh đại diện nhóm!', 'success');
       }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    })();
   };
 
   // Existing member IDs (from API-backed member list)
