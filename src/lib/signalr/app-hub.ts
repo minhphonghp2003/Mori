@@ -204,7 +204,6 @@ class AppHub {
       .build();
 
     this.connection.on("ReceiveKicked", () => {
-      console.log("[AppHub] Kicked by another connection");
       this.kickedCallback?.();
     });
 
@@ -324,50 +323,34 @@ class AppHub {
 
     // Location events (merged from the retired LocationHub)
     this.connection.on("ReceiveLocations", (locations: LocationDto[]) => {
-      console.log("[AppHub] ReceiveLocations event fired:", locations.length, "locations");
       this.receiveLocationsCallbacks.forEach((cb) => cb(locations));
     });
 
     this.connection.on("NewJoin", (user: UserDto, location: LocationDto) => {
-      console.log("[AppHub] NewJoin event fired:", user.name);
       this.newJoinCallbacks.forEach((cb) => cb(user, location));
     });
 
     this.connection.on("ReceiveUserDisconnect", (userId: number) => {
-      console.log("[AppHub] User disconnected:", userId);
       this.userDisconnectCallbacks.forEach((cb) => cb(userId));
     });
 
     this.connection.on("ReceiveOtherMovement", (location: LocationDto) => {
-      console.log("[AppHub] ReceiveOtherMovement event fired:", location.name);
       this.receiveOtherMovementCallbacks.forEach((cb) => cb(location));
     });
 
     this.connection.on("ReceiveVisibilityUpdated", (location: LocationDto) => {
-      console.log("[AppHub] Visibility updated:", location);
       this.receiveVisibilityUpdatedCallbacks.forEach((cb) => cb(location));
     });
 
     this.connection.on("ReceiveBatteryUpdated", (location: LocationDto) => {
-      console.log("[AppHub] Battery updated:", location);
       this.receiveBatteryUpdatedCallbacks.forEach((cb) => cb(location));
     });
 
     this.connection.on("ReceiveStatusUpdated", (location: LocationDto) => {
-      console.log("[AppHub] Status updated:", location);
       this.receiveStatusUpdatedCallbacks.forEach((cb) => cb(location));
     });
 
-    this.connection.onclose(() => {
-      console.log("[AppHub] Disconnected");
-    });
-
-    this.connection.onreconnecting(() => {
-      console.log("[AppHub] Reconnecting...");
-    });
-
     this.connection.onreconnected(async () => {
-      console.log("[AppHub] Reconnected");
       for (const convId of this.joinedConversations) {
         try {
           await this.connection?.invoke("JoinConversation", convId);
@@ -383,9 +366,7 @@ class AppHub {
     });
 
     try {
-      this.connectionReady = this.connection.start().then(() => {
-        console.log("[AppHub] Connected");
-      });
+      this.connectionReady = this.connection.start();
       await this.connectionReady;
     } catch (err) {
       this.connectionReady = null;
