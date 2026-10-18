@@ -9,10 +9,7 @@ import {
   MapPin, 
   Eye, 
   MessageSquare, 
-  Plus, 
-  Trash2, 
   Upload, 
-  Users, 
   RotateCcw, 
   SwitchCamera,
   Check,
@@ -38,10 +35,9 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
-  // Captured / Selected Media
+  // Captured / Selected Media — a moment carries at most ONE image or video.
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string>('');
   const [selectedVideoPoster, setSelectedVideoPoster] = useState<string>('');
 
@@ -103,8 +99,6 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordTimerRef = useRef<number | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
-  const swipeStartXRef = useRef<number | null>(null);
-  const swipeStartYRef = useRef<number | null>(null);
   const cameraGenRef = useRef(0);
 
   // True while (re)acquiring the camera — flip button is disabled then.
@@ -207,7 +201,6 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         setSelectedImages([dataUrl]);
-        setPreviewImageIndex(0);
         setMediaType('image');
         setIsImmersive(false);
         setStep('edit');
@@ -219,7 +212,6 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
     // Fallback if camera stream is inactive
     const fallbackImage = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80';
     setSelectedImages([fallbackImage]);
-    setPreviewImageIndex(0);
     setMediaType('image');
     setIsImmersive(false);
     setStep('edit');
@@ -305,89 +297,37 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
     }
   };
 
-  // Handle Gallery Selection (Single or Multi-image / Video)
+  // Handle Gallery Selection — a moment is capped at ONE image or ONE video.
+  // Picking again replaces the previous pick.
   const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
 
     // Video File
-    if (files[0].type.startsWith('video/')) {
-      const url = URL.createObjectURL(files[0]);
+    if (file.type.startsWith('video/')) {
+      const url = URL.createObjectURL(file);
       setSelectedVideoUrl(url);
       setSelectedVideoPoster('');
       setMediaType('video');
       setIsImmersive(false);
       setStep('edit');
       showToast('Đã chọn video từ thư viện', 'success');
-      e.target.value = '';
       return;
     }
 
-    // Multiple Images
-    const newImages: string[] = [];
-    const readCount = files.length;
-    let loaded = 0;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          newImages.push(event.target.result as string);
-        }
-        loaded++;
-        if (loaded === readCount) {
-          // Append to existing picks (capped at 10) — "Thêm ảnh" must not
-          // wipe what was already selected.
-          setSelectedImages((prev) => [...prev, ...newImages].slice(0, 10));
-          setPreviewImageIndex(0);
-          setMediaType('image');
-          setIsImmersive(false);
-          setStep('edit');
-          showToast(`Đã thêm ${newImages.length} ảnh`, 'success');
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    e.target.value = '';
-  };
-
-  // Delete single photo in multi-image set
-  const handleRemoveImage = (indexToRemove: number) => {
-    if (selectedImages.length <= 1) {
-      setStep('capture');
-      setSelectedImages([]);
-      return;
-    }
-    const filtered = selectedImages.filter((_, idx) => idx !== indexToRemove);
-    setSelectedImages(filtered);
-    if (previewImageIndex >= filtered.length) {
-      setPreviewImageIndex(filtered.length - 1);
-    }
-  };
-
-  // Swipe gesture handling for multi-images in Editor
-  const handleTouchStart = (e: React.TouchEvent) => {
-    swipeStartXRef.current = e.touches[0].clientX;
-    swipeStartYRef.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (swipeStartXRef.current === null || swipeStartYRef.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - swipeStartXRef.current;
-    const deltaY = e.changedTouches[0].clientY - swipeStartYRef.current;
-
-    // Check if horizontal swipe
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 40 && mediaType === 'image' && selectedImages.length > 1) {
-      if (deltaX < 0 && previewImageIndex < selectedImages.length - 1) {
-        setPreviewImageIndex(prev => prev + 1);
-      } else if (deltaX > 0 && previewImageIndex > 0) {
-        setPreviewImageIndex(prev => prev - 1);
+    // Single Image — replaces whatever was selected before
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setSelectedImages([event.target.result as string]);
+        setMediaType('image');
+        setIsImmersive(false);
+        setStep('edit');
+        showToast('Đã chọn ảnh', 'success');
       }
-    }
-
-    swipeStartXRef.current = null;
-    swipeStartYRef.current = null;
+    };
+    reader.readAsDataURL(file);
   };
 
   // Video controller handlers
@@ -504,12 +444,11 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
       }}
       className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-in fade-in duration-200"
     >      <div className="relative w-full h-full max-w-md mx-auto bg-slate-950 flex flex-col overflow-hidden select-none">
-        {/* Hidden File Picker for Gallery Selection (Single or Multi-media) */}
+        {/* Hidden File Picker for Gallery Selection (Single image or video) */}
         <input
           ref={galleryInputRef}
           type="file"
           accept="image/*,video/*"
-          multiple
           className="hidden"
           onChange={handleGalleryFileChange}
         />
@@ -678,10 +617,8 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
         {/* STEP 2: STORY EDITOR, FULLSCREEN MEDIA PREVIEW & PUBLISH SCREEN           */}
         {/* ========================================================================= */}
         {step === 'edit' && (
-          <div 
+          <div
             className="relative w-full h-full flex flex-col justify-between bg-black text-white"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
           >
             {/* Fullscreen Media Preview Background (Tap to toggle immersive mode) */}
             <div 
@@ -691,26 +628,11 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
               {mediaType === 'image' ? (
                 <div className="relative w-full h-full flex items-center justify-center">
                   <img
-                    key={previewImageIndex}
-                    src={selectedImages[previewImageIndex]}
+                    src={selectedImages[0]}
                     alt="Captured preview"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover animate-in fade-in duration-200"
                   />
-
-                  {/* Top multi-image dots indicator */}
-                  {selectedImages.length > 1 && !isImmersive && (
-                    <div className="absolute top-16 inset-x-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-                      {selectedImages.map((_, idx) => (
-                        <span
-                          key={idx}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${
-                            idx === previewImageIndex ? 'w-6 bg-white shadow-sm' : 'w-1.5 bg-white/40'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="relative w-full h-full flex items-center justify-center">
@@ -811,38 +733,6 @@ export const CreateMomentModal: React.FC<CreateMomentModalProps> = ({ onClose })
                 <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Chụp lại</span>
               </button>
-
-              {/* Add more photos or delete current photo in multi-image set */}
-              {mediaType === 'image' && (
-                <div className="flex items-center gap-2">
-                  {selectedImages.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveImage(previewImageIndex);
-                      }}
-                      className="p-2 rounded-full bg-rose-600/80 hover:bg-rose-600 text-white backdrop-blur-md border border-white/20 transition-all cursor-pointer shadow-md"
-                      title="Xóa ảnh này"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      galleryInputRef.current?.click();
-                    }}
-                    className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/25 flex items-center gap-1 text-white text-xs font-bold active:scale-95 transition-all cursor-pointer shadow-md"
-                    title="Thêm ảnh khác"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Thêm ảnh ({selectedImages.length})</span>
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Bottom Form Sheet & Video Controller (Hidden in Immersive mode) */}
