@@ -195,7 +195,7 @@ export const ChatListView: React.FC = () => {
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>Khám phá</span>
               {unjoinedGroups.length > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                   filterTab === 'discover' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
