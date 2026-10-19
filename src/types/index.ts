@@ -82,6 +82,8 @@ export interface Message {
   renderType?: ChatMessageRenderType;
   text?: string;
   imageUrl?: string;
+  /** Full-resolution source for the image shown in `imageUrl` (a thumbnail). */
+  imageOriginalUrl?: string;
   videoUrl?: string;
   mediaType?: "text" | "image" | "video" | "gif" | "location" | "moment";
   momentId?: string;

@@ -52,10 +52,15 @@ export const mapMessage = (dto: MessageDto, opts: MapMessageOptions = {}): Messa
   const first = attachments[0];
 
   let imageUrl: string | undefined;
+  let imageOriginalUrl: string | undefined;
   let videoUrl: string | undefined;
   if (first) {
     if (isVideoUrl(first.originalUrl)) videoUrl = first.originalUrl;
-    else imageUrl = first.thumbUrl || first.originalUrl;
+    else {
+      // Thumbnail for the inline bubble, full image for the fullscreen viewer.
+      imageUrl = first.thumbUrl || first.originalUrl;
+      imageOriginalUrl = first.originalUrl;
+    }
   }
 
   const content = dto.content || undefined;
@@ -108,6 +113,7 @@ export const mapMessage = (dto: MessageDto, opts: MapMessageOptions = {}): Messa
     renderType,
     text,
     imageUrl,
+    imageOriginalUrl,
     videoUrl,
     mediaType,
     momentId: dto.momentId != null ? String(dto.momentId) : undefined,

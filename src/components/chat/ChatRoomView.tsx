@@ -1188,7 +1188,7 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
                         if (isLongPressRef.current) return;
                         e.stopPropagation();
                         setActiveMedia({
-                          url: msg.imageUrl!,
+                          url: msg.imageOriginalUrl ?? msg.imageUrl!,
                           type: "image",
                           senderName: sender.name,
                           timestamp: msg.timestamp,

@@ -32,6 +32,8 @@ import {
   X,
   UserX,
   MoreVertical,
+  Share,
+  SquarePlus,
   Trash2,
   Upload,
   Loader2,
@@ -1108,16 +1110,46 @@ export const SettingsView: React.FC = () => {
 
             <div className="space-y-3 mb-5">
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 text-xs">
-                <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Trên iPhone / iPad (Safari):</div>
-                <div className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-                  Nhấn vào nút <span className="font-bold text-emerald-600">Chia sẻ (Share)</span> ở thanh dưới Safari, sau đó chọn <span className="font-bold text-emerald-600">"Thêm vào MH chính" (Add to Home Screen)</span>.
+                <div className="font-bold text-slate-800 dark:text-slate-200 mb-2">Trên iPhone / iPad (Safari):</div>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                  <span>Nhấn vào</span>
+                  <span
+                    title="Chia sẻ"
+                    aria-label="Chia sẻ"
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-emerald-600 shrink-0"
+                  >
+                    <Share className="w-3.5 h-3.5" />
+                  </span>
+                  <span>ở thanh dưới Safari, rồi chọn</span>
+                  <span
+                    title="Thêm vào màn hình chính"
+                    aria-label="Thêm vào màn hình chính"
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-emerald-600 shrink-0"
+                  >
+                    <SquarePlus className="w-3.5 h-3.5" />
+                  </span>
                 </div>
               </div>
 
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 text-xs">
-                <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Trên Android (Chrome):</div>
-                <div className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-                  Nhấn vào menu <span className="font-bold text-emerald-600">ba chấm</span> ở góc trên, sau đó chọn <span className="font-bold text-emerald-600">"Cài đặt ứng dụng" (Install App)</span>.
+                <div className="font-bold text-slate-800 dark:text-slate-200 mb-2">Trên Android (Chrome):</div>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                  <span>Nhấn vào</span>
+                  <span
+                    title="Menu"
+                    aria-label="Menu"
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-emerald-600 shrink-0"
+                  >
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </span>
+                  <span>ở góc trên, rồi chọn</span>
+                  <span
+                    title="Cài đặt ứng dụng"
+                    aria-label="Cài đặt ứng dụng"
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-emerald-600 shrink-0"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </span>
                 </div>
               </div>
             </div>

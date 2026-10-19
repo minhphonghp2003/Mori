@@ -613,9 +613,9 @@ export const MomentReelCard: React.FC<MomentReelCardProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Location badge */}
             {moment.locationName && (
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[11px] text-white/90 truncate max-w-[min(180px,40vw)]">
-                <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="truncate">{moment.locationName}</span>
+              <div className="inline-flex items-start gap-1 px-2.5 py-1 rounded-2xl bg-black/50 backdrop-blur-md border border-white/15 text-[11px] text-white/90 leading-snug max-w-full">
+                <MapPin className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+                <span className="min-w-0 break-words text-left">{moment.locationName}</span>
               </div>
             )}
 
