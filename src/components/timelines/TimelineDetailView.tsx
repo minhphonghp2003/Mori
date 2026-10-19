@@ -54,7 +54,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto no-scrollbar select-none">
+    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto overflow-x-hidden no-scrollbar select-none">
       {/* Top Floating Back Bar */}
       <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
         <button
@@ -142,7 +142,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
             <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30 z-10 shrink-0">
               <PlaneTakeoff className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider whitespace-nowrap truncate">Khởi hành</div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">{timeline.startDate}</div>
             </div>
@@ -155,7 +155,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                 <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 flex items-center justify-center font-bold text-xs z-10 shrink-0 mt-2">
                   ?
                 </div>
-                <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-4 border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                <div className="flex-1 min-w-0 bg-white dark:bg-slate-900 rounded-3xl p-4 border border-dashed border-slate-200 dark:border-slate-700 text-center">
                   <p className="text-[11px] text-slate-400 dark:text-slate-500">
                     Chưa có khoảnh khắc nào trên hành trình này.
                   </p>
@@ -185,7 +185,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                     allowComment: true,
                     reactions: []
                   })}
-                  className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-98"
+                  className="flex-1 min-w-0 bg-white dark:bg-slate-900 rounded-3xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-98"
                 >
                   <div className="relative aspect-16/10 rounded-2xl overflow-hidden mb-2.5 bg-slate-100 dark:bg-slate-800">
                     <img
@@ -196,8 +196,8 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
                     />
                   </div>
 
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{m.title}</h3>
+                  <div className="flex items-center justify-between mb-1 gap-2 min-w-0">
+                    <h3 className="flex-1 min-w-0 text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{m.title}</h3>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap truncate shrink-0">{m.time}</span>
                   </div>
 
@@ -214,7 +214,7 @@ export const TimelineDetailView: React.FC<TimelineDetailViewProps> = ({ timeline
             <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/30 z-10 shrink-0">
               <Flag className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider whitespace-nowrap truncate">Kết thúc hành trình</div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">{timeline.endDate} · Kỷ niệm đọng lại mãi mãi</div>
             </div>

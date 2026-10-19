@@ -127,7 +127,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
     >
       <div 
-        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[92dvh] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-8 duration-200"
+        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-[32px] sm:rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] h-[92dvh] sm:h-auto sm:max-h-[92dvh] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto mb-3 sm:hidden" aria-hidden="true" />
@@ -243,7 +243,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                 Không có khoảnh khắc nào của bạn trong khoảng ngày này.
               </p>
             ) : (
-              <div className="grid grid-cols-3 gap-2 max-h-36 overflow-y-auto no-scrollbar p-1">
+              <div className="grid grid-cols-3 gap-2 max-h-[40dvh] sm:max-h-72 overflow-y-auto no-scrollbar p-1">
                 {available.map((m) => {
                   const isSelected = selectedMomentIds.includes(m.id);
                   return (
@@ -258,7 +258,7 @@ export const CreateTimelineModal: React.FC<CreateTimelineModalProps> = ({ onClos
                         src={m.imageUrl}
                         alt={m.caption}
                         referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                       {isSelected && (
                         <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center">
