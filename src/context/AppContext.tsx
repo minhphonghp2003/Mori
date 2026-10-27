@@ -142,7 +142,7 @@ interface AppContextType {
   removeFriend: (userId: string) => void;
   blockChat: ChatActions['blockChat'];
   unblockChat: ChatActions['unblockChat'];
-  updateProfile: (profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>) => Promise<void>;
+  updateProfile: (profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar' | 'phoneNumber'>>) => Promise<void>;
   createTimeline: (timelineData: { title: string; partnerIds: string[]; selectedMomentIds: string[] }) => Promise<void>;
   deleteTimeline: (timelineId: string) => void;
   openChatWithUser: ChatActions['openChatWithUser'];
@@ -152,6 +152,8 @@ interface AppContextType {
   updateGroupInfo: ChatActions['updateGroupInfo'];
   addGroupMembers: ChatActions['addGroupMembers'];
   leaveGroup: ChatActions['leaveGroup'];
+  disbandGroup: ChatActions['disbandGroup'];
+  kickGroupMember: ChatActions['kickGroupMember'];
   refreshConversations: ChatActions['refreshConversations'];
   loadMoreConversations: ChatActions['loadMoreConversations'];
   loadOlderMessages: ChatActions['loadOlderMessages'];
@@ -1084,7 +1086,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    * so the modal stays open on failure.
    */
   const updateProfile = async (
-    profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar'>>,
+    profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar' | 'phoneNumber'>>,
   ): Promise<void> => {
     let avatar = currentUser.avatar;
     try {
@@ -1110,6 +1112,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         age: Number(profileData.age ?? currentUser.age) || currentUser.age || 20,
         ...(genderId ? { genderId } : {}),
         ...(profileData.bio !== undefined ? { bio: profileData.bio.trim() } : {}),
+        ...(profileData.phoneNumber !== undefined
+          ? { phoneNumber: profileData.phoneNumber.trim() || null }
+          : {}),
       });
       const mapped = mapMeToUser(dto);
       setCurrentUser((prev) => ({
@@ -1121,6 +1126,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // data-URL only survives when the profile has no server image yet.
         avatar: mapped.avatar || avatar,
         bio: mapped.bio ?? (profileData.bio !== undefined ? profileData.bio : prev.bio),
+        phoneNumber:
+          profileData.phoneNumber !== undefined
+            ? mapped.phoneNumber || profileData.phoneNumber.trim() || undefined
+            : prev.phoneNumber,
         lastUpdated: 'Vừa xong',
       }));
       showToast('Đã lưu thông tin cá nhân thành công', 'success');
@@ -1248,6 +1257,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateGroupInfo: chatActions.updateGroupInfo,
         addGroupMembers: chatActions.addGroupMembers,
         leaveGroup: chatActions.leaveGroup,
+        disbandGroup: chatActions.disbandGroup,
+        kickGroupMember: chatActions.kickGroupMember,
         refreshConversations: chatActions.refreshConversations,
         loadMoreConversations: chatActions.loadMoreConversations,
         loadOlderMessages: chatActions.loadOlderMessages,

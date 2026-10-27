@@ -26,6 +26,8 @@ export interface User {
     city: string;
   };
   visibility: VisibilityTier;
+  /** Vietnamese phone number used for the Zalo deep link (optional). */
+  phoneNumber?: string;
   relationship?: {
     type: FriendshipType;
     status: FriendshipStatus;

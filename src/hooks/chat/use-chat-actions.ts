@@ -26,9 +26,11 @@ import { MessageType, type ConversationMemberDto } from "@/types/chat";
 import type { DiscoverableGroup, User } from "@/types";
 import {
   dataUrlToBlob,
+  mapMeToUser,
   mapMember,
   uploadChatMedia,
 } from "@/lib/chat/mappers";
+import { getUserById } from "@/services/user";
 import { waitForFileMarkedSuccess } from "@/lib/signalr/file-processing";
 import { fileToOrientedFile } from "@/lib/image";
 
@@ -82,6 +84,10 @@ export interface ChatActions {
     newMemberIds: string[],
   ) => Promise<boolean>;
   leaveGroup: (conversationId: string) => Promise<void>;
+  /** Host-only: permanently delete the group for every member. */
+  disbandGroup: (conversationId: string) => Promise<boolean>;
+  /** Host-only: remove one member from the group. */
+  kickGroupMember: (conversationId: string, userId: string) => Promise<boolean>;
   blockChat: (conversationId: string, targetUserId: string) => Promise<boolean>;
   unblockChat: (conversationId: string, targetUserId: string) => Promise<boolean>;
   refreshConversations: () => Promise<void>;
@@ -728,6 +734,56 @@ export function useChatActions({
     [dispatch, leaveConversation, router, toast],
   );
 
+  const disbandGroup = useCallback(
+    async (conversationId: string): Promise<boolean> => {
+      const convId = Number(conversationId);
+      if (!convId) return false;
+      try {
+        await chatService.leaveOwnGroup(convId);
+        const wasActive = store.getState().chat.activeConversationId === convId;
+        dispatch(removeConversation(convId));
+        if (wasActive) await leaveConversation();
+        // The room no longer exists — always land on the chat list. `replace`
+        // keeps the deleted room out of history (back would 404).
+        router.replace("/chat");
+        toast("Đã giải tán nhóm", "info");
+        return true;
+      } catch (err) {
+        console.error("[chat] disbandGroup failed:", err);
+        return false;
+      }
+    },
+    [dispatch, leaveConversation, router, toast],
+  );
+
+  const kickGroupMember = useCallback(
+    async (conversationId: string, userId: string): Promise<boolean> => {
+      const convId = Number(conversationId);
+      const uid = Number(userId);
+      if (!convId || !uid) return false;
+      try {
+        await chatService.removeGroupMember(convId, uid);
+        const conv = store
+          .getState()
+          .chat.conversations.find((c) => c.id === convId);
+        if (conv) {
+          dispatch(
+            updateConversationState({
+              conversationId: convId,
+              patch: { memberCount: Math.max(1, (conv.memberCount ?? 1) - 1) },
+            }),
+          );
+        }
+        toast("Đã xóa thành viên khỏi nhóm", "success");
+        return true;
+      } catch (err) {
+        console.error("[chat] kickGroupMember failed:", err);
+        return false;
+      }
+    },
+    [dispatch, toast],
+  );
+
   const blockChat = useCallback(
     async (conversationId: string, targetUserId: string): Promise<boolean> => {
       const convId = Number(conversationId);
@@ -774,7 +830,20 @@ export function useChatActions({
         const res = await chatService.getConversationMembers(convId);
         const other = res.data.find((m) => m.userId !== myId);
         if (!other) return null;
-        const user = mapMember(other);
+        let user = mapMember(other);
+        // The member DTO does not always carry the phone number, but the
+        // direct-chat header needs it for the Zalo shortcut.
+        if (!other.phoneNumber) {
+          try {
+            const profile = await getUserById(other.userId);
+            user = {
+              ...mapMeToUser(profile),
+              relationship: user.relationship,
+            };
+          } catch (err) {
+            console.error("[chat] resolvePartnerUser profile failed:", err);
+          }
+        }
         partnerCacheRef.current.set(conversationId, user);
         return user;
       } catch (err) {
@@ -846,6 +915,8 @@ export function useChatActions({
     updateGroupInfo,
     addGroupMembers,
     leaveGroup,
+    disbandGroup,
+    kickGroupMember,
     blockChat,
     unblockChat,
     refreshConversations,

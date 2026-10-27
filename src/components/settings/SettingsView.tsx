@@ -39,7 +39,9 @@ import {
   Loader2,
   Mars,
   Venus,
-  Transgender
+  Transgender,
+  Phone,
+  Info
 } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -86,7 +88,8 @@ export const SettingsView: React.FC = () => {
     avatar: currentUser.avatar,
     age: currentUser.age,
     gender: currentUser.gender,
-    bio: currentUser.bio || ''
+    bio: currentUser.bio || '',
+    phoneNumber: currentUser.phoneNumber || ''
   });
 
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -235,7 +238,8 @@ export const SettingsView: React.FC = () => {
       avatar: currentUser.avatar,
       age: currentUser.age,
       gender: currentUser.gender,
-      bio: currentUser.bio || ''
+      bio: currentUser.bio || '',
+      phoneNumber: currentUser.phoneNumber || ''
     });
     setShowEditProfileModal(true);
   };
@@ -267,7 +271,8 @@ export const SettingsView: React.FC = () => {
         avatar: profileForm.avatar.trim() || currentUser.avatar,
         age: Number(profileForm.age) || 20,
         gender: profileForm.gender as 'Nam' | 'Nữ' | 'Khác',
-        bio: profileForm.bio.trim()
+        bio: profileForm.bio.trim(),
+        phoneNumber: profileForm.phoneNumber.trim()
       });
 
       setShowEditProfileModal(false);
@@ -1026,6 +1031,31 @@ export const SettingsView: React.FC = () => {
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 text-right block">{profileForm.bio.length}/150</span>
+              </div>
+
+              {/* Phone (Zalo connection) */}
+              <div>
+                <label htmlFor="profile-phone" className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Số điện thoại
+                </label>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+                  <input
+                    id="profile-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={profileForm.phoneNumber}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                    maxLength={20}
+                    placeholder="VD: 0912 345 678"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <p className="mt-1.5 flex items-start gap-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+                  <Info className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" aria-hidden="true" />
+                  <span>Cập nhật SĐT để cho phép kết nối Zalo.</span>
+                </p>
               </div>
 
               {/* Actions */}

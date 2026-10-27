@@ -106,6 +106,8 @@ export interface ConversationMemberDto {
   userImage: ImageDto | null;
   role: number;
   isOnline: boolean;
+  /** Present when the backend exposes the member's Zalo-capable number. */
+  phoneNumber?: string | null;
 }
 
 export const ConversationMemberRole = {

@@ -6,6 +6,8 @@ import { LoadingSpinner } from "../common/LoadingSpinner";
 import { Avatar } from "../common/Avatar";
 import { MomentViewerModal } from "../moments/MomentViewerModal";
 import { GroupSettingsModal } from "./GroupSettingsModal";
+import { ZaloIcon } from "../common/ZaloIcon";
+import { getZaloUrl } from "@/lib/chat/zalo";
 import { Message, Moment, User } from "../../types";
 import { ConversationMemberRole, type ConversationMemberDto } from "../../types/chat";
 import { appHub } from "@/lib/signalr/app-hub";
@@ -295,6 +297,27 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
     name: (!convIsGroup && conversation?.name) || currentUser.name,
     avatar: (!convIsGroup && conversation?.avatar) || currentUser.avatar,
   };
+  const zaloUrl =
+    !convIsGroup && partnerUser
+      ? getZaloUrl(partnerUser.phoneNumber)
+      : null;
+
+  // The host dissolved the group, or I was kicked while reading: the row
+  // vanishes from Redux — close the room instead of showing "not found".
+  const hadConversationRef = useRef(false);
+  const onBackRef = useRef(onBack);
+  useEffect(() => {
+    onBackRef.current = onBack;
+  }, [onBack]);
+  useEffect(() => {
+    if (conversation) {
+      hadConversationRef.current = true;
+      return;
+    }
+    if (!hadConversationRef.current) return;
+    const timer = setTimeout(() => onBackRef.current(), 900);
+    return () => clearTimeout(timer);
+  }, [conversation]);
 
   const adminUserId = useMemo(
     () => memberDtos.find((m) => m.role === ConversationMemberRole.Host)?.userId,
@@ -994,6 +1017,19 @@ export const ChatRoomView: React.FC<ChatRoomViewProps> = ({
 
             {!conversation.isBlocked && (
               <>
+                {zaloUrl && (
+                  <a
+                    href={zaloUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0068FF]/60"
+                    title={`Kết nối Zalo với ${partner.name}`}
+                    aria-label={`Mở Zalo của ${partner.name}`}
+                  >
+                    <ZaloIcon className="h-5 w-5" />
+                  </a>
+                )}
+
                 <button
                   onClick={() => partnerUser && startCall(partnerUser, true)}
                   disabled={!partnerUser}

@@ -24,7 +24,8 @@ import {
   Globe,
   X,
   MapPin,
-  Crosshair
+  Crosshair,
+  RefreshCw
 } from 'lucide-react';
 
 const DEFAULT_VIEW = { longitude: 105.854167, latitude: 21.028511, zoom: 12.5 };
@@ -292,6 +293,15 @@ export const LocationView: React.FC = () => {
     window.dispatchEvent(new Event(LOCATION_RETRY_EVENT));
   };
 
+  // Full page reload (same as F5) — the spinner shows until the document
+  // unloads, then the map re-mounts with a fresh session/hub connection.
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshMap = () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    window.location.reload();
+  };
+
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden select-none">
       {/* Top Map Floating Header: 3 Filter Tabs + Visibility Changing Button */}
@@ -540,6 +550,21 @@ export const LocationView: React.FC = () => {
 
         {/* MAP FLOATING CONTROLS (Right side) */}
         <div className="absolute right-3.5 bottom-6 flex flex-col gap-2 pointer-events-auto z-20">
+          {/* Refresh map (soft reload) */}
+          <button
+            onClick={refreshMap}
+            disabled={isRefreshing}
+            aria-label="Làm mới bản đồ"
+            title="Làm mới bản đồ"
+            aria-busy={isRefreshing}
+            className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-wait focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          >
+            <RefreshCw
+              className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
+              aria-hidden="true"
+            />
+          </button>
+
           {/* Center on Me */}
           <button
             onClick={centerOnUser}

@@ -200,8 +200,10 @@ export const emptyUser = (id: string, name: string, avatar: string): User => ({
   visibility: 4,
 });
 
-export const mapMember = (m: ConversationMemberDto): User =>
-  emptyUser(String(m.userId), m.userName, m.userImage?.thumbUrl ?? "");
+export const mapMember = (m: ConversationMemberDto): User => ({
+  ...emptyUser(String(m.userId), m.userName, m.userImage?.thumbUrl ?? ""),
+  phoneNumber: m.phoneNumber ?? undefined,
+});
 
 const FRIENDSHIP_TYPE_TO_DESIGN: Record<FriendshipTypeValue, FriendshipType> = {
   [FRIENDSHIP_TYPE_VALUES.Friend]: "friend",
@@ -264,6 +266,7 @@ export const mapMeToUser = (u: ApiUser): User => ({
   age: u.age ?? 0,
   gender: u.genderId === 1 ? "Nam" : u.genderId === 2 ? "Nữ" : "Khác",
   bio: u.bio ?? "",
+  phoneNumber: u.phoneNumber ?? undefined,
 });
 
 const EXT_CONTENT_TYPES: Record<string, string> = {

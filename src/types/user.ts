@@ -23,6 +23,7 @@ export interface User {
   age: number;
   genderId: number;
   bio?: string | null;
+  phoneNumber?: string | null;
   friendship?: FriendshipStatusDto | null;
 }
 
@@ -39,6 +40,8 @@ export interface UpdateUserInput {
   age?: number;
   genderId?: number;
   bio?: string | null;
+  /** Digits-only string; null clears the number (disables the Zalo link). */
+  phoneNumber?: string | null;
 }
 
 /**

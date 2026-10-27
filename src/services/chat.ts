@@ -69,6 +69,14 @@ export async function leaveGroup(
   return res.data;
 }
 
+/** Host-only hard delete: conversation + messages disappear for everyone. */
+export async function leaveOwnGroup(
+  conversationId: number,
+): Promise<{ data: Record<string, never>; success: boolean; message?: string }> {
+  const res = await httpClient.post(`/Chat/${conversationId}/leave-own-group`);
+  return res.data;
+}
+
 export async function createJoinRequest(conversationId: number): Promise<{
   data: { id?: number } | null;
   success: boolean;

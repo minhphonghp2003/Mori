@@ -1,16 +1,18 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Conversation } from '../../types';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Conversation, User } from '../../types';
 import {
   ConversationMemberDto,
   ConversationMemberRole,
   JoinRequestDto,
   JoinRequestStatus,
+  toChatMessageRenderType,
 } from '../../types/chat';
 import { useApp } from '../../context/AppContext';
 import {
   getPendingJoinRequests,
   confirmJoinRequest,
 } from '@/services/chat';
+import { appHub } from '@/lib/signalr/app-hub';
 import { mapMember } from '@/lib/chat/mappers';
 import { fileToDataUrl } from '../../lib/image';
 import { Avatar } from '../common/Avatar';
@@ -28,7 +30,10 @@ import {
   CheckCircle2, 
   Globe, 
   Lock,
-  Upload
+  Upload,
+  UserX,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 
 interface GroupSettingsModalProps {
@@ -49,6 +54,8 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
     updateGroupInfo, 
     addGroupMembers, 
     leaveGroup,
+    disbandGroup,
+    kickGroupMember,
     loadMembers,
     showToast 
   } = useApp();
@@ -60,6 +67,9 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [kickTarget, setKickTarget] = useState<User | null>(null);
+  const [isKicking, setIsKicking] = useState(false);
+  const [isDisbanding, setIsDisbanding] = useState(false);
   const groupAvatarInputRef = useRef<HTMLInputElement | null>(null);
 
   // Real members + pending join requests come from the API (design mocks are gone)
@@ -67,13 +77,13 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
   const [pendingRequests, setPendingRequests] = useState<JoinRequestDto[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
 
-  const refreshMembers = async () => {
+  const refreshMembers = useCallback(async () => {
     try {
       setMemberDtos(await loadMembers(conversation.id));
     } catch (err) {
       console.error('[GroupSettings] loadMembers failed:', err);
     }
-  };
+  }, [conversation.id, loadMembers]);
 
   useEffect(() => {
     let alive = true;
@@ -94,6 +104,31 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
       alive = false;
     };
   }, [conversation.id, loadMembers]);
+
+  // Someone was removed / left / the host kicked a member while this panel is
+  // open — keep the roster (and the member count) in sync.
+  useEffect(() => {
+    const convId = Number(conversation.id);
+    const unsubMessage = appHub.onReceiveMessage((message) => {
+      if (
+        Number(message.conversationId) === convId &&
+        toChatMessageRenderType(message.type) === "System"
+      ) {
+        void refreshMembers();
+      }
+    });
+    const unsubRemoved = appHub.onReceiveMemberRemoved((data) => {
+      if (Number(data.conversationId) === convId) void refreshMembers();
+    });
+    const unsubLeft = appHub.onReceiveMemberLeft((data) => {
+      if (Number(data.conversationId) === convId) void refreshMembers();
+    });
+    return () => {
+      unsubMessage();
+      unsubRemoved();
+      unsubLeft();
+    };
+  }, [conversation.id, refreshMembers]);
 
   const memberUsers = useMemo(() => memberDtos.map(mapMember), [memberDtos]);
   const adminUserId = useMemo(
@@ -180,9 +215,34 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
     }
   };
 
-  const handleLeaveGroup = () => {
+  const handleLeaveGroup = async () => {
+    if (isMeAdmin) {
+      // Host cannot "leave": POST /leave rejects the owner. Dissolving is the
+      // host-only equivalent (hard delete for every member). Wait for the
+      // server before navigating so a failure keeps the room open.
+      if (isDisbanding) return;
+      setIsDisbanding(true);
+      const ok = await disbandGroup(conversation.id);
+      setIsDisbanding(false);
+      if (ok) {
+        setConfirmLeave(false);
+        onClose();
+      }
+      return;
+    }
     onLeaveGroupSuccess();
     void leaveGroup(conversation.id);
+  };
+
+  const handleKickMember = async (member: User) => {
+    if (isKicking) return;
+    setIsKicking(true);
+    const ok = await kickGroupMember(conversation.id, member.id);
+    setIsKicking(false);
+    if (ok) {
+      setKickTarget(null);
+      await refreshMembers();
+    }
   };
 
   return (
@@ -414,51 +474,95 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
               {memberUsers.map((member) => {
                 const isUserMe = member.id === currentUser.id;
                 const isAdmin = Number(member.id) === adminUserId;
+                const isKickConfirm = kickTarget?.id === member.id;
 
                 return (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/60 dark:bg-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-700/70 border border-slate-100 dark:border-slate-700 transition-colors"
-                  >
-                    <div 
-                      onClick={() => {
-                        setSelectedUser(member);
-                        onClose();
-                      }}
-                      className="flex items-center gap-3 cursor-pointer group/member flex-1 min-w-0"
-                      title="Xem trang cá nhân"
-                    >
-                      <div className="relative shrink-0">
-                        <Avatar
-                          src={member.avatar}
-                          name={member.name}
-                          className="w-10 h-10 rounded-full object-cover ring-2 ring-white group-hover/member:ring-emerald-400 transition-all"
-                        />
-                        {isAdmin && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs">
-                            <ShieldCheck className="w-2.5 h-2.5" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 group-hover/member:text-emerald-600 dark:group-hover/member:text-emerald-400 transition-colors">
-                          <span className="truncate">{member.name}</span>
-                          {isUserMe && (
-                            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded-md shrink-0">
-                              Bạn
-                            </span>
+                  <div key={member.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50/60 dark:bg-slate-800/60 hover:bg-slate-100/70 dark:hover:bg-slate-700/70 border border-slate-100 dark:border-slate-700 transition-colors">
+                      <div
+                        onClick={() => {
+                          setSelectedUser(member);
+                          onClose();
+                        }}
+                        className="flex items-center gap-3 cursor-pointer group/member flex-1 min-w-0"
+                        title="Xem trang cá nhân"
+                      >
+                        <div className="relative shrink-0">
+                          <Avatar
+                            src={member.avatar}
+                            name={member.name}
+                            className="w-10 h-10 rounded-full object-cover ring-2 ring-white group-hover/member:ring-emerald-400 transition-all"
+                          />
+                          {isAdmin && (
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                              <ShieldCheck className="w-2.5 h-2.5" />
+                            </div>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                          {isAdmin ? 'Quản trị viên nhóm' : 'Thành viên'}
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 group-hover/member:text-emerald-600 dark:group-hover/member:text-emerald-400 transition-colors">
+                            <span className="truncate">{member.name}</span>
+                            {isUserMe && (
+                              <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 px-1.5 py-0.5 rounded-md shrink-0">
+                                Bạn
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                            {isAdmin ? 'Quản trị viên nhóm' : 'Thành viên'}
+                          </div>
                         </div>
                       </div>
+
+                      {isAdmin ? (
+                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/30">
+                          Admin
+                        </span>
+                      ) : isMeAdmin ? (
+                        <button
+                          type="button"
+                          onClick={() => setKickTarget(member)}
+                          disabled={isKicking}
+                          title={`Xóa ${member.name} khỏi nhóm`}
+                          aria-label={`Xóa ${member.name} khỏi nhóm`}
+                          className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-500 dark:hover:bg-rose-500/15 dark:hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60"
+                        >
+                          <UserX className="h-4 w-4" />
+                        </button>
+                      ) : null}
                     </div>
 
-                    {isAdmin && (
-                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/30">
-                        Admin
-                      </span>
+                    {isKickConfirm && (
+                      <div
+                        role="alert"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-500/30 dark:bg-rose-500/10"
+                      >
+                        <span className="text-[11px] font-semibold text-rose-800 dark:text-rose-200">
+                          Xóa <b>{member.name}</b> khỏi nhóm?
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setKickTarget(null)}
+                            disabled={isKicking}
+                            className="min-h-[32px] rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleKickMember(member)}
+                            disabled={isKicking}
+                            className="flex min-h-[32px] items-center justify-center gap-1 rounded-lg bg-rose-600 px-2.5 text-[11px] font-bold text-white transition-colors hover:bg-rose-700 disabled:opacity-60"
+                          >
+                            {isKicking ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              'Xóa'
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
@@ -604,7 +708,9 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
           {confirmLeave ? (
             <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-center animate-in fade-in">
               <p className="text-xs text-rose-800 dark:text-rose-200 font-bold mb-2">
-                Bạn có chắc chắn muốn rời khỏi nhóm này không?
+                {isMeAdmin
+                  ? 'Giải tán nhóm sẽ xóa vĩnh viễn nhóm và toàn bộ tin nhắn với tất cả thành viên. Bạn có chắc chắn?'
+                  : 'Bạn có chắc chắn muốn rời khỏi nhóm này không?'}
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -614,10 +720,12 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
                   Ở lại
                 </button>
                 <button
-                  onClick={handleLeaveGroup}
-                  className="flex-1 py-2 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60"
+                  onClick={() => void handleLeaveGroup()}
+                  disabled={isDisbanding}
+                  className="flex flex-1 items-center justify-center gap-1.5 py-2 min-h-[44px] rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60"
                 >
-                  Xác nhận rời
+                  {isDisbanding && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {isMeAdmin ? 'Xác nhận giải tán' : 'Xác nhận rời'}
                 </button>
               </div>
             </div>
@@ -626,8 +734,12 @@ export const GroupSettingsModal: React.FC<GroupSettingsModalProps> = ({
               onClick={() => setConfirmLeave(true)}
               className="w-full py-2.5 min-h-[44px] rounded-2xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Rời khỏi nhóm</span>
+              {isMeAdmin ? (
+                <AlertTriangle className="w-4 h-4" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )}
+              <span>{isMeAdmin ? 'Giải tán nhóm' : 'Rời khỏi nhóm'}</span>
             </button>
           )}
         </div>
