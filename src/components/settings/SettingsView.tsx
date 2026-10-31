@@ -256,10 +256,17 @@ export const SettingsView: React.FC = () => {
 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+  const isAdminName = (name?: string) => (name ?? '').trim().toLowerCase() === 'admin';
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileForm.name.trim()) {
+    const trimmedName = profileForm.name.trim();
+    if (!trimmedName) {
       showToast('Vui lòng nhập họ tên của bạn', 'error');
+      return;
+    }
+    if (isAdminName(trimmedName) && !isAdminName(currentUser.name)) {
+      showToast('Tên "Admin" chỉ dành cho tài khoản quản trị.', 'error');
       return;
     }
     if (isSavingProfile) return;
@@ -343,7 +350,9 @@ export const SettingsView: React.FC = () => {
 
             {/* Name on line 1, age + gender on line 2 */}
             <div className="space-y-1 min-w-0 flex-1">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight whitespace-nowrap truncate">{currentUser.name}</h2>
+              <h2 className={`text-base font-bold leading-tight whitespace-nowrap truncate ${isAdminName(currentUser.name) ? 'admin-neon' : 'text-slate-900 dark:text-slate-100'}`}>
+                {currentUser.name}
+              </h2>
               <div className="flex items-center gap-1">
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
                   {currentUser.age} tuổi

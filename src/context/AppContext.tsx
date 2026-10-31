@@ -1088,6 +1088,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateProfile = async (
     profileData: Partial<Pick<User, 'name' | 'bio' | 'age' | 'gender' | 'avatar' | 'phoneNumber'>>,
   ): Promise<void> => {
+    const nextName = (profileData.name ?? currentUser.name).trim();
+    if (nextName.toLowerCase() === 'admin' && currentUser.name.toLowerCase() !== 'admin') {
+      throw new Error('Tên "Admin" chỉ dành cho tài khoản quản trị.');
+    }
     let avatar = currentUser.avatar;
     try {
       if (profileData.avatar && profileData.avatar !== currentUser.avatar) {

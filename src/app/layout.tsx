@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AppProviders } from "@/providers/app-providers";
+import { AdminNameHighlighter } from "@/components/common/AdminNameHighlighter";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div id="app-root" className="app-root">
             {children}
           </div>
+          <AdminNameHighlighter />
         </AppProviders>
         {gaId && <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />}
         {gaId && (

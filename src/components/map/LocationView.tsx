@@ -365,15 +365,7 @@ export const LocationView: React.FC = () => {
         </div>
       )}
       {/* Cluster count when bubbles are capped */}
-      {showBubbles && hiddenBubbleCount > 0 && (
-        <div className="absolute bottom-24 inset-x-0 z-10 flex justify-center pointer-events-none">
-          <span className="px-3 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-white text-[11px] font-semibold">
-            Đang hiện {bubbleIds.size}/{visibleUsers.length} bong bóng
-          </span>
-        </div>
-      )}
-
-      {/* Map Interactive Canvas */}
+         {/* Map Interactive Canvas */}
       <div className="relative flex-1 w-full h-full overflow-hidden">
         {hasMapStyle ? (
           <MapGl

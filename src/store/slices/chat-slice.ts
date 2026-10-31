@@ -71,10 +71,16 @@ const chatSlice = createSlice({
     },
     addConversation: (state, action: PayloadAction<ConversationDto>) => {
       const idx = state.conversations.findIndex((c) => c.id === action.payload.id);
+      const payload = { ...action.payload };
+      // A conversation we are currently viewing must never show a stale
+      // unread badge, even if the server payload still carries one.
+      if (payload.id === state.activeConversationId) {
+        payload.unreadCount = 0;
+      }
       if (idx !== -1) {
-        state.conversations[idx] = action.payload;
+        state.conversations[idx] = payload;
       } else {
-        state.conversations.unshift(action.payload);
+        state.conversations.unshift(payload);
       }
     },
     updateConversationWithLastMessage: (

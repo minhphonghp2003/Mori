@@ -13,6 +13,7 @@ import {
   prependMessages,
   removeConversation,
   removeMessageReaction,
+  resetUnreadCount,
   setActiveConversation,
   setConversationBlocked,
   setConversationUnblocked,
@@ -215,9 +216,11 @@ export function useChatActions({
       }
 
       dispatch(setActiveConversation(convId));
-      // Unread accounting is server-driven now: JoinConversation resets the
-      // room and re-pushes the authoritative total via ReceiveUnreadCount,
-      // so nothing is cleared locally — the badge follows the payload.
+      // Clear this conversation's badge immediately on open. The server
+      // re-pushes the authoritative global total via ReceiveUnreadCount, but
+      // the per-conversation badge is local state and must be reset here —
+      // otherwise it stays stale until the list is refetched.
+      dispatch(resetUnreadCount(convId));
       partnerCacheRef.current.delete(conversationId);
 
       await loadMessages(conversationId);
@@ -228,6 +231,10 @@ export function useChatActions({
           // Upsert, not patch-only: a freshly created conversation has no
           // row yet, and the room renders "not found" until one appears.
           dispatch(addConversation(detail.data));
+          // The server detail can still carry a stale unread count (read
+          // state is updated asynchronously) — clear the badge for the room
+          // we just opened so it never lingers on the list.
+          dispatch(resetUnreadCount(convId));
         }
       } catch (err) {
         console.error("[chat] enterConversation detail failed:", err);

@@ -16,6 +16,7 @@ import {
   patchMessageAttachment,
   removeConversation,
   removeMessageReaction,
+  resetUnreadCount,
   setConversations,
   setTotalUnreadCount,
   updateConversationFromNotification,
@@ -87,6 +88,9 @@ export function ChatSync({ children }: { children: ReactNode }) {
       unsubs.push(
         appHub.onReceiveConversationUpdated((data) => {
           if (data.conversationId === store.getState().chat.activeConversationId) {
+            // Keep the opened room's badge cleared even when the server
+            // re-pushes its (possibly stale) unread count.
+            dispatch(resetUnreadCount(data.conversationId));
             return;
           }
           dispatch(updateConversationFromNotification(data));
