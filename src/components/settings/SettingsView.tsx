@@ -6,12 +6,12 @@ import { useIsPwa } from '../../hooks/use-is-pwa';
 import { useTheme } from '../../providers/theme-provider';
 import { requestNotificationPermission, syncFcmTokenAfterAuth, deleteFcmToken } from '../../lib/fcm';
 import { fileToDataUrl } from '../../lib/image';
-import { FriendshipType, VisibilityTier, User as UserType, Timeline, Moment } from '../../types';
+import { FriendshipType, User as UserType, Timeline, Moment } from '../../types';
 import { LogoLoader } from '../common/LogoLoader';
 import { useScrollToTop } from '@/hooks/use-scroll-to-top';
 import { Avatar } from '../common/Avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { VISIBILITY_OPTIONS } from '../../constants/visibility';
+
 import { CreateTimelineModal } from '../timelines/CreateTimelineModal';
 import { MomentViewerModal } from '../moments/MomentViewerModal';
 import { 
@@ -22,7 +22,6 @@ import {
   LogOut, 
   Camera, 
   MessageCircle, 
-  Check, 
   Compass, 
   Plus, 
   Calendar, 
@@ -63,7 +62,6 @@ export const SettingsView: React.FC = () => {
     changeFriendshipType, 
     removeFriend,
     updateProfile,
-    updateVisibility,
     deleteTimeline,
     openChatWithUser,
     refreshFriendships,
@@ -498,44 +496,6 @@ export const SettingsView: React.FC = () => {
                   />
                   <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:bg-emerald-600 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-600 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-white dark:peer-focus-visible:ring-offset-slate-900 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white" />
                 </label>
-              </div>
-            </div>
-
-            {/* Location Privacy Settings */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">Quyền riêng tư vị trí</h3>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Chọn đối tượng có thể nhìn thấy bạn trên bản đồ:
-              </p>
-
-              <div className="space-y-1.5">
-                {VISIBILITY_OPTIONS.map((opt) => {
-                  const isChecked = currentUser.visibility === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => updateVisibility(opt.value as VisibilityTier)}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-2xl text-left transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
-                        isChecked
-                          ? 'bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200 font-bold'
-                          : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <div>
-                        <div className="text-xs">{opt.label}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">{opt.desc}</div>
-                      </div>
-                      {isChecked && (
-                        <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
               </div>
             </div>
 
